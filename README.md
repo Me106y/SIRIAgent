@@ -8,7 +8,7 @@ Phase 2 的双栏平台：左 1/3 星历可视化，右 2/3 Agent。它**不修�
 
 ![Phase 2 前端：左 1/3 星历、右 2/3 Agent](docs/assets/frontend.png)
 
-点「杭州」飞到杭州并让 80 km 区域闪烁约 6 秒：
+点「杭州」飞到杭州，并用 WGS84 市界多边形让杭州边界闪烁约 6 秒：
 
 ![杭州定位](docs/assets/hangzhou.png)
 

@@ -362,7 +362,7 @@ main ul li::marker { color: var(--brand); }
 <tbody>
 <tr>
 <td>版本</td>
-<td>v1.8（草案，待评审）</td>
+<td>v1.9（草案，待评审）</td>
 </tr>
 <tr>
 <td>日期</td>
@@ -2730,6 +2730,7 @@ CREATE INDEX idx_sensor_sat     ON sensor(sat_id);
   3. 面积与官方公布值比对，相对误差阈值 ≤ 5%（超出则标 <code>accuracy=low</code> 并告警）；
   4. 记录 <code>source=amap</code>、<code>datum=gcj02</code>、<code>accuracy=approx</code>。</li>
 <li>空间查询：bbox 预过滤 + 点在多边形；<strong>不引入 PostGIS/SpatiaLite</strong>。</li>
+<li>已生成 <code>RS-Service/data/aoi/hangzhou_330100.geojson</code>：Amap 市界 6406 点，GCJ-02→WGS84，bbox <code>118.340,29.192,120.718,30.566</code>；<code>GET /api/v1/aoi/hangzhou</code> 提供。</li>
 </ul>
 <h3 id="sec-4-8">4.8 云量（Phase 2 就接）</h3>
 <ul>
@@ -3043,7 +3044,7 @@ when-to-use: 用户询问某地某时的卫星过境、可见性、覆盖能力�
 <ul>
 <li>左栏可折叠（窄屏默认折叠为图标条）。</li>
 <li>右栏不限制话题：欢迎语只做示例，不写"只能问星历"。</li>
-<li>相机："聚焦"飞到选中星足迹；"杭州"飞到杭州并让 80 km 区域闪烁约 6 秒。时间轴 UI 暂不启用，后端 <code>at</code> 参数保留。</li>
+<li>相机："聚焦"飞到选中星足迹；"杭州"飞到杭州并让<strong>杭州边界多边形</strong>闪烁约 6 秒（Amap 市界 GCJ-02→WGS84）。时间轴 UI 暂不启用，后端 <code>at</code> 参数保留。</li>
 <li>卫星列表支持按类别（商业/民用/气象海洋）/类型（光学/SAR/高光谱）/分辨率/低置信筛选，默认 111 颗展示集；列表用虚拟滚动，111 颗也能流畅。</li>
 </ul>
 <h3 id="sec-6-4">6.4 视觉系统</h3>
@@ -3496,7 +3497,7 @@ M5 联调上线（约 0.5 周）
 <tr>
 <td>M1 数据服务</td>
 <td><strong>进行中</strong></td>
-<td>两仓库已公开（<a href="https://github.com/Me106y/SIRIAgent">SIRIAgent</a>、<a href="https://github.com/Me106y/RS-Service">RS-Service</a>）；12 表迁移 <code>73866dc4fe27</code>；111 颗 seed；首次同步 111 条 TLE；REST/MCP 可用；12 个测试通过。待补：AOI/GCJ-02 入库、覆盖/重访、云量写入 <code>pass_window</code></td>
+<td>两仓库已公开；12 表迁移；111 颗 seed；111 条 TLE；REST/MCP 可用；杭州 AOI 文件（WGS84）已生成；12 个测试通过。待补：AOI 写入 <code>aoi</code> 表、覆盖/重访、云量写入 <code>pass_window</code></td>
 </tr>
 <tr>
 <td>M2 Agent 可查</td>
@@ -3511,7 +3512,7 @@ M5 联调上线（约 0.5 周）
 <tr>
 <td>M4 可视化</td>
 <td><strong>部分完成</strong></td>
-<td>地球、实时位置、轨迹、过境表、足迹圆、杭州区域闪烁定位已接；时间轴与覆盖图层按反馈移除；重访/时间覆盖率未做</td>
+<td>地球、实时位置、轨迹、过境表、足迹圆、杭州边界闪烁定位已接；时间轴与覆盖图层按反馈移除；重访/时间覆盖率未做</td>
 </tr>
 <tr>
 <td>流式</td>
@@ -3686,6 +3687,11 @@ M5 联调上线（约 0.5 周）
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>2026-10-19</td>
+<td>v1.9</td>
+<td>杭州定位改用 Amap 市界（GCJ-02→WGS84，6406 点），新增 <code>/api/v1/aoi/hangzhou</code> 与 <code>data/aoi/hangzhou_330100.geojson</code></td>
+</tr>
 <tr>
 <td>2026-10-19</td>
 <td>v1.8</td>

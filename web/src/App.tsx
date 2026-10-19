@@ -27,6 +27,7 @@ export default function App() {
   const [swathKm, setSwathKm] = useState<number | null>(null);
   const [focusToken, setFocusToken] = useState(0);
   const [hangzhouToken, setHangzhouToken] = useState(0);
+  const [hangzhouPolygon, setHangzhouPolygon] = useState<number[][] | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -43,6 +44,20 @@ export default function App() {
     api
       .sync()
       .then((payload) => alive && setSync(payload))
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    api
+      .hangzhouBoundary()
+      .then((payload) => {
+        if (!alive) return;
+        setHangzhouPolygon(payload.features[0]?.geometry.coordinates[0] ?? null);
+      })
       .catch(() => undefined);
     return () => {
       alive = false;
@@ -306,6 +321,7 @@ export default function App() {
               footprintRadiusKm={swathKm != null ? swathKm / 2 : null}
               focusToken={focusToken}
               hangzhouToken={hangzhouToken}
+              hangzhouPolygon={hangzhouPolygon}
             />
             <div className="globe-caption">
               <span>

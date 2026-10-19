@@ -1,5 +1,6 @@
 import type {
   ChatUsage,
+  HangzhouBoundary,
   PassItem,
   PositionItem,
   Satellite,
@@ -38,6 +39,7 @@ export const api = {
       `/api/rs/satellites/${norad}/passes?hours=24&min_elev=5`,
     ),
   sync: () => getJson<SyncStatus>("/api/rs/sync/status"),
+  hangzhouBoundary: () => getJson<HangzhouBoundary>("/api/rs/aoi/hangzhou"),
 };
 
 export interface ChatResponse {

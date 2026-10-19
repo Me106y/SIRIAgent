@@ -21,6 +21,7 @@ interface GlobeProps {
   footprintRadiusKm: number | null;
   focusToken: number;
   hangzhouToken: number;
+  hangzhouPolygon: number[][] | null;
 }
 
 export function Globe({
@@ -33,6 +34,7 @@ export function Globe({
   footprintRadiusKm,
   focusToken,
   hangzhouToken,
+  hangzhouPolygon,
 }: GlobeProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<Cesium.Viewer | null>(null);
@@ -223,8 +225,9 @@ export function Globe({
         Cesium.Color.fromCssColorString("#A5F3FC").withAlpha(0.35 + 0.55 * alpha()),
       false,
     );
-    pulseRef.current = viewer.entities.add({
-      position: Cesium.Cartesian3.fromDegrees(120.16, 30.27, 60),
+    const center = Cesium.Cartesian3.fromDegrees(120.2099, 30.2466, 80);
+    const common = {
+      position: center,
       label: {
         text: "杭州",
         font: "12px sans-serif",
@@ -233,22 +236,40 @@ export function Globe({
         backgroundColor: Cesium.Color.fromCssColorString("#04121F").withAlpha(0.75),
         pixelOffset: new Cesium.Cartesian2(0, -18),
       },
-      ellipse: {
-        semiMajorAxis: 80_000,
-        semiMinorAxis: 80_000,
-        height: 50,
-        material: new Cesium.ColorMaterialProperty(fill),
-        outline: true,
-        outlineColor: outline,
-      },
-    });
+    } as const;
+    if (hangzhouPolygon && hangzhouPolygon.length > 3) {
+      pulseRef.current = viewer.entities.add({
+        ...common,
+        polygon: {
+          hierarchy: new Cesium.PolygonHierarchy(
+            Cesium.Cartesian3.fromDegreesArray(hangzhouPolygon.flat()),
+          ),
+          height: 50,
+          material: new Cesium.ColorMaterialProperty(fill),
+          outline: true,
+          outlineColor: outline,
+        },
+      });
+    } else {
+      pulseRef.current = viewer.entities.add({
+        ...common,
+        ellipse: {
+          semiMajorAxis: 80_000,
+          semiMinorAxis: 80_000,
+          height: 50,
+          material: new Cesium.ColorMaterialProperty(fill),
+          outline: true,
+          outlineColor: outline,
+        },
+      });
+    }
     pulseTimer.current = window.setTimeout(() => {
       if (!viewer.isDestroyed() && pulseRef.current) {
         viewer.entities.remove(pulseRef.current);
         pulseRef.current = null;
       }
     }, 6000);
-  }, [hangzhouToken]);
+  }, [hangzhouToken, hangzhouPolygon]);
 
   useEffect(() => {
     if (focusToken === 0) return;

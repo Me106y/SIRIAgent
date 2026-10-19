@@ -122,3 +122,20 @@ export type StreamEvent =
       elapsed_ms?: number;
     }
   | { type: "error"; message: string };
+
+export interface HangzhouBoundary {
+  type: "FeatureCollection";
+  features: Array<{
+    type: "Feature";
+    properties: {
+      code: string;
+      name: string;
+      source: string;
+      datum: string;
+      accuracy: string;
+      points: number;
+      bbox: [number, number, number, number];
+    };
+    geometry: { type: "Polygon"; coordinates: number[][][] };
+  }>;
+}
