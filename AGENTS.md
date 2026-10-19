@@ -64,7 +64,8 @@
 - 新 Python 模块 ≤600 行；类型注解齐全；错误路径有结构化日志。
 - 前端用 pnpm；构建产物 `web/dist/` 由后端托管。
 - Commit：`feat(scope): ...` / `fix(scope): ...` / `docs: ...`；一次提交只做一件事，正文说明"为什么"。
-- 推 `main` 前跑：`uv run pytest`、`pnpm test`、`pnpm build`，并确认 `git status` 干净。
+- 推 `main` 前跑：`cd ../RS-Service && uv run pytest`、`cd web && pnpm build`，并确认 `git status` 干净。
+- 星历服务用 `systemctl --user restart rs-service-api`；前端用 `systemctl --user restart siriagent-demo`。
 - 仓库里只提交源码、迁移、测试夹具、文档；数据库、密钥、`node_modules`、构建产物留在本机。
 
 ## 7. 文档

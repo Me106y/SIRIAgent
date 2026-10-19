@@ -5,13 +5,18 @@ import os
 import shutil
 import subprocess
 import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, Response, jsonify, request, send_from_directory
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 STATIC_DIR = PROJECT_ROOT / "static"
+WEB_DIST = PROJECT_ROOT / "web" / "dist"
 PATCH_FILE = PROJECT_ROOT / "headless.patch.yml"
+RS_SERVICE_BASE = os.environ.get("RS_SERVICE_BASE", "http://127.0.0.1:8766/api/v1")
+_RS_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
 DSH_ROOT = Path(
     os.environ.get(
@@ -92,7 +97,43 @@ def _chat_command(message: str, session_id: str | None) -> list[str]:
 
 @app.get("/")
 def index():
+    if (WEB_DIST / "index.html").is_file():
+        return send_from_directory(WEB_DIST, "index.html")
     return send_from_directory(STATIC_DIR, "index.html")
+
+
+@app.get("/api/rs/<path:subpath>")
+def rs_proxy(subpath: str):
+    """把浏览器请求反代到本机 RS-Service；浏览器不直连 8766。"""
+    query = request.query_string.decode()
+    url = f"{RS_SERVICE_BASE}/{subpath}" + (f"?{query}" if query else "")
+    req = urllib.request.Request(url, headers={"Accept": "application/json"})
+    try:
+        with _RS_OPENER.open(req, timeout=30) as resp:
+            return Response(
+                resp.read(),
+                status=resp.status,
+                content_type=resp.headers.get("Content-Type", "application/json"),
+            )
+    except urllib.error.HTTPError as exc:
+        return Response(
+            exc.read(),
+            status=exc.code,
+            content_type=exc.headers.get("Content-Type", "application/json"),
+        )
+    except (urllib.error.URLError, TimeoutError) as exc:
+        return jsonify({"ok": False, "error": f"RS-Service 不可达：{exc}"}), 502
+
+
+@app.get("/<path:filename>")
+def frontend_files(filename: str):
+    if (WEB_DIST / filename).is_file():
+        return send_from_directory(WEB_DIST, filename)
+    if (STATIC_DIR / filename).is_file():
+        return send_from_directory(STATIC_DIR, filename)
+    if (WEB_DIST / "index.html").is_file():
+        return send_from_directory(WEB_DIST, "index.html")
+    return jsonify({"ok": False, "error": "not found"}), 404
 
 
 @app.get("/api/health")
@@ -106,6 +147,8 @@ def health():
             "dsh_patch": str(PATCH_FILE),
             "node": NODE_BIN,
             "cwd": str(PROJECT_ROOT),
+            "frontend": "web/dist" if (WEB_DIST / "index.html").is_file() else "static",
+            "rs_service": RS_SERVICE_BASE,
             "timeout_seconds": DSH_TIMEOUT,
         }
     )

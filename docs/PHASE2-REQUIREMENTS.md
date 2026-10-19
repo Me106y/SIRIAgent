@@ -2,9 +2,9 @@
 
 | 项目 | 内容 |
 | --- | --- |
-| 版本 | v1.4（草案，待评审） |
+| 版本 | v1.5（草案，待评审） |
 | 日期 | 2026-10-19 |
-| 状态 | 范围与决策已确认；111 颗展示集定稿 |
+| 状态 | 范围与决策已确认；M3 前端骨架已落地 |
 | 归属 | `SIRIAgent` 仓库（本文档为 Phase 2 唯一事实源） |
 | 上游 | `PRD.html`（遥感智能体平台建设方案 v1.1） |
 | HTML 版 | `docs/PHASE2-REQUIREMENTS.html`（`scripts/build_requirements_html.py` 生成） |
@@ -644,7 +644,7 @@ when-to-use: 用户询问某地某时的卫星过境、可见性、覆盖能力�
 | 地球 | **CesiumJS**（本地 NaturalEarth 影像，不用 Cesium Ion，不需要 token） |
 | 卫星推演 | `satellite.js`（前端本地 SGP4，负责平滑动画；服务端负责过境/覆盖） |
 | Markdown | `@deepseek-ai/dsh-client-ui-primitives@0.2.1-rc.2`（直接依赖，不 vendor） |
-| 状态 | React Query（服务端数据）+ Zustand（UI 状态） |
+| 状态 | React hooks（按需再引状态库） |
 | 流式 | SSE（优先）或 WebSocket |
 | 测试 | Vitest + Playwright（视觉与响应式） |
 
@@ -816,8 +816,9 @@ M5 联调上线（约 0.5 周）
 | --- | --- | --- |
 | M1 数据服务 | **进行中** | 两仓库已公开（[SIRIAgent](https://github.com/Me106y/SIRIAgent)、[RS-Service](https://github.com/Me106y/RS-Service)）；12 表迁移 `73866dc4fe27`；111 颗 seed；首次同步 111 条 TLE；REST/MCP 可用；12 个测试通过。待补：AOI/GCJ-02 入库、覆盖/重访、云量写入 `pass_window` |
 | M2 Agent 可查 | **进行中** | MCP 已实现 `list_satellites`、`get_satellite`、`next_passes`、`ground_track`、`current_position`、`sync_status`；待补 `get_tle`、`propagate`、`coverage_window`、`run_command` 与 4 个 skill |
-| M3 前端骨架 | 未开始 | 待 D1–D3、D6 |
-| M4 可视化 | 未开始 | 待 D4–D5 |
+| M3 前端骨架 | **已完成骨架** | `web/` React 19 + Vite + TS + Cesium；1/3 + 2/3 布局；111 颗位置 5 s 刷新；选中星轨迹与过境表；`/api/chat` 可用；1440/900/488 宽度无横向溢出 |
+| M4 可视化 | **部分完成** | 地球、实时位置、轨迹、过境表已接；时间轴、足迹、覆盖图层待补 |
+| 流式 | 待补 | 当前前端复用 `/api/chat`（headless 一次性返回）；D2 的 SDK 流式桥未接 |
 | M5 联调上线 | 未开始 | 待 D7–D9 与验收演示 |
 
 ---
@@ -877,6 +878,7 @@ M5 联调上线（约 0.5 周）
 
 | 日期 | 版本 | 变更 |
 | --- | --- | --- |
+| 2026-10-19 | v1.5 | M3 前端骨架落地：`web/` React+Vite+TS+Cesium、1/3+2/3、111 颗实时位置、选中星轨迹/过境、`/api/chat`；补充 `payload_public` 列 |
 | 2026-10-19 | v1.4 | 展示集扩到 **111 颗**（102 LEO + 9 GEO，全部国内公开轨道；商业 64/民用 29/气象海洋 18；军事 0）；新增 13 颗 payload_public=false 仅轨道条目、低轨异常提示、111 颗前端性能口径 |
 | 2026-10-19 | v1.3 | 展示集初版：30 颗全部中国（25 LEO + 5 GEO）；补充 44312=捕风一号A、40143=Yaogan-21、GF-12=SAR 等数据质量结论 |
 | 2026-10-19 | v1.2 | 同步改为每日 1 次（03:00）+ 最多 3 次重试，失败当天停止；新增 `sync_state` 表，`sync_run`/`sync_item_error` 增加尝试次数、重试与错误字段 |

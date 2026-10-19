@@ -1,6 +1,6 @@
 # SIRIAgent
 
-一个独立的、用于快速验证 DSH 的极简 Web 界面。它**不修改** `SIRI-Agent` 项目，只在自己的目录里运行。
+Phase 2 的双栏平台：左 1/3 星历可视化，右 2/3 Agent。它**不修改** `SIRI-Agent` 项目，只在自己的目录里运行。
 
 > Phase 2 的范围、优先级与验收标准见 [`docs/PHASE2-REQUIREMENTS.md`](docs/PHASE2-REQUIREMENTS.md)（[HTML 版](docs/PHASE2-REQUIREMENTS.html)，由 `scripts/build_requirements_html.py` 生成）。后续需求变更只改该文档，不再写入 `SIRI-Agent`。
 >
@@ -15,18 +15,34 @@
 Cloudflare Tunnel
   ▼
 127.0.0.1:8000  gunicorn + Flask（本项目）
-  │  每次对话 spawn 一个子进程
+  ├─ /            → web/dist（React + Cesium）
+  ├─ /api/rs/*    → 127.0.0.1:8766（RS-Service REST）
+  └─ /api/chat    → dsh --profile headless --json
   ▼
-dsh --profile headless --json
-  │  使用 DSH 已保存的凭据和模型
-  ▼
-DSH agent（DeepSeek Harness）
+DSH agent（DeepSeek Harness） + RS-Service（星历/MCP）
 ```
 
-- 前端：`static/index.html`，原生 HTML/CSS/JS，无构建步骤。
-- 后端：`app.py`，Flask，负责调用 DSH headless 并解析 NDJSON 事件。
+- 前端：`web/`，React 19 + Vite + TypeScript + CesiumJS；构建产物 `web/dist/` 由 Flask 托管。
+- 历史页面：`static/index.html`，仅在 `web/dist` 不存在时兜底。
+- 后端：`app.py`，Flask；`/api/rs/*` 反代到本机 RS-Service，浏览器不直连 8766。
 - DSH：`dsh --profile headless`，每次消息一次运行；用 `--session-id` 续聊。
 - 端口：`127.0.0.1:8000`，与原来的平台一致，Tunnel 不需要改。
+
+## 前端开发
+
+```bash
+cd "/home/siri/桌面/SIRIAgent/web"
+pnpm install
+pnpm dev          # 开发服务器 5173，/api 代理到 8000
+pnpm build        # 产物写入 web/dist，Flask 自动托管
+```
+
+前端依赖 RS-Service 的 REST（`127.0.0.1:8766`）。启动顺序：
+
+```bash
+systemctl --user start rs-service-api.service   # 星历服务
+systemctl --user restart siriagent-demo          # 前端 + DSH
+```
 
 ## 运行
 
