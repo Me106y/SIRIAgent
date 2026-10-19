@@ -37,7 +37,7 @@ function ChevronIcon() {
 function SendIcon() {
   return (
     <svg viewBox="0 0 16 16" aria-hidden="true">
-      <path d="M3 8h9M8.5 3.5L13 8l-4.5 4.5" />
+      <path d="M8 13V3M3.5 7.5L8 3l4.5 4.5" />
     </svg>
   );
 }
