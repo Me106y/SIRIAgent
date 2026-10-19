@@ -362,7 +362,7 @@ main ul li::marker { color: var(--brand); }
 <tbody>
 <tr>
 <td>版本</td>
-<td>v2.0（草案，待评审）</td>
+<td>v2.1（草案，待评审）</td>
 </tr>
 <tr>
 <td>日期</td>
@@ -3507,7 +3507,7 @@ M5 联调上线（约 0.5 周）
 <tr>
 <td>M3 前端骨架</td>
 <td><strong>已完成骨架</strong></td>
-<td><code>web/</code> React 19 + Vite + TS + Cesium；1/3 + 2/3；111 颗位置 5 s 刷新；选中星轨迹与过境表；SDK SSE 事件流 + Markdown；生产化顶栏（API 余额）、<code>/</code> 技能菜单、DSH 式工具卡/思考态、卡片阴影；1440/900/488 无横向溢出</td>
+<td><code>web/</code> React 19 + Vite + TS + Cesium；1/3 + 2/3；111 颗位置 5 s 刷新；选中星轨迹与过境表；SDK SSE 事件流 + 10 s 心跳 + 工具/思考按事件顺序穿插；生产化顶栏（API 余额）、<code>/</code> 技能菜单、DSH 式工具卡/思考态、卡片阴影；1440/900/488 无横向溢出</td>
 </tr>
 <tr>
 <td>M4 可视化</td>
@@ -3687,6 +3687,11 @@ M5 联调上线（约 0.5 周）
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>2026-10-19</td>
+<td>v2.1</td>
+<td>修复长流中断：SSE 10 s 心跳、只在未收到事件时回退、回退接口非 JSON 安全解析；工具调用/思考/文本按事件顺序穿插</td>
+</tr>
 <tr>
 <td>2026-10-19</td>
 <td>v2.0</td>

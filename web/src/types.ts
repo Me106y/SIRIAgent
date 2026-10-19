@@ -96,10 +96,25 @@ export interface ToolCall {
   result?: unknown;
 }
 
+export type MessageBlock =
+  | { id: string; kind: "thinking"; text: string }
+  | {
+      id: string;
+      kind: "tool";
+      callId: string;
+      tool: string;
+      input?: unknown;
+      status?: string;
+      result?: unknown;
+    }
+  | { id: string; kind: "text"; text: string }
+  | { id: string; kind: "notice"; text: string };
+
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant";
   text: string;
+  blocks?: MessageBlock[];
   thinking?: string;
   tools?: ToolCall[];
   usage?: ChatUsage | null;

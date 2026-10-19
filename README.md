@@ -8,7 +8,7 @@
 
 ![SIRIAgent 前端：左 1/3 星历、右 2/3 Agent](docs/assets/frontend.png)
 
-工具调用与思考态按 DSH 的方式呈现：运行中显示转圈，完成后折叠为一行；思考过程在答案上方。
+工具调用与思考按事件发生顺序穿插：运行中显示转圈，完成后折叠为一行；思考块出现在对应步骤之间。
 
 ![工具调用与思考态](docs/assets/chat.png)
 
@@ -62,7 +62,7 @@ systemctl --user restart siriagent-demo          # 前端 + DSH
 
 ## SDK 流式
 
-`/api/chat/stream` 用 DSH Python SDK 的事件流：`tool_call` / `tool_result` 实时出现，文本在回合结束时整块返回（当前 SDK 版本不吐 token delta）。SDK 缺省时前端会回退到 `/api/chat`。
+`/api/chat/stream` 用 DSH Python SDK 的事件流：`tool_call` / `tool_result` / `reasoning` / `text` 按发生顺序推送，服务端每 10 s 发心跳防止长工具调用被中间层断开；文本在回合结束时整块返回（当前 SDK 版本不吐 token delta）。SDK 缺省时前端会回退到 `/api/chat`。
 
 本机安装（SDK 不在仓库内）：
 

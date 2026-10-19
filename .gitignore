@@ -21,3 +21,6 @@ data/*.sqlite3
 .ruff_cache/
 .mypy_cache/
 .DS_Store
+
+# 本地草稿
+.scratch/

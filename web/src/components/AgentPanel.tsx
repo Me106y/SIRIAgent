@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { api } from "../api";
-import type { ChatMessage, Skill } from "../types";
+import type { ChatMessage, MessageBlock, Skill } from "../types";
 import { Markdown } from "./Markdown";
 
 interface Props {
@@ -48,6 +48,40 @@ function toolLabel(name: string): string {
 
 function pretty(value: unknown): string {
   return typeof value === "string" ? value : JSON.stringify(value, null, 2);
+}
+
+type ToolBlock = Extract<MessageBlock, { kind: "tool" }>;
+
+function ToolRow({ block }: { block: ToolBlock }) {
+  const done = block.status === "completed";
+  return (
+    <details className={`tool-card ${done ? "done" : "running"}`}>
+      <summary>
+        <span className={`tool-icon ${done ? "ok" : "running"}`}>
+          {done ? <CheckIcon /> : <span className="tool-spinner" />}
+        </span>
+        <span className="tool-name" title={block.tool}>
+          {toolLabel(block.tool)}
+        </span>
+        <span className="tool-state">{done ? "完成" : "运行中"}</span>
+        <ChevronIcon />
+      </summary>
+      <div className="tool-body">
+        {block.input != null && (
+          <>
+            <div className="tool-label">参数</div>
+            <pre>{pretty(block.input)}</pre>
+          </>
+        )}
+        {block.result != null && (
+          <>
+            <div className="tool-label">结果</div>
+            <pre>{pretty(block.result)}</pre>
+          </>
+        )}
+      </div>
+    </details>
+  );
 }
 
 export function AgentPanel({ messages, busy, sessionId, onSend, onReset }: Props) {
@@ -198,88 +232,61 @@ export function AgentPanel({ messages, busy, sessionId, onSend, onReset }: Props
         )}
 
         {messages.map((message) => {
-          const loading = message.role === "assistant" && busy && !message.text;
+          const blocks = message.blocks ?? [];
+          const hasText = blocks.some((block) => block.kind === "text");
+          const loading = message.role === "assistant" && busy && !hasText;
           return (
             <article key={message.id} className={`message ${message.role}`}>
               <div className="who">{message.role === "user" ? "你" : "SIRIAgent"}</div>
-              {message.tools && message.tools.length > 0 && (
-                <div className="tool-list">
-                  {message.tools.map((tool) => {
-                    const done = tool.status === "completed";
-                    return (
-                      <details
-                        className={`tool-card ${done ? "done" : "running"}`}
-                        key={tool.callId}
-                      >
-                        <summary>
-                          <span className={`tool-icon ${done ? "ok" : "running"}`}>
-                            {done ? <CheckIcon /> : <span className="tool-spinner" />}
-                          </span>
-                          <span className="tool-name" title={tool.tool}>
-                            {toolLabel(tool.tool)}
-                          </span>
-                          <span className="tool-state">{done ? "完成" : "运行中"}</span>
-                          <ChevronIcon />
-                        </summary>
-                        <div className="tool-body">
-                          {tool.input != null && (
-                            <>
-                              <div className="tool-label">参数</div>
-                              <pre>{pretty(tool.input)}</pre>
-                            </>
-                          )}
-                          {tool.result != null && (
-                            <>
-                              <div className="tool-label">结果</div>
-                              <pre>{pretty(tool.result)}</pre>
-                            </>
-                          )}
+              {message.role === "user" ? (
+                <div className="bubble">{message.text}</div>
+              ) : (
+                <div className="timeline">
+                  {blocks.map((block) => {
+                    if (block.kind === "tool") {
+                      return <ToolRow key={block.id} block={block} />;
+                    }
+                    if (block.kind === "thinking") {
+                      return (
+                        <details className="thinking" key={block.id}>
+                          <summary>
+                            <span className="thinking-mark" aria-hidden="true" />
+                            {busy && !hasText ? "思考中" : "思考过程"}
+                          </summary>
+                          <pre>{block.text}</pre>
+                        </details>
+                      );
+                    }
+                    if (block.kind === "notice") {
+                      return (
+                        <div className="stream-notice" key={block.id}>
+                          {block.text}
                         </div>
-                      </details>
+                      );
+                    }
+                    return (
+                      <div
+                        className={message.error ? "bubble error" : "bubble markdown-bubble"}
+                        key={block.id}
+                      >
+                        <Markdown text={block.text} />
+                      </div>
                     );
                   })}
-                </div>
-              )}
-              {message.thinking && (
-                <details className="thinking">
-                  <summary>
-                    <span className="thinking-mark" aria-hidden="true" />
-                    {loading ? "思考中" : "思考过程"}
-                  </summary>
-                  <pre>{message.thinking}</pre>
-                </details>
-              )}
-              {loading ? (
-                <div className="assistant-loading" aria-live="polite">
-                  <span className="thinking-dots" aria-hidden="true">
-                    <i />
-                    <i />
-                    <i />
-                  </span>
-                  {message.tools && message.tools.length > 0
-                    ? "正在整理结果"
-                    : "正在思考"}
-                </div>
-              ) : (
-                <div
-                  className={
-                    message.error
-                      ? "bubble error"
-                      : message.role === "assistant"
-                        ? "bubble markdown-bubble"
-                        : "bubble"
-                  }
-                >
-                  {message.text ? (
-                    message.role === "assistant" && !message.error ? (
-                      <Markdown text={message.text} />
-                    ) : (
-                      message.text
-                    )
-                  ) : message.role === "assistant" ? (
-                    "…"
-                  ) : (
-                    ""
+                  {loading && (
+                    <div className="assistant-loading" aria-live="polite">
+                      <span className="thinking-dots" aria-hidden="true">
+                        <i />
+                        <i />
+                        <i />
+                      </span>
+                      {blocks.length > 0 ? "正在整理结果" : "正在思考"}
+                    </div>
+                  )}
+                  {!loading && blocks.length === 0 && (
+                    <div className={message.error ? "bubble error" : "bubble markdown-bubble"}>
+                      {message.text ? <Markdown text={message.text} /> : "…"}
+                    </div>
                   )}
                 </div>
               )}

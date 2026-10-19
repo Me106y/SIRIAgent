@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import json
 import os
+import queue
 import re
 import shutil
 import subprocess
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -297,7 +299,27 @@ def chat_stream():
         )
 
     def generate():
-        for event in manager.stream(message, session_id):
+        events: queue.Queue[dict | None] = queue.Queue()
+
+        def pump() -> None:
+            try:
+                for item in manager.stream(message, session_id):
+                    events.put(item)
+            except Exception as exc:  # noqa: BLE001 - 转成 SSE error
+                events.put({"type": "error", "message": f"{type(exc).__name__}: {exc}"})
+            finally:
+                events.put(None)
+
+        threading.Thread(target=pump, name="sse-pump", daemon=True).start()
+        yield "retry: 3000\n\n"
+        while True:
+            try:
+                event = events.get(timeout=10)
+            except queue.Empty:
+                yield ": keep-alive\n\n"
+                continue
+            if event is None:
+                break
             yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
 
     return Response(

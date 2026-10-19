@@ -64,7 +64,17 @@ export async function chat(message: string, sessionId?: string): Promise<ChatRes
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ message, session_id: sessionId }),
   });
-  const payload = (await response.json()) as ChatResponse;
+  const raw = await response.text();
+  let payload: ChatResponse;
+  try {
+    payload = JSON.parse(raw) as ChatResponse;
+  } catch {
+    const detail = raw.trim().slice(0, 240);
+    return {
+      ok: false,
+      error: `HTTP ${response.status} ${detail || "（空响应）"}`,
+    };
+  }
   if (!response.ok) {
     return { ok: false, error: payload.error || `HTTP ${response.status}` };
   }

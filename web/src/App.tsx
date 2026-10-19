@@ -7,6 +7,7 @@ import { SatellitePanel } from "./components/SatellitePanel";
 import type {
   Balance,
   ChatMessage,
+  MessageBlock,
   PassItem,
   PositionItem,
   Satellite,
@@ -158,7 +159,7 @@ export default function App() {
       setMessages((current) => [
         ...current,
         { id: crypto.randomUUID(), role: "user", text },
-        { id: assistantId, role: "assistant", text: "" },
+        { id: assistantId, role: "assistant", text: "", blocks: [] },
       ]);
       setBusy(true);
       setError(null);
@@ -171,115 +172,186 @@ export default function App() {
         );
       };
 
+      const mutate = (fn: (blocks: MessageBlock[]) => void) => {
+        setMessages((current) =>
+          current.map((message) => {
+            if (message.id !== assistantId) return message;
+            const blocks = [...(message.blocks || [])];
+            fn(blocks);
+            return {
+              ...message,
+              blocks,
+              text: blocks
+                .filter((block): block is Extract<MessageBlock, { kind: "text" }> =>
+                  block.kind === "text",
+                )
+                .map((block) => block.text)
+                .join("\n\n"),
+            };
+          }),
+        );
+      };
+
+      const pushText = (value: string, replace = false) => {
+        mutate((blocks) => {
+          const last = blocks[blocks.length - 1];
+          if (last?.kind === "text") {
+            blocks[blocks.length - 1] = {
+              ...last,
+              text: replace ? value : last.text + value,
+            };
+          } else {
+            blocks.push({ id: crypto.randomUUID(), kind: "text", text: value });
+          }
+        });
+      };
+
+      const pushNotice = (value: string) => {
+        mutate((blocks) => {
+          blocks.push({ id: crypto.randomUUID(), kind: "notice", text: value });
+        });
+      };
+
+      let sawEvent = false;
       try {
         await streamChat(text, sessionId, (event) => {
+          sawEvent = true;
           switch (event.type) {
             case "session":
               setSessionId(event.session_id);
               break;
             case "text":
-              setMessages((current) =>
-                current.map((message) =>
-                  message.id === assistantId
-                    ? {
-                        ...message,
-                        text: event.replace ? event.text : message.text + event.text,
-                      }
-                    : message,
-                ),
-              );
+              pushText(event.text, event.replace);
               break;
             case "reasoning":
-              setMessages((current) =>
-                current.map((message) =>
-                  message.id === assistantId
-                    ? { ...message, thinking: (message.thinking || "") + event.text }
-                    : message,
-                ),
-              );
+              mutate((blocks) => {
+                const last = blocks[blocks.length - 1];
+                if (last?.kind === "thinking") {
+                  blocks[blocks.length - 1] = {
+                    ...last,
+                    text: `${last.text}\n\n${event.text}`,
+                  };
+                } else {
+                  blocks.push({
+                    id: crypto.randomUUID(),
+                    kind: "thinking",
+                    text: event.text,
+                  });
+                }
+              });
               break;
             case "tool_call":
-              setMessages((current) =>
-                current.map((message) => {
-                  if (message.id !== assistantId) return message;
-                  const tools = message.tools ? [...message.tools] : [];
-                  if (tools.some((tool) => tool.callId === event.callId)) {
-                    return message;
-                  }
-                  return {
-                    ...message,
-                    tools: [
-                      ...tools,
-                      {
-                        callId: event.callId,
-                        tool: event.tool,
-                        input: event.input,
-                        status: "running",
-                      },
-                    ],
-                  };
-                }),
-              );
+              mutate((blocks) => {
+                if (
+                  blocks.some(
+                    (block) => block.kind === "tool" && block.callId === event.callId,
+                  )
+                ) {
+                  return;
+                }
+                blocks.push({
+                  id: crypto.randomUUID(),
+                  kind: "tool",
+                  callId: event.callId,
+                  tool: event.tool,
+                  input: event.input,
+                  status: "running",
+                });
+              });
               break;
             case "tool_result":
-              setMessages((current) =>
-                current.map((message) =>
-                  message.id === assistantId
-                    ? {
-                        ...message,
-                        tools: (message.tools || []).map((tool) =>
-                          tool.callId === event.callId
-                            ? { ...tool, status: event.status, result: event.result }
-                            : tool,
-                        ),
-                      }
-                    : message,
-                ),
-              );
+              mutate((blocks) => {
+                const index = blocks.findIndex(
+                  (block) => block.kind === "tool" && block.callId === event.callId,
+                );
+                if (index >= 0) {
+                  const block = blocks[index];
+                  if (block.kind === "tool") {
+                    blocks[index] = {
+                      ...block,
+                      status: event.status,
+                      result: event.result,
+                    };
+                  }
+                }
+              });
+              break;
+            case "notice":
+              pushNotice(event.message);
               break;
             case "done":
-              setMessages((current) =>
-                current.map((message) =>
-                  message.id === assistantId
-                    ? {
-                        ...message,
-                        text: event.text || message.text || "（没有文本）",
-                        elapsed_ms: event.elapsed_ms,
-                      }
-                    : message,
-                ),
-              );
+              if (event.text) {
+                mutate((blocks) => {
+                  const last = blocks[blocks.length - 1];
+                  if (last?.kind === "text" && last.text === event.text) return;
+                  if (last?.kind === "text" && !last.text) {
+                    blocks[blocks.length - 1] = { ...last, text: event.text };
+                    return;
+                  }
+                  blocks.push({
+                    id: crypto.randomUUID(),
+                    kind: "text",
+                    text: event.text,
+                  });
+                });
+              }
+              update({ elapsed_ms: event.elapsed_ms });
               if (event.session_id) setSessionId(event.session_id);
               break;
             case "error":
-              update({ text: event.message, error: true });
+              pushNotice(event.message);
+              update({ error: true });
               break;
             default:
               break;
           }
         });
       } catch (streamError) {
-        try {
-          const response = await chat(text, sessionId);
-          if (!response.ok) throw new Error(response.error || "DSH 没有返回结果。");
-          if (response.session_id) setSessionId(response.session_id);
-          update({
-            text: response.text || "（没有文本）",
-            thinking: response.thinking || undefined,
-            tools: response.tool_calls || [],
-            usage: response.usage || null,
-            elapsed_ms: response.elapsed_ms,
-          });
-        } catch (fallbackError) {
-          const message =
-            fallbackError instanceof Error ? fallbackError.message : "请求失败";
-          update({
-            text:
-              streamError instanceof Error
-                ? `${streamError.message}；回退失败：${message}`
-                : message,
-            error: true,
-          });
+        const reason =
+          streamError instanceof Error ? streamError.message : "连接中断";
+        if (!sawEvent) {
+          try {
+            const response = await chat(text, sessionId);
+            if (!response.ok) throw new Error(response.error || "DSH 没有返回结果。");
+            if (response.session_id) setSessionId(response.session_id);
+            const blocks: MessageBlock[] = [];
+            if (response.thinking) {
+              blocks.push({
+                id: crypto.randomUUID(),
+                kind: "thinking",
+                text: response.thinking,
+              });
+            }
+            (response.tool_calls || []).forEach((tool) => {
+              blocks.push({
+                id: crypto.randomUUID(),
+                kind: "tool",
+                callId: tool.callId,
+                tool: tool.tool,
+                input: tool.input,
+                status: tool.status || "completed",
+                result: tool.result,
+              });
+            });
+            blocks.push({
+              id: crypto.randomUUID(),
+              kind: "text",
+              text: response.text || "（没有文本）",
+            });
+            update({
+              blocks,
+              text: response.text || "（没有文本）",
+              usage: response.usage || null,
+              elapsed_ms: response.elapsed_ms,
+            });
+          } catch (fallbackError) {
+            const message =
+              fallbackError instanceof Error ? fallbackError.message : "请求失败";
+            pushNotice(`请求失败：${reason}；回退失败：${message}`);
+            update({ error: true });
+          }
+        } else {
+          pushNotice(`连接中断：${reason}。已保留已收到的内容；可以直接重试。`);
         }
       } finally {
         setBusy(false);
@@ -287,6 +359,7 @@ export default function App() {
     },
     [sessionId],
   );
+
   const reset = useCallback(() => {
     setMessages([]);
     setSessionId(undefined);
