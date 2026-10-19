@@ -6,6 +6,8 @@ Phase 2 的双栏平台：左 1/3 星历可视化，右 2/3 Agent。它**不修�
 >
 > Agent 在本仓库的工作约定见 [`AGENTS.md`](AGENTS.md)。
 
+![Phase 2 前端：左 1/3 星历、右 2/3 Agent](docs/assets/frontend.png)
+
 ## 它是什么
 
 ```text

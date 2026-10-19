@@ -21,3 +21,13 @@
         sandbox: workspace-write
         approval: never
     defaultPreset: workspace-write
+
+# 星历服务：DSH 通过 MCP 调用本机 RS-Service
+- insert:
+    - id: mcp-client
+      name: "@deepseek-ai/dsh-mcp-client"
+      config:
+        serverName: rs-service
+        transport: streamable-http
+        url: http://127.0.0.1:8765/mcp
+

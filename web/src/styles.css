@@ -560,6 +560,60 @@ button {
   color: #fecaca;
 }
 
+.tool-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 7px;
+}
+
+.tool-card {
+  border: 1px solid rgba(34, 211, 238, 0.22);
+  border-radius: 8px;
+  background: rgba(34, 211, 238, 0.05);
+  padding: 6px 9px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.tool-card summary {
+  cursor: pointer;
+  user-select: none;
+  color: #9fdce8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tool-status {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.tool-status.ok {
+  background: var(--accent-2);
+  box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.12);
+}
+
+.tool-card pre {
+  margin: 6px 0 0;
+  padding: 7px 8px;
+  border-radius: 6px;
+  background: rgba(4, 10, 18, 0.7);
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 180px;
+  overflow: auto;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: #c7d8ea;
+}
+
 .thinking {
   margin-top: 6px;
   font-size: 11.5px;

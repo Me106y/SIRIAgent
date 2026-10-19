@@ -44,6 +44,26 @@ def _event_text(events: list[dict], event_type: str) -> str:
     return "\n".join(parts).strip()
 
 
+def _tool_events(events: list[dict]) -> list[dict]:
+    calls: dict[str, dict] = {}
+    order: list[str] = []
+    for event in events:
+        if event.get("type") == "tool_call":
+            call_id = str(event.get("callId") or "")
+            calls[call_id] = {
+                "callId": call_id,
+                "tool": event.get("tool"),
+                "input": event.get("input"),
+            }
+            order.append(call_id)
+        elif event.get("type") == "tool_result":
+            call_id = str(event.get("callId") or "")
+            if call_id in calls:
+                calls[call_id]["status"] = event.get("status")
+                calls[call_id]["result"] = event.get("result")
+    return [calls[call_id] for call_id in order]
+
+
 def _last_usage(events: list[dict]) -> dict | None:
     for event in reversed(events):
         if event.get("type") == "status" and isinstance(event.get("usage"), dict):
@@ -249,6 +269,7 @@ def chat():
             "text": final_text or "（DSH 没有返回文本。）",
             "thinking": _event_text(events, "thinking"),
             "usage": _last_usage(events),
+            "tool_calls": _tool_events(events),
             "elapsed_ms": int((time.time() - started) * 1000),
             "events": len(events),
         }

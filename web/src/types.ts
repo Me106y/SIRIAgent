@@ -74,11 +74,20 @@ export interface ChatUsage {
   [key: string]: unknown;
 }
 
+export interface ToolCall {
+  callId: string;
+  tool: string;
+  input?: unknown;
+  status?: string;
+  result?: unknown;
+}
+
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant";
   text: string;
   thinking?: string;
+  tools?: ToolCall[];
   usage?: ChatUsage | null;
   elapsed_ms?: number;
   error?: boolean;

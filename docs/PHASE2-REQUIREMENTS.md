@@ -815,7 +815,7 @@ M5 联调上线（约 0.5 周）
 | 里程碑 | 状态 | 证据 |
 | --- | --- | --- |
 | M1 数据服务 | **进行中** | 两仓库已公开（[SIRIAgent](https://github.com/Me106y/SIRIAgent)、[RS-Service](https://github.com/Me106y/RS-Service)）；12 表迁移 `73866dc4fe27`；111 颗 seed；首次同步 111 条 TLE；REST/MCP 可用；12 个测试通过。待补：AOI/GCJ-02 入库、覆盖/重访、云量写入 `pass_window` |
-| M2 Agent 可查 | **进行中** | MCP 已实现 `list_satellites`、`get_satellite`、`next_passes`、`ground_track`、`current_position`、`sync_status`；待补 `get_tle`、`propagate`、`coverage_window`、`run_command` 与 4 个 skill |
+| M2 Agent 可查 | **进行中** | MCP 已接入 `headless.patch.yml`（Streamable HTTP）；6 个工具可用，前端已显示工具卡；待补 `get_tle`、`propagate`、`coverage_window`、`run_command` 与 4 个 skill |
 | M3 前端骨架 | **已完成骨架** | `web/` React 19 + Vite + TS + Cesium；1/3 + 2/3 布局；111 颗位置 5 s 刷新；选中星轨迹与过境表；`/api/chat` 可用；1440/900/488 宽度无横向溢出 |
 | M4 可视化 | **部分完成** | 地球、实时位置、轨迹、过境表已接；时间轴、足迹、覆盖图层待补 |
 | 流式 | 待补 | 当前前端复用 `/api/chat`（headless 一次性返回）；D2 的 SDK 流式桥未接 |

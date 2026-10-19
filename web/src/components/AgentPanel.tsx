@@ -77,6 +77,34 @@ export function AgentPanel({ messages, busy, sessionId, onSend, onReset }: Props
             <div className={message.error ? "bubble error" : "bubble"}>
               {message.text || (message.role === "assistant" ? "…" : "")}
             </div>
+            {message.tools && message.tools.length > 0 && (
+              <div className="tool-list">
+                {message.tools.map((tool) => (
+                  <details className="tool-card" key={tool.callId}>
+                    <summary>
+                      <span
+                        className={
+                          tool.status === "completed"
+                            ? "tool-status ok"
+                            : "tool-status"
+                        }
+                      />
+                      {tool.tool}
+                    </summary>
+                    {tool.input != null && (
+                      <pre>{JSON.stringify(tool.input, null, 2)}</pre>
+                    )}
+                    {tool.result != null && (
+                      <pre>
+                        {typeof tool.result === "string"
+                          ? tool.result
+                          : JSON.stringify(tool.result, null, 2)}
+                      </pre>
+                    )}
+                  </details>
+                ))}
+              </div>
+            )}
             {message.thinking && (
               <details className="thinking">
                 <summary>思考过程</summary>

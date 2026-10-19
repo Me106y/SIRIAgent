@@ -132,6 +132,7 @@ export default function App() {
             role: "assistant",
             text: response.text || "（没有文本）",
             thinking: response.thinking || undefined,
+            tools: response.tool_calls || [],
             usage: response.usage || null,
             elapsed_ms: response.elapsed_ms,
           },

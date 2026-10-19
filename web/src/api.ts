@@ -4,6 +4,7 @@ import type {
   PositionItem,
   Satellite,
   SyncStatus,
+  ToolCall,
   TrackPoint,
 } from "./types";
 
@@ -38,6 +39,7 @@ export interface ChatResponse {
   session_id?: string;
   text?: string;
   thinking?: string;
+  tool_calls?: ToolCall[];
   usage?: ChatUsage | null;
   elapsed_ms?: number;
   error?: string;
