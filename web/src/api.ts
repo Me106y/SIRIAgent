@@ -30,7 +30,15 @@ async function getJson<T>(path: string, timeoutMs = 15_000): Promise<T> {
   }
 }
 
+export interface BootstrapPayload {
+  ok: boolean;
+  satellites: { total: number; items: Satellite[] };
+  positions: { count: number; items: PositionItem[]; generated_at: string };
+  balance: Balance;
+}
+
 export const api = {
+  bootstrap: () => getJson<BootstrapPayload>("/api/bootstrap", 20_000),
   satellites: () =>
     getJson<{ total: number; items: Satellite[] }>("/api/rs/satellites?limit=200"),
   satellite: (norad: number) =>

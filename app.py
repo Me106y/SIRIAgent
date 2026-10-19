@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import queue
@@ -23,6 +24,32 @@ RS_SERVICE_BASE = os.environ.get("RS_SERVICE_BASE", "http://127.0.0.1:8766/api/v
 
 from sdk_runtime import manager  # noqa: E402  (项目根模块)
 _RS_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
+
+def _cache_policy(subpath: str) -> str:
+    """按数据新鲜度分层缓存：目录/详情日更，轨迹/过境/位置是秒级动态数据。"""
+    if subpath == "positions":
+        return "no-store"
+    if subpath.startswith("satellites/"):
+        if subpath.endswith("/track") or subpath.endswith("/passes"):
+            return "no-store"
+        return "public, max-age=300"
+    if subpath == "satellites":
+        return "public, max-age=300"
+    if subpath.startswith("aoi/"):
+        return "public, max-age=3600"
+    if subpath == "sync/status":
+        return "public, max-age=60"
+    return "no-store"
+
+
+def _with_cache(response: Response, policy: str, body: bytes | None = None) -> Response:
+    """写入 Cache-Control；可缓存响应带 ETag，命中 If-None-Match 时回 304。"""
+    response.headers["Cache-Control"] = policy
+    if policy != "no-store" and body is not None:
+        response.set_etag(hashlib.sha256(body).hexdigest()[:32])
+        response = response.make_conditional(request)
+    return response
 
 DSH_ROOT = Path(
     os.environ.get(
@@ -137,20 +164,27 @@ def rs_proxy(subpath: str):
     for attempt in range(2):
         try:
             with _RS_OPENER.open(req, timeout=30) as resp:
-                return Response(
-                    resp.read(),
-                    status=resp.status,
-                    content_type=resp.headers.get("Content-Type", "application/json"),
+                body = resp.read()
+                return _with_cache(
+                    Response(
+                        body,
+                        status=resp.status,
+                        content_type=resp.headers.get("Content-Type", "application/json"),
+                    ),
+                    _cache_policy(subpath),
+                    body,
                 )
         except urllib.error.HTTPError as exc:
             if exc.code >= 500 and attempt == 0:
                 time.sleep(0.15)
                 continue
-            return Response(
+            error = Response(
                 exc.read(),
                 status=exc.code,
                 content_type=exc.headers.get("Content-Type", "application/json"),
             )
+            error.headers["Cache-Control"] = "no-store"
+            return error
         except (urllib.error.URLError, TimeoutError) as exc:
             if attempt == 0:
                 time.sleep(0.15)
@@ -159,15 +193,33 @@ def rs_proxy(subpath: str):
             return jsonify({"ok": False, "error": f"RS-Service 不可达：{exc}"}), 502
 
 
+def _rs_json(subpath: str) -> dict:
+    """服务端直连 RS-Service 取 JSON（供 bootstrap 合并首屏请求）。"""
+    url = f"{RS_SERVICE_BASE}/{subpath}"
+    req = urllib.request.Request(url, headers={"Accept": "application/json"})
+    with _RS_OPENER.open(req, timeout=30) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
 @app.get("/<path:filename>")
 def frontend_files(filename: str):
     if (WEB_DIST / filename).is_file():
-        return send_from_directory(WEB_DIST, filename)
-    if (STATIC_DIR / filename).is_file():
-        return send_from_directory(STATIC_DIR, filename)
-    if (WEB_DIST / "index.html").is_file():
-        return send_from_directory(WEB_DIST, "index.html")
-    return jsonify({"ok": False, "error": "not found"}), 404
+        response = send_from_directory(WEB_DIST, filename)
+    elif (STATIC_DIR / filename).is_file():
+        response = send_from_directory(STATIC_DIR, filename)
+    elif (WEB_DIST / "index.html").is_file():
+        response = send_from_directory(WEB_DIST, "index.html")
+    else:
+        return jsonify({"ok": False, "error": "not found"}), 404
+    if filename.startswith("assets/"):
+        # Vite 产物带内容哈希：下载一次后长期复用，升级时 URL 自然变化。
+        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+    elif filename.startswith("cesium/"):
+        # Cesium 资源没有内容哈希，保守缓存 7 天；升级版本时再清一次。
+        response.headers["Cache-Control"] = "public, max-age=604800"
+    elif filename in ("sw.js", "index.html"):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
 
 
 _BALANCE_CACHE: dict[str, object] = {"at": 0.0, "payload": None}
@@ -250,11 +302,34 @@ def balance() -> Response:
     now = time.time()
     cached = _BALANCE_CACHE.get("payload")
     if not refresh and cached and now - float(_BALANCE_CACHE.get("at") or 0) < 60:
-        return jsonify(cached)
-    payload = _fetch_balance()
-    _BALANCE_CACHE["at"] = now
-    _BALANCE_CACHE["payload"] = payload
-    return jsonify(payload)
+        payload = cached
+    else:
+        payload = _fetch_balance()
+        _BALANCE_CACHE["at"] = now
+        _BALANCE_CACHE["payload"] = payload
+    body = json.dumps(payload, sort_keys=True, ensure_ascii=False).encode()
+    policy = "no-store" if refresh else "public, max-age=60"
+    return _with_cache(jsonify(payload), policy, body)
+
+
+@app.get("/api/bootstrap")
+def bootstrap() -> Response:
+    """首屏一次拿齐目录、星历与余额，少 3 个往返；星历是秒级数据，不缓存。"""
+    try:
+        satellites = _rs_json("satellites?limit=200")
+        positions = _rs_json("positions")
+    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, ValueError) as exc:
+        return jsonify({"ok": False, "error": f"RS-Service 不可达：{exc}"}), 502
+    response = jsonify(
+        {
+            "ok": True,
+            "satellites": satellites,
+            "positions": positions,
+            "balance": _fetch_balance(),
+        }
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @app.get("/api/skills")
@@ -265,13 +340,15 @@ def skills() -> Response:
             meta = _skill_meta(path)
             if meta:
                 items.append(meta)
-    return jsonify({"items": items})
+    payload = {"items": items}
+    body = json.dumps(payload, ensure_ascii=False).encode()
+    return _with_cache(jsonify(payload), "public, max-age=3600", body)
 
 
 @app.get("/api/health")
 def health():
     ready = DSH_CLI.is_file() and PATCH_FILE.is_file() and Path(NODE_BIN).is_file()
-    return jsonify(
+    response = jsonify(
         {
             "ok": True,
             "dsh_ready": ready,
@@ -284,6 +361,8 @@ def health():
             "timeout_seconds": DSH_TIMEOUT,
         }
     )
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @app.post("/api/chat/stream")

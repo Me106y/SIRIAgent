@@ -28,6 +28,7 @@ Cloudflare Tunnel
 127.0.0.1:8000  gunicorn + Flask（本项目）
   ├─ /            → web/dist（React + Cesium）
   ├─ /api/rs/*    → 127.0.0.1:8766（RS-Service REST）
+  ├─ /api/bootstrap → 首屏聚合：目录 + 星历 + 余额（一次往返）
   ├─ /api/chat/stream → DSH Python SDK（SSE：工具卡 + 文本）
   ├─ /api/balance → DeepSeek API 余额（60 s 缓存）
   ├─ /api/skills  → skills/*/SKILL.md
@@ -39,6 +40,9 @@ DSH agent（DeepSeek Harness） + RS-Service（星历/MCP）
 - 前端：`web/`，React 19 + Vite + TypeScript + CesiumJS；构建产物 `web/dist/` 由 Flask 托管。
 - 历史页面：`static/index.html`，仅在 `web/dist` 不存在时兜底。
 - 后端：`app.py`，Flask；`/api/rs/*` 反代到本机 RS-Service，浏览器不直连 8766。
+- 首屏：Cesium 运行时按需加载；目录先读 localStorage 再后台刷新；`/api/bootstrap` 合并目录/星历/余额。目录类接口带 `ETag` 与 `Cache-Control`，位置/过境保持 `no-store`。
+- 静态资源：`/assets/*` 一年 `immutable`，`/cesium/*` 7 天；首次访问后浏览器不再重复下载 Cesium。
+- Service Worker（`web/public/sw.js`）：`/cesium/*`、`/assets/*` 进 Cache Storage，首访后离线也能开；升级 Cesium 时改 `VERSION`。
 - DSH：`dsh --profile headless`，每次消息一次运行；用 `--session-id` 续聊。
 - 顶栏余额：`/api/balance` 读取本机 DSH 凭据并查询 DeepSeek API 余额（60 s 缓存）。
 - 输入框：`/` 打开技能菜单（`skills/*/SKILL.md`），Enter 发送，Shift+Enter 换行。

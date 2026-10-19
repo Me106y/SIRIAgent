@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { api, chat, streamChat } from "./api";
+import { readCatalogCache, writeCatalogCache } from "./lib/catalogCache";
 import { AgentPanel } from "./components/AgentPanel";
 import { Globe } from "./components/Globe";
 import { SatellitePanel } from "./components/SatellitePanel";
@@ -28,36 +29,111 @@ export default function App() {
   const [hangzhouToken, setHangzhouToken] = useState(0);
   const [hangzhouPolygon, setHangzhouPolygon] = useState<number[][] | null>(null);
   const [balance, setBalance] = useState<Balance | null>(null);
+  const [bootDone, setBootDone] = useState(false);
+
+  const bootRef = useRef<"pending" | "ok" | "failed">("pending");
+  const positionsInFlight = useRef(false);
+
+  const applyCatalog = useCallback((items: Satellite[]) => {
+    setSatellites(items);
+    const preferred = items.find((item) => item.norad === 40118) || items[0];
+    if (preferred) setSelected((current) => current ?? preferred.norad);
+  }, []);
+
+  const loadSatellites = useCallback(async () => {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        const payload = await api.satellites();
+        applyCatalog(payload.items);
+        writeCatalogCache(payload.items);
+        return;
+      } catch (exc) {
+        if (attempt === 0) {
+          await new Promise((resolve) => window.setTimeout(resolve, 900));
+          continue;
+        }
+        console.warn("satellite catalog unavailable", exc);
+      }
+    }
+  }, [applyCatalog]);
+
+  const loadBalance = useCallback(async (refresh = false) => {
+    try {
+      setBalance(await api.balance(refresh));
+    } catch {
+      setBalance({ ok: false, error: "unreachable" });
+    }
+  }, []);
+
+  const loadPositions = useCallback(async () => {
+    if (positionsInFlight.current) return;
+    positionsInFlight.current = true;
+    try {
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        try {
+          const payload = await api.positions();
+          const next: Record<number, PositionItem> = {};
+          payload.items.forEach((item) => {
+            next[item.norad] = item;
+          });
+          setPositions(next);
+          return;
+        } catch (exc) {
+          if (attempt === 0) {
+            await new Promise((resolve) => window.setTimeout(resolve, 350));
+            continue;
+          }
+          // 后台轮询失败保持上一帧星历，不打断界面。
+          console.warn("positions poll unavailable", exc);
+        }
+      }
+    } finally {
+      positionsInFlight.current = false;
+    }
+  }, []);
 
   useEffect(() => {
     let alive = true;
+    const cached = readCatalogCache();
+    if (cached) applyCatalog(cached);
+
+    // 目录/星历到位后再放 Cesium 进来，避免 1.7 MB 把 bootstrap 挤到十几秒。
+    const safety = window.setTimeout(() => {
+      if (alive) setBootDone(true);
+    }, 6000);
 
     const load = async () => {
-      for (let attempt = 0; attempt < 2; attempt += 1) {
-        try {
-          const payload = await api.satellites();
-          if (!alive) return;
-          setSatellites(payload.items);
-          const preferred =
-            payload.items.find((item) => item.norad === 40118) || payload.items[0];
-          if (preferred) setSelected((current) => current ?? preferred.norad);
-          return;
-        } catch (exc) {
-          if (!alive) return;
-          if (attempt === 0) {
-            await new Promise((resolve) => window.setTimeout(resolve, 900));
-            continue;
-          }
-          console.warn("satellite catalog unavailable", exc);
-        }
+      try {
+        const payload = await api.bootstrap();
+        if (!alive) return;
+        applyCatalog(payload.satellites.items);
+        writeCatalogCache(payload.satellites.items);
+        const next: Record<number, PositionItem> = {};
+        payload.positions.items.forEach((item) => {
+          next[item.norad] = item;
+        });
+        setPositions(next);
+        setBalance(payload.balance);
+        bootRef.current = "ok";
+      } catch (exc) {
+        if (!alive) return;
+        bootRef.current = "failed";
+        console.warn("bootstrap unavailable", exc);
+        void loadSatellites();
+        void loadBalance();
+        void loadPositions();
+      } finally {
+        window.clearTimeout(safety);
+        if (alive) setBootDone(true);
       }
     };
 
     void load();
     return () => {
       alive = false;
+      window.clearTimeout(safety);
     };
-  }, []);
+  }, [applyCatalog, loadBalance, loadPositions, loadSatellites]);
 
   useEffect(() => {
     let alive = true;
@@ -74,63 +150,20 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    let alive = true;
-    const load = async (refresh = false) => {
-      try {
-        const payload = await api.balance(refresh);
-        if (alive) setBalance(payload);
-      } catch {
-        if (alive) setBalance({ ok: false, error: "unreachable" });
-      }
-    };
-    void load();
-    const timer = window.setInterval(() => void load(), 60_000);
+    if (bootRef.current !== "pending") void loadBalance();
+    const timer = window.setInterval(() => void loadBalance(), 60_000);
     return () => {
-      alive = false;
       window.clearInterval(timer);
     };
-  }, []);
+  }, [loadBalance]);
 
   useEffect(() => {
-    let alive = true;
-    let inFlight = false;
-
-    const load = async () => {
-      if (inFlight) return;
-      inFlight = true;
-      try {
-        for (let attempt = 0; attempt < 2; attempt += 1) {
-          try {
-            const payload = await api.positions();
-            if (!alive) return;
-            const next: Record<number, PositionItem> = {};
-            payload.items.forEach((item) => {
-              next[item.norad] = item;
-            });
-            setPositions(next);
-            return;
-          } catch (exc) {
-            if (!alive) return;
-            if (attempt === 0) {
-              await new Promise((resolve) => window.setTimeout(resolve, 350));
-              continue;
-            }
-            // 后台轮询失败保持上一帧星历，不打断界面。
-            console.warn("positions poll unavailable", exc);
-          }
-        }
-      } finally {
-        inFlight = false;
-      }
-    };
-
-    void load();
-    const timer = window.setInterval(() => void load(), 5000);
+    if (bootRef.current !== "pending") void loadPositions();
+    const timer = window.setInterval(() => void loadPositions(), 5000);
     return () => {
-      alive = false;
       window.clearInterval(timer);
     };
-  }, []);
+  }, [loadPositions]);
 
   useEffect(() => {
     if (selected == null) {
@@ -453,6 +486,7 @@ export default function App() {
               focusToken={focusToken}
               hangzhouToken={hangzhouToken}
               hangzhouPolygon={hangzhouPolygon}
+              enabled={bootDone}
             />
             <div className="globe-caption">
               <span>
