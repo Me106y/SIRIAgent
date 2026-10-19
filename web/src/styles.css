@@ -576,7 +576,14 @@ button {
 }
 
 .message.user {
+  width: fit-content;
+  max-width: 82%;
   margin-left: auto;
+}
+
+.message.user .bubble {
+  width: fit-content;
+  max-width: 100%;
 }
 
 .who {
