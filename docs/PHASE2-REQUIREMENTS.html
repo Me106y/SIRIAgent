@@ -318,6 +318,7 @@ main ul li::marker { color: var(--brand); }
 <a class="depth-3" href="#sec-7-3">7.3 Phase 3 第一项（占位）</a>
 <a class="depth-2" href="#sec-8">8. 优先级总表</a>
 <a class="depth-2" href="#sec-9">9. 依赖与里程碑</a>
+<a class="depth-3" href="#sec-9-1">9.1 实施进度（2026-10-19）</a>
 <a class="depth-2" href="#sec-10">10. 风险与回滚</a>
 <a class="depth-2" href="#sec-11">11. 决策记录（已关闭）</a>
 <a class="depth-2" href="#sec-12">12. 附录</a>
@@ -2890,6 +2891,7 @@ CREATE INDEX idx_sensor_sat     ON sensor(sat_id);
 </tr>
 </tbody>
 </table></div>
+<div class="callout"><span class="callout-label">说明</span><p>2026-10-19 已实现：<code>list_satellites</code>、<code>get_satellite</code>、<code>next_passes</code>、<code>ground_track</code>、<code>current_position</code>、<code>sync_status</code>；其余待补。</p></div>
 <p>所有工具出参统一包一层：</p>
 <pre><code class="language-json">{
   &quot;ok&quot;: true,
@@ -3492,6 +3494,43 @@ M5 联调上线（约 0.5 周）
   D7/D8/D9 + 验收演示
 </code></pre>
 <p>关键路径：<strong>A3（gh 登录）→ A1/A2 → B2（数据源）→ B4（卫星集）→ B6（过境）→ C2（MCP）→ D5（可视化联调）</strong>。</p>
+<h3 id="sec-9-1">9.1 实施进度（2026-10-19）</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>里程碑</th>
+<th>状态</th>
+<th>证据</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M1 数据服务</td>
+<td><strong>进行中</strong></td>
+<td>两仓库已公开（<a href="https://github.com/Me106y/SIRIAgent">SIRIAgent</a>、<a href="https://github.com/Me106y/RS-Service">RS-Service</a>）；12 表迁移 <code>73866dc4fe27</code>；111 颗 seed；首次同步 111 条 TLE；REST/MCP 可用；12 个测试通过。待补：AOI/GCJ-02 入库、覆盖/重访、云量写入 <code>pass_window</code></td>
+</tr>
+<tr>
+<td>M2 Agent 可查</td>
+<td><strong>进行中</strong></td>
+<td>MCP 已实现 <code>list_satellites</code>、<code>get_satellite</code>、<code>next_passes</code>、<code>ground_track</code>、<code>current_position</code>、<code>sync_status</code>；待补 <code>get_tle</code>、<code>propagate</code>、<code>coverage_window</code>、<code>run_command</code> 与 4 个 skill</td>
+</tr>
+<tr>
+<td>M3 前端骨架</td>
+<td>未开始</td>
+<td>待 D1–D3、D6</td>
+</tr>
+<tr>
+<td>M4 可视化</td>
+<td>未开始</td>
+<td>待 D4–D5</td>
+</tr>
+<tr>
+<td>M5 联调上线</td>
+<td>未开始</td>
+<td>待 D7–D9 与验收演示</td>
+</tr>
+</tbody>
+</table></div>
 <hr />
 <h2 id="sec-10">10. 风险与回滚</h2>
 <div class="table-wrap"><table>

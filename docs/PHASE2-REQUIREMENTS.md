@@ -566,6 +566,8 @@ CREATE INDEX idx_sensor_sat     ON sensor(sat_id);
 | `sync_status` | — | 最近同步、TLE 年龄、失败项 | |
 | `run_command` | `command`（枚举）、`args`（schema） | stdout/结构化结果 + 审计 id | 受控命令入口，见 §5.3 |
 
+> 2026-10-19 已实现：`list_satellites`、`get_satellite`、`next_passes`、`ground_track`、`current_position`、`sync_status`；其余待补。
+
 所有工具出参统一包一层：
 
 ```json
@@ -807,6 +809,16 @@ M5 联调上线（约 0.5 周）
 ```
 
 关键路径：**A3（gh 登录）→ A1/A2 → B2（数据源）→ B4（卫星集）→ B6（过境）→ C2（MCP）→ D5（可视化联调）**。
+
+### 9.1 实施进度（2026-10-19）
+
+| 里程碑 | 状态 | 证据 |
+| --- | --- | --- |
+| M1 数据服务 | **进行中** | 两仓库已公开（[SIRIAgent](https://github.com/Me106y/SIRIAgent)、[RS-Service](https://github.com/Me106y/RS-Service)）；12 表迁移 `73866dc4fe27`；111 颗 seed；首次同步 111 条 TLE；REST/MCP 可用；12 个测试通过。待补：AOI/GCJ-02 入库、覆盖/重访、云量写入 `pass_window` |
+| M2 Agent 可查 | **进行中** | MCP 已实现 `list_satellites`、`get_satellite`、`next_passes`、`ground_track`、`current_position`、`sync_status`；待补 `get_tle`、`propagate`、`coverage_window`、`run_command` 与 4 个 skill |
+| M3 前端骨架 | 未开始 | 待 D1–D3、D6 |
+| M4 可视化 | 未开始 | 待 D4–D5 |
+| M5 联调上线 | 未开始 | 待 D7–D9 与验收演示 |
 
 ---
 
