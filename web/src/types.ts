@@ -139,3 +139,21 @@ export interface HangzhouBoundary {
     geometry: { type: "Polygon"; coordinates: number[][][] };
   }>;
 }
+
+export interface Balance {
+  ok: boolean;
+  available?: boolean;
+  currency?: string;
+  total?: string;
+  granted?: string;
+  topped_up?: string;
+  checked_at?: string;
+  error?: string;
+}
+
+export interface Skill {
+  name: string;
+  description: string;
+  when_to_use: string;
+  path: string;
+}

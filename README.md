@@ -1,12 +1,16 @@
 # SIRIAgent
 
-Phase 2 的双栏平台：左 1/3 星历可视化，右 2/3 Agent。它**不修改** `SIRI-Agent` 项目，只在自己的目录里运行。
+面向遥感任务的双栏平台：左 1/3 星历可视化，右 2/3 Agent。它**不修改** `SIRI-Agent` 项目，只在自己的目录里运行。
 
-> Phase 2 的范围、优先级与验收标准见 [`docs/PHASE2-REQUIREMENTS.md`](docs/PHASE2-REQUIREMENTS.md)（[HTML 版](docs/PHASE2-REQUIREMENTS.html)，由 `scripts/build_requirements_html.py` 生成）。后续需求变更只改该文档，不再写入 `SIRI-Agent`。
+> 需求范围、优先级与验收标准见 [`docs/PHASE2-REQUIREMENTS.md`](docs/PHASE2-REQUIREMENTS.md)（[HTML 版](docs/PHASE2-REQUIREMENTS.html)，由 `scripts/build_requirements_html.py` 生成）。后续需求变更只改该文档，不再写入 `SIRI-Agent`。
 >
 > Agent 在本仓库的工作约定见 [`AGENTS.md`](AGENTS.md)。
 
-![Phase 2 前端：左 1/3 星历、右 2/3 Agent](docs/assets/frontend.png)
+![SIRIAgent 前端：左 1/3 星历、右 2/3 Agent](docs/assets/frontend.png)
+
+工具调用与思考态按 DSH 的方式呈现：运行中显示转圈，完成后折叠为一行；思考过程在答案上方。
+
+![工具调用与思考态](docs/assets/chat.png)
 
 点「杭州」飞到杭州，并用 WGS84 市界多边形让杭州边界闪烁约 6 秒：
 
@@ -24,7 +28,10 @@ Cloudflare Tunnel
 127.0.0.1:8000  gunicorn + Flask（本项目）
   ├─ /            → web/dist（React + Cesium）
   ├─ /api/rs/*    → 127.0.0.1:8766（RS-Service REST）
-  └─ /api/chat    → dsh --profile headless --json
+  ├─ /api/chat/stream → DSH Python SDK（SSE：工具卡 + 文本）
+  ├─ /api/balance → DeepSeek API 余额（60 s 缓存）
+  ├─ /api/skills  → skills/*/SKILL.md
+  └─ /api/chat    → 回退：dsh --profile headless --json
   ▼
 DSH agent（DeepSeek Harness） + RS-Service（星历/MCP）
 ```
@@ -33,6 +40,8 @@ DSH agent（DeepSeek Harness） + RS-Service（星历/MCP）
 - 历史页面：`static/index.html`，仅在 `web/dist` 不存在时兜底。
 - 后端：`app.py`，Flask；`/api/rs/*` 反代到本机 RS-Service，浏览器不直连 8766。
 - DSH：`dsh --profile headless`，每次消息一次运行；用 `--session-id` 续聊。
+- 顶栏余额：`/api/balance` 读取本机 DSH 凭据并查询 DeepSeek API 余额（60 s 缓存）。
+- 输入框：`/` 打开技能菜单（`skills/*/SKILL.md`），Enter 发送，Shift+Enter 换行。
 - 端口：`127.0.0.1:8000`，与原来的平台一致，Tunnel 不需要改。
 
 ## 前端开发
@@ -44,7 +53,7 @@ pnpm dev          # 开发服务器 5173，/api 代理到 8000
 pnpm build        # 产物写入 web/dist，Flask 自动托管
 ```
 
-前端依赖 RS-Service 的 REST（`127.0.0.1:8766`）。相机控制：「聚焦」飞到选中星足迹，「杭州」飞到杭州并让 80 km 区域闪烁约 6 秒。时间轴 UI 暂不启用，后端 `at` 参数保留。启动顺序：
+前端依赖 RS-Service 的 REST（`127.0.0.1:8766`）。相机控制：「聚焦」飞到选中星足迹，「杭州」飞到杭州并让市界多边形闪烁约 6 秒。时间轴 UI 暂不启用，后端 `at` 参数保留。启动顺序：
 
 ```bash
 systemctl --user start rs-service-api.service   # 星历服务

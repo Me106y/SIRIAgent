@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import time
@@ -15,6 +16,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 STATIC_DIR = PROJECT_ROOT / "static"
 WEB_DIST = PROJECT_ROOT / "web" / "dist"
 PATCH_FILE = PROJECT_ROOT / "headless.patch.yml"
+SKILLS_DIR = PROJECT_ROOT / "skills"
 RS_SERVICE_BASE = os.environ.get("RS_SERVICE_BASE", "http://127.0.0.1:8766/api/v1")
 
 from sdk_runtime import manager  # noqa: E402  (项目根模块)
@@ -156,6 +158,104 @@ def frontend_files(filename: str):
     if (WEB_DIST / "index.html").is_file():
         return send_from_directory(WEB_DIST, "index.html")
     return jsonify({"ok": False, "error": "not found"}), 404
+
+
+_BALANCE_CACHE: dict[str, object] = {"at": 0.0, "payload": None}
+
+
+def _read_deepseek_key() -> str | None:
+    env = os.environ.get("DEEPSEEK_API_KEY")
+    if env:
+        return env.strip()
+    for path in (
+        PROJECT_ROOT / ".credentials.yaml",
+        Path.home() / ".dsh-siriagent" / ".credentials.yaml",
+        Path.home() / ".dsh" / ".credentials.yaml",
+    ):
+        if not path.is_file():
+            continue
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        match = re.search(r"^\s*DEEPSEEK_API_KEY:\s*(\S+)\s*$", text, re.MULTILINE)
+        if match:
+            return match.group(1).strip()
+    return None
+
+
+def _fetch_balance() -> dict:
+    key = _read_deepseek_key()
+    if not key:
+        return {"ok": False, "error": "missing_api_key"}
+    request = urllib.request.Request(
+        "https://api.deepseek.com/user/balance",
+        headers={"Authorization": f"Bearer {key}", "Accept": "application/json"},
+    )
+    try:
+        with _RS_OPENER.open(request, timeout=12) as response:
+            data = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        return {"ok": False, "error": f"http_{exc.code}"}
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+        return {"ok": False, "error": type(exc).__name__}
+    infos = data.get("balance_infos") or []
+    if not infos:
+        return {"ok": False, "error": "empty_balance"}
+    info = infos[0]
+    return {
+        "ok": True,
+        "available": bool(data.get("is_available")),
+        "currency": info.get("currency", "CNY"),
+        "total": info.get("total_balance"),
+        "granted": info.get("granted_balance"),
+        "topped_up": info.get("topped_up_balance"),
+        "checked_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+
+
+def _skill_meta(path: Path) -> dict | None:
+    text = path.read_text(encoding="utf-8", errors="ignore")
+    if not text.startswith("---"):
+        return None
+    parts = text.split("---", 2)
+    if len(parts) < 3:
+        return None
+    meta: dict[str, str] = {}
+    for line in parts[1].splitlines():
+        if ":" not in line:
+            continue
+        key, value = line.split(":", 1)
+        meta[key.strip()] = value.strip().strip('"').strip("'")
+    if not meta.get("name"):
+        return None
+    return {
+        "name": meta["name"],
+        "description": meta.get("description", ""),
+        "when_to_use": meta.get("when-to-use") or meta.get("when_to_use", ""),
+        "path": str(path.relative_to(PROJECT_ROOT)),
+    }
+
+
+@app.get("/api/balance")
+def balance() -> Response:
+    refresh = request.args.get("refresh") == "1"
+    now = time.time()
+    cached = _BALANCE_CACHE.get("payload")
+    if not refresh and cached and now - float(_BALANCE_CACHE.get("at") or 0) < 60:
+        return jsonify(cached)
+    payload = _fetch_balance()
+    _BALANCE_CACHE["at"] = now
+    _BALANCE_CACHE["payload"] = payload
+    return jsonify(payload)
+
+
+@app.get("/api/skills")
+def skills() -> Response:
+    items = []
+    if SKILLS_DIR.is_dir():
+        for path in sorted(SKILLS_DIR.glob("*/SKILL.md")):
+            meta = _skill_meta(path)
+            if meta:
+                items.append(meta)
+    return jsonify({"items": items})
 
 
 @app.get("/api/health")

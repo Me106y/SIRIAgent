@@ -5,11 +5,11 @@ import { AgentPanel } from "./components/AgentPanel";
 import { Globe } from "./components/Globe";
 import { SatellitePanel } from "./components/SatellitePanel";
 import type {
+  Balance,
   ChatMessage,
   PassItem,
   PositionItem,
   Satellite,
-  SyncStatus,
   TrackPoint,
 } from "./types";
 
@@ -19,7 +19,6 @@ export default function App() {
   const [selected, setSelected] = useState<number | null>(null);
   const [track, setTrack] = useState<TrackPoint[]>([]);
   const [passes, setPasses] = useState<PassItem[]>([]);
-  const [sync, setSync] = useState<SyncStatus | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sessionId, setSessionId] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
@@ -28,6 +27,7 @@ export default function App() {
   const [focusToken, setFocusToken] = useState(0);
   const [hangzhouToken, setHangzhouToken] = useState(0);
   const [hangzhouPolygon, setHangzhouPolygon] = useState<number[][] | null>(null);
+  const [balance, setBalance] = useState<Balance | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -41,10 +41,6 @@ export default function App() {
         if (preferred) setSelected((current) => current ?? preferred.norad);
       })
       .catch((exc: Error) => alive && setError(`卫星目录加载失败：${exc.message}`));
-    api
-      .sync()
-      .then((payload) => alive && setSync(payload))
-      .catch(() => undefined);
     return () => {
       alive = false;
     };
@@ -61,6 +57,24 @@ export default function App() {
       .catch(() => undefined);
     return () => {
       alive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    const load = async (refresh = false) => {
+      try {
+        const payload = await api.balance(refresh);
+        if (alive) setBalance(payload);
+      } catch {
+        if (alive) setBalance({ ok: false, error: "unreachable" });
+      }
+    };
+    void load();
+    const timer = window.setInterval(() => void load(), 60_000);
+    return () => {
+      alive = false;
+      window.clearInterval(timer);
     };
   }, []);
 
@@ -133,9 +147,9 @@ export default function App() {
   }, [selected]);
 
   const selectedAge = useMemo(() => {
-    if (selected == null) return sync?.tle_max_age_hours ?? null;
+    if (selected == null) return null;
     return positions[selected]?.tle_age_hours ?? null;
-  }, [selected, positions, sync]);
+  }, [selected, positions]);
 
   const selectedPosition = selected != null ? positions[selected] : undefined;
   const send = useCallback(
@@ -279,30 +293,49 @@ export default function App() {
     setError(null);
   }, []);
 
-  const syncStatus = sync?.last_run?.status || sync?.state?.last_status || "unknown";
-  const syncOk = syncStatus === "ok";
+  const balanceValue = Number(balance?.total);
+  const balanceLabel = balance?.ok
+    ? `${balance.currency === "USD" ? "$" : "¥"}${
+        Number.isFinite(balanceValue) ? balanceValue.toFixed(2) : "—"
+      }`
+    : balance
+      ? "余额 —"
+      : "余额 …";
+  const balanceTitle = balance?.ok
+    ? `赠送 ${balance.granted ?? "—"} · 充值 ${balance.topped_up ?? "—"} · 点击刷新`
+    : "API 余额不可用";
 
   return (
     <div className="app">
       <header className="topbar">
         <div className="brand">
-          <span className="logo">S</span>
+          <img
+            className="brand-logo"
+            src="/logo-96.png"
+            srcSet="/logo-96.png 1x, /logo-192.png 2x"
+            alt=""
+          />
           <div>
             <strong>SIRIAgent</strong>
-            <small>星历 × 智能体 · Phase 2</small>
+            <small>遥感任务与星历服务</small>
           </div>
         </div>
         <div className="top-meta">
-          <span className={`status-pill ${syncOk ? "ok" : "warn"}`}>
+          <button
+            type="button"
+            className={`balance-pill ${balance?.ok ? "ok" : ""}`}
+            title={balanceTitle}
+            onClick={() => {
+              setBalance(null);
+              api
+                .balance(true)
+                .then(setBalance)
+                .catch(() => setBalance({ ok: false, error: "unreachable" }));
+            }}
+          >
             <span className="dot" />
-            同步 {syncStatus}
-          </span>
-          <span className="status-pill">
-            TLE {sync?.tle_max_age_hours != null ? `${sync.tle_max_age_hours.toFixed(1)} h` : "—"}
-          </span>
-          <span className="status-pill">
-            {sync?.tle_current_count ?? 0} / {satellites.length || "—"} 在库
-          </span>
+            API 余额 <strong>{balanceLabel}</strong>
+          </button>
         </div>
       </header>
 

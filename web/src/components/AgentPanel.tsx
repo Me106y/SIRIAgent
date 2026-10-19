@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-import type { ChatMessage } from "../types";
+import { api } from "../api";
+import type { ChatMessage, Skill } from "../types";
 import { Markdown } from "./Markdown";
 
 interface Props {
@@ -17,20 +18,151 @@ const EXAMPLES = [
   "帮我看看这 111 颗星里，哪些是 SAR。",
 ];
 
+function CheckIcon() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M3.5 8.4l2.7 2.7 6.3-6.2" />
+    </svg>
+  );
+}
+
+function ChevronIcon() {
+  return (
+    <svg className="tool-chevron" viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M5.5 3.5L10 8l-4.5 4.5" />
+    </svg>
+  );
+}
+
+function SendIcon() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M3 8h9M8.5 3.5L13 8l-4.5 4.5" />
+    </svg>
+  );
+}
+
+function toolLabel(name: string): string {
+  return name.replace(/^mcp__[^_]+__/, "").replace(/_/g, " ");
+}
+
+function pretty(value: unknown): string {
+  return typeof value === "string" ? value : JSON.stringify(value, null, 2);
+}
+
 export function AgentPanel({ messages, busy, sessionId, onSend, onReset }: Props) {
   const [input, setInput] = useState("");
+  const [skills, setSkills] = useState<Skill[]>([]);
+  const [slashOpen, setSlashOpen] = useState(false);
+  const [slashIndex, setSlashIndex] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const filteredSkills = useMemo(() => {
+    if (!input.startsWith("/")) return [];
+    const query = input.slice(1).trim().split(/\s+/)[0]?.toLowerCase() ?? "";
+    return skills.filter(
+      (skill) =>
+        !query ||
+        skill.name.toLowerCase().includes(query) ||
+        skill.description.toLowerCase().includes(query),
+    );
+  }, [input, skills]);
+
+  useEffect(() => {
+    let alive = true;
+    api
+      .skills()
+      .then((payload) => {
+        if (alive) setSkills(payload.items);
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   useEffect(() => {
     const node = scrollRef.current;
     if (node) node.scrollTop = node.scrollHeight;
   }, [messages, busy]);
 
+  useEffect(() => {
+    const node = inputRef.current;
+    if (!node) return;
+    node.style.height = "0px";
+    node.style.height = `${Math.min(node.scrollHeight, 150)}px`;
+  }, [input]);
+
+  useEffect(() => {
+    if (!slashOpen) return;
+    const close = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest(".composer-wrap")) setSlashOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [slashOpen]);
+
   const submit = () => {
     const text = input.trim();
     if (!text || busy) return;
     onSend(text);
     setInput("");
+    setSlashOpen(false);
+  };
+
+  const openSlash = () => {
+    const node = inputRef.current;
+    const cursor = node?.selectionStart ?? input.length;
+    const next = input.slice(0, cursor) + "/" + input.slice(cursor);
+    setInput(next);
+    setSlashOpen(next.startsWith("/"));
+    setSlashIndex(0);
+    requestAnimationFrame(() => inputRef.current?.focus());
+  };
+
+  const chooseSkill = (skill: Skill) => {
+    const tail =
+      input.startsWith("/") && input.includes(" ")
+        ? input.slice(input.indexOf(" ") + 1).trim()
+        : "";
+    const usage = `请使用 ${skill.name} 技能（读取 ${skill.path}）：${skill.description}。`;
+    setInput(tail ? `${usage}\n${tail}` : `${usage}\n`);
+    setSlashOpen(false);
+    setSlashIndex(0);
+    requestAnimationFrame(() => inputRef.current?.focus());
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (slashOpen && filteredSkills.length > 0) {
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setSlashIndex((index) => (index + 1) % filteredSkills.length);
+        return;
+      }
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setSlashIndex(
+          (index) => (index - 1 + filteredSkills.length) % filteredSkills.length,
+        );
+        return;
+      }
+      if (event.key === "Enter") {
+        event.preventDefault();
+        chooseSkill(filteredSkills[slashIndex]);
+        return;
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setSlashOpen(false);
+        return;
+      }
+    }
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      submit();
+    }
   };
 
   return (
@@ -38,10 +170,7 @@ export function AgentPanel({ messages, busy, sessionId, onSend, onReset }: Props
       <div className="agent-head">
         <div>
           <h2>Agent</h2>
-          <p>
-            DSH · headless
-            {sessionId ? ` · ${sessionId.slice(-8)}` : " · 新会话"}
-          </p>
+          <p>{sessionId ? `会话 · ${sessionId.slice(-8)}` : "新会话"}</p>
         </div>
         <button type="button" className="ghost" onClick={onReset}>
           新会话
@@ -51,12 +180,8 @@ export function AgentPanel({ messages, busy, sessionId, onSend, onReset }: Props
       <div className="messages" ref={scrollRef}>
         {messages.length === 0 && (
           <div className="welcome">
-            <p className="eyebrow">PHASE 2 · AGENT</p>
-            <h1>问点什么</h1>
-            <p>
-              右栏不限制话题。星历、过境、覆盖类问题会走 MCP 查 RS-Service；
-              其他问题由 Agent 直接回答。
-            </p>
+            <h1>今天想查哪颗卫星？</h1>
+            <p>查询位置、过境窗口与任务可行性，也可以直接描述你的需求。</p>
             <div className="examples">
               {EXAMPLES.map((example) => (
                 <button
@@ -72,84 +197,105 @@ export function AgentPanel({ messages, busy, sessionId, onSend, onReset }: Props
           </div>
         )}
 
-        {messages.map((message) => (
-          <article key={message.id} className={`message ${message.role}`}>
-            <div className="who">{message.role === "user" ? "你" : "SIRIAgent"}</div>
-            {message.tools && message.tools.length > 0 && (
-              <div className="tool-list">
-                {message.tools.map((tool) => (
-                  <details className="tool-card" key={tool.callId}>
-                    <summary>
-                      <span
-                        className={
-                          tool.status === "completed"
-                            ? "tool-status ok"
-                            : "tool-status"
-                        }
-                      />
-                      {tool.tool}
-                    </summary>
-                    {tool.input != null && (
-                      <pre>{JSON.stringify(tool.input, null, 2)}</pre>
-                    )}
-                    {tool.result != null && (
-                      <pre>
-                        {typeof tool.result === "string"
-                          ? tool.result
-                          : JSON.stringify(tool.result, null, 2)}
-                      </pre>
-                    )}
-                  </details>
-                ))}
-              </div>
-            )}
-            <div
-              className={
-                message.error
-                  ? "bubble error"
-                  : message.role === "assistant"
-                    ? "bubble markdown-bubble"
-                    : "bubble"
-              }
-            >
-              {message.text ? (
-                message.role === "assistant" && !message.error ? (
-                  <Markdown text={message.text} />
-                ) : (
-                  message.text
-                )
-              ) : message.role === "assistant" ? (
-                busy ? (
-                  <>
-                    <span className="spinner" />
-                    正在调用 DSH…
-                  </>
-                ) : (
-                  "…"
-                )
-              ) : (
-                ""
+        {messages.map((message) => {
+          const loading = message.role === "assistant" && busy && !message.text;
+          return (
+            <article key={message.id} className={`message ${message.role}`}>
+              <div className="who">{message.role === "user" ? "你" : "SIRIAgent"}</div>
+              {message.tools && message.tools.length > 0 && (
+                <div className="tool-list">
+                  {message.tools.map((tool) => {
+                    const done = tool.status === "completed";
+                    return (
+                      <details
+                        className={`tool-card ${done ? "done" : "running"}`}
+                        key={tool.callId}
+                      >
+                        <summary>
+                          <span className={`tool-icon ${done ? "ok" : "running"}`}>
+                            {done ? <CheckIcon /> : <span className="tool-spinner" />}
+                          </span>
+                          <span className="tool-name" title={tool.tool}>
+                            {toolLabel(tool.tool)}
+                          </span>
+                          <span className="tool-state">{done ? "完成" : "运行中"}</span>
+                          <ChevronIcon />
+                        </summary>
+                        <div className="tool-body">
+                          {tool.input != null && (
+                            <>
+                              <div className="tool-label">参数</div>
+                              <pre>{pretty(tool.input)}</pre>
+                            </>
+                          )}
+                          {tool.result != null && (
+                            <>
+                              <div className="tool-label">结果</div>
+                              <pre>{pretty(tool.result)}</pre>
+                            </>
+                          )}
+                        </div>
+                      </details>
+                    );
+                  })}
+                </div>
               )}
-            </div>
-            {message.thinking && (
-              <details className="thinking">
-                <summary>思考过程</summary>
-                <pre>{message.thinking}</pre>
-              </details>
-            )}
-            {(message.usage || message.elapsed_ms) && (
-              <div className="meta">
-                {message.elapsed_ms != null && (
-                  <span>{(message.elapsed_ms / 1000).toFixed(1)} s</span>
-                )}
-                {message.usage?.total_tokens != null && (
-                  <span>{message.usage.total_tokens} tokens</span>
-                )}
-              </div>
-            )}
-          </article>
-        ))}
-
+              {message.thinking && (
+                <details className="thinking">
+                  <summary>
+                    <span className="thinking-mark" aria-hidden="true" />
+                    {loading ? "思考中" : "思考过程"}
+                  </summary>
+                  <pre>{message.thinking}</pre>
+                </details>
+              )}
+              {loading ? (
+                <div className="assistant-loading" aria-live="polite">
+                  <span className="thinking-dots" aria-hidden="true">
+                    <i />
+                    <i />
+                    <i />
+                  </span>
+                  {message.tools && message.tools.length > 0
+                    ? "正在整理结果"
+                    : "正在思考"}
+                </div>
+              ) : (
+                <div
+                  className={
+                    message.error
+                      ? "bubble error"
+                      : message.role === "assistant"
+                        ? "bubble markdown-bubble"
+                        : "bubble"
+                  }
+                >
+                  {message.text ? (
+                    message.role === "assistant" && !message.error ? (
+                      <Markdown text={message.text} />
+                    ) : (
+                      message.text
+                    )
+                  ) : message.role === "assistant" ? (
+                    "…"
+                  ) : (
+                    ""
+                  )}
+                </div>
+              )}
+              {(message.usage || message.elapsed_ms) && (
+                <div className="meta">
+                  {message.elapsed_ms != null && (
+                    <span>{(message.elapsed_ms / 1000).toFixed(1)} s</span>
+                  )}
+                  {message.usage?.total_tokens != null && (
+                    <span>{message.usage.total_tokens} tokens</span>
+                  )}
+                </div>
+              )}
+            </article>
+          );
+        })}
       </div>
 
       <form
@@ -159,21 +305,69 @@ export function AgentPanel({ messages, busy, sessionId, onSend, onReset }: Props
           submit();
         }}
       >
-        <textarea
-          value={input}
-          onChange={(event) => setInput(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" && !event.shiftKey) {
-              event.preventDefault();
-              submit();
-            }
-          }}
-          rows={2}
-          placeholder="输入消息，Enter 发送，Shift+Enter 换行"
-        />
-        <button type="submit" className="send" disabled={busy || !input.trim()}>
-          发送
-        </button>
+        <div className="composer-wrap">
+          {slashOpen && filteredSkills.length > 0 && (
+            <div className="slash-menu" role="listbox" aria-label="技能">
+              <div className="slash-head">
+                <span>调用技能</span>
+                <span>↑↓ 选择 · Enter 使用 · Esc 关闭</span>
+              </div>
+              {filteredSkills.map((skill, index) => (
+                <button
+                  key={skill.name}
+                  type="button"
+                  role="option"
+                  aria-selected={index === slashIndex}
+                  className={index === slashIndex ? "slash-item active" : "slash-item"}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onMouseEnter={() => setSlashIndex(index)}
+                  onClick={() => chooseSkill(skill)}
+                >
+                  <span className="slash-name">/{skill.name}</span>
+                  <span className="slash-desc">{skill.description}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="composer-box">
+            <textarea
+              ref={inputRef}
+              value={input}
+              onChange={(event) => {
+                const value = event.target.value;
+                setInput(value);
+                const menu = value.startsWith("/") && !value.includes("\n");
+                setSlashOpen(menu);
+                if (menu) setSlashIndex(0);
+              }}
+              onKeyDown={handleKeyDown}
+              rows={1}
+              placeholder="输入消息，或输入 / 调用技能"
+              aria-label="输入消息"
+            />
+            <div className="composer-bar">
+              <button
+                type="button"
+                className={slashOpen ? "composer-tool active" : "composer-tool"}
+                onClick={openSlash}
+                aria-expanded={slashOpen}
+                title="调用技能"
+              >
+                /
+              </button>
+              <span className="composer-hint">Enter 发送 · Shift+Enter 换行</span>
+              <button
+                type="submit"
+                className="send"
+                disabled={busy || !input.trim()}
+                aria-label="发送"
+                title="发送"
+              >
+                <SendIcon />
+              </button>
+            </div>
+          </div>
+        </div>
       </form>
     </section>
   );

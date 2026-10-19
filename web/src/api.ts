@@ -1,10 +1,12 @@
 import type {
+  Balance,
   ChatUsage,
   HangzhouBoundary,
   PassItem,
   PositionItem,
   Satellite,
   SatelliteDetail,
+  Skill,
   StreamEvent,
   SyncStatus,
   ToolCall,
@@ -40,6 +42,9 @@ export const api = {
     ),
   sync: () => getJson<SyncStatus>("/api/rs/sync/status"),
   hangzhouBoundary: () => getJson<HangzhouBoundary>("/api/rs/aoi/hangzhou"),
+  balance: (refresh = false) =>
+    getJson<Balance>(`/api/balance${refresh ? "?refresh=1" : ""}`),
+  skills: () => getJson<{ items: Skill[] }>("/api/skills"),
 };
 
 export interface ChatResponse {
