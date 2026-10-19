@@ -50,10 +50,31 @@ function pretty(value: unknown): string {
   return typeof value === "string" ? value : JSON.stringify(value, null, 2);
 }
 
+function inputSummary(input: unknown): string {
+  if (input == null) return "";
+  if (typeof input === "string") return input.replace(/\s+/g, " ").trim();
+  if (typeof input !== "object") return String(input);
+  const record = input as Record<string, unknown>;
+  const command = record.command ?? record.cmd;
+  if (typeof command === "string" && command.trim()) {
+    return `$ ${command.replace(/\s+/g, " ").trim()}`;
+  }
+  const path = record.path ?? record.file_path ?? record.file;
+  if (typeof path === "string") return path;
+  const pairs = Object.entries(record)
+    .filter(([, value]) => value == null || typeof value !== "object")
+    .slice(0, 3)
+    .map(([key, value]) => `${key}=${String(value)}`);
+  if (pairs.length > 0) return pairs.join(" · ");
+  const json = JSON.stringify(record).replace(/\s+/g, " ");
+  return json.length > 120 ? `${json.slice(0, 117)}…` : json;
+}
+
 type ToolBlock = Extract<MessageBlock, { kind: "tool" }>;
 
 function ToolRow({ block }: { block: ToolBlock }) {
   const done = block.status === "completed";
+  const detail = inputSummary(block.input);
   return (
     <details className={`tool-card ${done ? "done" : "running"}`}>
       <summary>
@@ -63,6 +84,14 @@ function ToolRow({ block }: { block: ToolBlock }) {
         <span className="tool-name" title={block.tool}>
           {toolLabel(block.tool)}
         </span>
+        {detail ? (
+          <span
+            className={detail.startsWith("$ ") ? "tool-detail command" : "tool-detail"}
+            title={detail}
+          >
+            {detail}
+          </span>
+        ) : null}
         <span className="tool-state">{done ? "完成" : "运行中"}</span>
         <ChevronIcon />
       </summary>

@@ -24,3 +24,4 @@ data/*.sqlite3
 
 # 本地草稿
 .scratch/
+.tmp-hzplan/

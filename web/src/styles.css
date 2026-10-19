@@ -824,11 +824,29 @@ button {
 }
 
 .tool-name {
-  flex: 1;
+  flex: 0 1 auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.tool-detail {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #8fb4c9;
+  font-size: 10.5px;
+}
+
+.tool-detail.command {
+  color: #9fdce8;
+}
+
+.tool-detail.command::first-letter {
+  color: var(--accent);
 }
 
 .tool-state {
