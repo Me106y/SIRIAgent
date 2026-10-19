@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SIRIAgent · DSH 验证台</title>
+  <style>
+    :root {
+      --bg: #f4f6f5;
+      --card: #ffffff;
+      --ink: #16211f;
+      --muted: #6b7a76;
+      --line: #e2e8e5;
+      --accent: #0f766e;
+      --accent-soft: #e6f4f1;
+      --user: #0f766e;
+      --danger: #b42318;
+      --shadow: 0 14px 40px rgba(20, 45, 40, .08);
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(900px 500px at 8% -10%, #dff2ec 0%, transparent 55%),
+        radial-gradient(700px 500px at 100% 0%, #eef3ff 0%, transparent 60%),
+        var(--bg);
+      color: var(--ink);
+      font: 15px/1.65 ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+    }
+    .shell {
+      width: min(920px, calc(100vw - 28px));
+      height: min(860px, calc(100vh - 36px));
+      margin: 18px auto;
+      display: flex;
+      flex-direction: column;
+      background: rgba(255, 255, 255, .82);
+      border: 1px solid rgba(255, 255, 255, .9);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      backdrop-filter: blur(14px);
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 255, 255, .76);
+    }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .logo {
+      width: 38px; height: 38px; border-radius: 12px;
+      display: grid; place-items: center;
+      background: linear-gradient(145deg, #0f766e, #14958a);
+      color: #fff; font-weight: 800; font-size: 17px;
+      box-shadow: 0 8px 20px rgba(15, 118, 110, .25);
+    }
+    .brand h1 { margin: 0; font-size: 16px; letter-spacing: .2px; }
+    .brand p { margin: 1px 0 0; font-size: 12px; color: var(--muted); }
+    .header-right { display: flex; align-items: center; gap: 10px; }
+    .status {
+      display: inline-flex; align-items: center; gap: 7px;
+      font-size: 12px; color: var(--muted);
+      background: #f7faf9; border: 1px solid var(--line);
+      padding: 6px 10px; border-radius: 999px; white-space: nowrap;
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #b6c2be; }
+    .dot.ok { background: #16a34a; box-shadow: 0 0 0 3px #dcfce7; }
+    .dot.bad { background: #dc2626; box-shadow: 0 0 0 3px #fee2e2; }
+    .ghost {
+      border: 1px solid var(--line); background: #fff; color: var(--ink);
+      padding: 7px 12px; border-radius: 10px; cursor: pointer;
+      font: inherit; font-size: 12px;
+    }
+    .ghost:hover { border-color: #b9c9c4; background: #fbfdfc; }
+    main {
+      flex: 1; overflow-y: auto; padding: 22px 22px 8px;
+      scroll-behavior: smooth;
+    }
+    .intro {
+      border: 1px solid #d7ece6; background: linear-gradient(180deg, #f4fbf9, #fff);
+      border-radius: 16px; padding: 14px 16px; margin-bottom: 18px;
+      color: #31524b; font-size: 13px;
+    }
+    .intro strong { color: var(--accent); }
+    .examples { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .chip {
+      border: 1px solid #cfe5df; background: #fff; color: #276055;
+      padding: 6px 10px; border-radius: 999px; cursor: pointer;
+      font: inherit; font-size: 12px;
+    }
+    .chip:hover { background: var(--accent-soft); }
+    .row { display: flex; margin: 14px 0; }
+    .row.user { justify-content: flex-end; }
+    .bubble-wrap { max-width: min(78%, 680px); }
+    .who { font-size: 11px; color: var(--muted); margin: 0 4px 5px; }
+    .row.user .who { text-align: right; }
+    .bubble {
+      padding: 11px 14px; border-radius: 15px;
+      white-space: pre-wrap; word-break: break-word;
+      border: 1px solid var(--line); background: var(--card);
+      box-shadow: 0 3px 12px rgba(22, 33, 31, .04);
+    }
+    .row.user .bubble {
+      background: var(--user); color: #fff; border-color: transparent;
+      border-bottom-right-radius: 5px;
+    }
+    .row.assistant .bubble { border-bottom-left-radius: 5px; }
+    .bubble.pending { color: var(--muted); }
+    .bubble.error { border-color: #f1c6c2; background: #fff7f6; color: var(--danger); }
+    .meta { margin-top: 6px; font-size: 11px; color: var(--muted); display: flex; gap: 10px; flex-wrap: wrap; }
+    details.think { margin-top: 8px; font-size: 12px; color: var(--muted); }
+    details.think summary { cursor: pointer; user-select: none; }
+    details.think .think-body {
+      margin-top: 6px; padding: 8px 10px; border-radius: 10px;
+      background: #f7faf9; border: 1px solid var(--line);
+      white-space: pre-wrap; max-height: 220px; overflow: auto;
+    }
+    footer {
+      border-top: 1px solid var(--line); background: rgba(255, 255, 255, .9);
+      padding: 14px 18px 16px;
+    }
+    .composer {
+      display: flex; align-items: flex-end; gap: 10px;
+      border: 1px solid var(--line); background: #fff;
+      border-radius: 16px; padding: 8px 8px 8px 14px;
+      box-shadow: 0 6px 18px rgba(22, 33, 31, .05);
+    }
+    textarea {
+      flex: 1; resize: none; border: 0; outline: 0; background: transparent;
+      font: inherit; color: var(--ink); max-height: 160px; min-height: 26px;
+      padding: 5px 0;
+    }
+    textarea::placeholder { color: #9aa8a4; }
+    .send {
+      border: 0; border-radius: 12px; padding: 10px 16px;
+      background: var(--accent); color: #fff; font: inherit; font-weight: 650;
+      cursor: pointer; white-space: nowrap;
+    }
+    .send:disabled { opacity: .45; cursor: not-allowed; }
+    .foot-note {
+      display: flex; justify-content: space-between; gap: 12px;
+      margin-top: 8px; font-size: 11px; color: var(--muted);
+    }
+    .session { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .spinner {
+      width: 13px; height: 13px; border-radius: 50%;
+      border: 2px solid #cfe5df; border-top-color: var(--accent);
+      display: inline-block; vertical-align: -2px; margin-right: 7px;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @media (max-width: 640px) {
+      .shell { width: 100%; height: 100%; margin: 0; border-radius: 0; border: 0; }
+      header { padding: 14px 16px; }
+      main { padding: 16px 14px 6px; }
+      footer { padding: 12px 12px 14px; }
+      .bubble-wrap { max-width: 88%; }
+      .header-right .status { display: none; }
+      .brand p { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="brand">
+        <div class="logo">S</div>
+        <div>
+          <h1>SIRIAgent</h1>
+          <p>DSH 验证台 · 新项目，不碰 SIRI-Agent</p>
+        </div>
+      </div>
+      <div class="header-right">
+        <span class="status"><span id="statusDot" class="dot"></span><span id="statusText">连接中…</span></span>
+        <button id="newChat" class="ghost" type="button">新会话</button>
+      </div>
+    </header>
+
+    <main id="messages">
+      <div class="intro">
+        <strong>这个 agent 真的由 DSH 驱动。</strong>
+        每轮消息会调用一次 <code>dsh --profile headless</code>，并在同一段 DSH session 上续聊。
+        先问一句试试；工具、模型和会话都由 DeepSeek Harness 提供。
+        <div class="examples">
+          <button class="chip" type="button">用一句话介绍你自己</button>
+          <button class="chip" type="button">你现在用的是什么模型和运行时？</button>
+          <button class="chip" type="button">看看当前目录里有什么文件</button>
+        </div>
+      </div>
+    </main>
+
+    <footer>
+      <form id="composer" class="composer">
+        <textarea id="input" rows="1" placeholder="输入消息，Enter 发送，Shift+Enter 换行"></textarea>
+        <button id="send" class="send" type="submit">发送</button>
+      </form>
+      <div class="foot-note">
+        <span class="session" id="sessionLabel">新会话 · 还没有 session</span>
+        <span>DSH headless · 单次最长 240s</span>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    const messages = document.getElementById('messages');
+    const input = document.getElementById('input');
+    const sendButton = document.getElementById('send');
+    const composer = document.getElementById('composer');
+    const newChatButton = document.getElementById('newChat');
+    const sessionLabel = document.getElementById('sessionLabel');
+    const statusDot = document.getElementById('statusDot');
+    const statusText = document.getElementById('statusText');
+    let sessionId = null;
+    let busy = false;
+
+    function setStatus(kind, text) {
+      statusDot.className = 'dot ' + kind;
+      statusText.textContent = text;
+    }
+
+    function scrollToBottom() {
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    function addRow(role, text, options = {}) {
+      const row = document.createElement('div');
+      row.className = 'row ' + role;
+      const wrap = document.createElement('div');
+      wrap.className = 'bubble-wrap';
+      const who = document.createElement('div');
+      who.className = 'who';
+      who.textContent = role === 'user' ? '你' : 'SIRIAgent';
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble' + (options.pending ? ' pending' : '') + (options.error ? ' error' : '');
+      if (options.pending) {
+        const spinner = document.createElement('span');
+        spinner.className = 'spinner';
+        bubble.appendChild(spinner);
+      }
+      bubble.appendChild(document.createTextNode(text));
+      wrap.appendChild(who);
+      wrap.appendChild(bubble);
+      row.appendChild(wrap);
+      messages.appendChild(row);
+      scrollToBottom();
+      return { row, wrap, bubble };
+    }
+
+    function addMeta(wrap, parts) {
+      if (!parts.length) return;
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+      parts.forEach((part) => {
+        const span = document.createElement('span');
+        span.textContent = part;
+        meta.appendChild(span);
+      });
+      wrap.appendChild(meta);
+    }
+
+    function addThinking(wrap, thinking) {
+      if (!thinking) return;
+      const details = document.createElement('details');
+      details.className = 'think';
+      const summary = document.createElement('summary');
+      summary.textContent = '查看 DSH 思考过程';
+      const body = document.createElement('div');
+      body.className = 'think-body';
+      body.textContent = thinking;
+      details.appendChild(summary);
+      details.appendChild(body);
+      wrap.appendChild(details);
+    }
+
+    function setBusy(value) {
+      busy = value;
+      sendButton.disabled = value;
+      input.disabled = value;
+      sendButton.textContent = value ? '思考中…' : '发送';
+    }
+
+    function updateSession(id) {
+      sessionId = id || null;
+      sessionLabel.textContent = id ? 'session · ' + id : '新会话 · 还没有 session';
+      sessionLabel.title = id || '';
+    }
+
+    async function sendMessage(raw) {
+      const text = String(raw || '').trim();
+      if (!text || busy) return;
+
+      addRow('user', text);
+      input.value = '';
+      input.style.height = 'auto';
+      setBusy(true);
+      const pending = addRow('assistant', 'DSH 正在处理…', { pending: true });
+
+      try {
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: text, session_id: sessionId }),
+        });
+        const contentType = response.headers.get('content-type') || '';
+        if (response.redirected || !contentType.includes('application/json')) {
+          throw new Error('Cloudflare Access 会话可能已过期，请刷新页面重新验证。');
+        }
+        const data = await response.json().catch(() => ({}));
+        pending.bubble.classList.remove('pending');
+        pending.bubble.textContent = '';
+
+        if (!response.ok || !data.ok) {
+          pending.bubble.classList.add('error');
+          pending.bubble.textContent = data.error || ('请求失败：HTTP ' + response.status);
+          addMeta(pending.wrap, data.session_id ? ['session · ' + data.session_id] : []);
+          return;
+        }
+
+        updateSession(data.session_id);
+        pending.bubble.textContent = data.text || '（空回复）';
+        const meta = [];
+        if (data.elapsed_ms) meta.push((data.elapsed_ms / 1000).toFixed(1) + 's');
+        if (data.usage && data.usage.totalTokens) meta.push('tokens · ' + data.usage.totalTokens);
+        if (data.thinking) addThinking(pending.wrap, data.thinking);
+        addMeta(pending.wrap, meta);
+        scrollToBottom();
+      } catch (error) {
+        pending.bubble.classList.remove('pending');
+        pending.bubble.classList.add('error');
+        pending.bubble.textContent = '请求失败：' + error.message;
+      } finally {
+        setBusy(false);
+        input.focus();
+      }
+    }
+
+    composer.addEventListener('submit', (event) => {
+      event.preventDefault();
+      sendMessage(input.value);
+    });
+
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage(input.value);
+      }
+    });
+
+    input.addEventListener('input', () => {
+      input.style.height = 'auto';
+      input.style.height = Math.min(input.scrollHeight, 160) + 'px';
+    });
+
+    newChatButton.addEventListener('click', () => {
+      if (busy) return;
+      updateSession(null);
+      messages.innerHTML = '';
+      const note = document.createElement('div');
+      note.className = 'intro';
+      note.innerHTML = '<strong>新会话已开始。</strong> 下一条消息会创建一个新的 DSH session。';
+      messages.appendChild(note);
+      input.value = '';
+      input.focus();
+    });
+
+    document.querySelectorAll('.chip').forEach((chip) => {
+      chip.addEventListener('click', () => {
+        if (busy) return;
+        input.value = chip.textContent;
+        input.focus();
+        sendMessage(chip.textContent);
+      });
+    });
+
+    (async function checkHealth() {
+      try {
+        const response = await fetch('/api/health');
+        const data = await response.json();
+        if (data.dsh_ready) {
+          setStatus('ok', 'DSH 就绪');
+        } else {
+          setStatus('bad', 'DSH 未就绪');
+        }
+      } catch (error) {
+        setStatus('bad', '后端不可达');
+      }
+    })();
+  </script>
+</body>
+</html>

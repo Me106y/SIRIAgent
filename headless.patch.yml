@@ -1,0 +1,23 @@
+# 让 headless 使用 DSH 已保存的凭据（默认 headless 会禁用存储凭据）
+- id: credentials
+  disabled: false
+- id: authorization
+  disabled: false
+- id: deepseek-account
+  disabled: false
+
+# 演示台允许 agent 在新项目工作区内读写和跑命令，但不需要交互审批
+- id: approval
+  config:
+    policy: never
+- id: permission
+  name: "@deepseek-ai/dsh-permission-presets"
+  config:
+    presets:
+      read-only:
+        sandbox: read-only
+        approval: never
+      workspace-write:
+        sandbox: workspace-write
+        approval: never
+    defaultPreset: workspace-write

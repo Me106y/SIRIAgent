@@ -1,0 +1,23 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+*.log
+
+# 前端
+node_modules/
+web/dist/
+.vite/
+
+# 运行数据与数据库
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+*.db-wal
+*.db-shm
+
+# 本地工具
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.DS_Store

@@ -1,0 +1,3714 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SIRIAgent Phase 2 需求文档</title>
+<style>
+:root {
+  --bg: #f3f6fc;
+  --surface: #ffffff;
+  --ink: #182647;
+  --muted: #5c6f94;
+  --line: #dfe7f4;
+  --brand: #2348b2;
+  --brand-ink: #17306f;
+  --brand-soft: #e9f0fd;
+  --brand-line: #c7d7f4;
+  --warn-bg: #fdf6e7;
+  --warn-line: #f0dca6;
+  --warn-ink: #7d5300;
+  --ok-bg: #eef7f0;
+  --ok-line: #bfe0c8;
+  --ok-ink: #1f6b3a;
+  --code-bg: #0f1b33;
+  --radius: 14px;
+  --shadow: 0 1px 2px rgba(23, 48, 111, .05), 0 8px 24px rgba(23, 48, 111, .07);
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Segoe UI", "Microsoft YaHei", "PingFang SC", system-ui, -apple-system, sans-serif;
+  font-size: 15px;
+  line-height: 1.78;
+}
+a { color: var(--brand-ink); text-decoration: none; }
+a:hover { text-decoration: underline; }
+code {
+  font-family: Consolas, "JetBrains Mono", Menlo, monospace;
+  font-size: .86em;
+  background: var(--brand-soft);
+  border: 1px solid var(--brand-line);
+  border-radius: 6px;
+  padding: 1px 6px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+pre {
+  background: var(--code-bg);
+  color: #dbe7ff;
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  overflow: auto;
+  font-size: 13px;
+  line-height: 1.7;
+  box-shadow: var(--shadow);
+  margin: 0 0 22px;
+}
+pre code {
+  background: none; border: none; padding: 0;
+  color: inherit; white-space: pre; font-size: 13px;
+}
+.skip-link { position: absolute; left: -9999px; }
+.skip-link:focus { left: 16px; top: 12px; background: var(--surface); padding: 8px 14px; border-radius: 8px; z-index: 99; }
+/* ---------- 顶栏 ---------- */
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 32px;
+  background: rgba(255, 255, 255, .93);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand:hover { text-decoration: none; }
+.brand-mark {
+  width: 42px; height: 42px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 12px;
+  background: linear-gradient(145deg, var(--brand), #4b78e6);
+  color: #fff; font-weight: 800; font-size: 18px;
+  box-shadow: 0 6px 16px rgba(35, 72, 178, .28);
+}
+.brand strong { display: block; font-size: 15.5px; color: var(--ink); }
+.brand small { display: block; font-size: 12px; color: var(--muted); }
+.primary-button {
+  border: none; cursor: pointer;
+  background: var(--brand); color: #fff;
+  font-size: 13.5px; font-weight: 600;
+  padding: 9px 18px; border-radius: 10px;
+  box-shadow: var(--shadow);
+  transition: background .15s ease;
+}
+.primary-button:hover { background: var(--brand-ink); }
+/* ---------- 版面 ---------- */
+.page-shell {
+  display: flex; gap: 40px; align-items: flex-start;
+  max-width: 1320px; margin: 0 auto;
+  padding: 30px 32px 90px;
+}
+.sidebar { width: 264px; flex-shrink: 0; position: sticky; top: 84px; max-height: calc(100vh - 110px); overflow-y: auto; padding-right: 4px; }
+#toc { display: flex; flex-direction: column; gap: 2px; }
+#toc a {
+  padding: 6px 12px; border-radius: 9px;
+  font-size: 13px; color: var(--muted);
+  border-left: 3px solid transparent;
+}
+#toc a.depth-3 { padding-left: 24px; font-size: 12.5px; }
+#toc a:hover { background: #edf2fa; text-decoration: none; color: var(--ink); }
+#toc a.active {
+  background: var(--brand-soft); color: var(--brand-ink);
+  border-left-color: var(--brand); font-weight: 600;
+}
+main { flex: 1; min-width: 0; }
+.doc-section { margin-bottom: 58px; scroll-margin-top: 84px; }
+.section-heading { margin-bottom: 20px; }
+.section-heading h2 { margin: 0 0 6px; font-size: 24px; letter-spacing: -.3px; }
+.section-heading p { margin: 0; color: var(--muted); font-size: 14px; }
+.sub-heading { margin: 34px 0 14px; font-size: 17px; scroll-margin-top: 84px; }
+.note { font-size: 13px; color: var(--muted); margin: 10px 0 18px; }
+h2 { scroll-margin-top: 84px; }
+h3 { scroll-margin-top: 84px; }
+h4 { margin: 26px 0 10px; font-size: 14.5px; scroll-margin-top: 84px; }
+/* ---------- 首屏 ---------- */
+.hero {
+  display: flex; gap: 28px; justify-content: space-between; align-items: stretch;
+  background: linear-gradient(135deg, #ffffff 0%, #eef4fe 55%, #d9e6fc 100%);
+  border: 1px solid var(--brand-line);
+  border-radius: 20px; padding: 38px 40px; margin-bottom: 30px;
+  box-shadow: var(--shadow);
+}
+.hero-copy { flex: 1; min-width: 0; }
+.eyebrow {
+  margin: 0 0 10px; font-size: 12.5px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase; color: var(--brand);
+}
+.hero h1 { margin: 0 0 12px; font-size: 30px; letter-spacing: -.5px; }
+.hero-lead { margin: 0; font-size: 15.5px; color: var(--muted); max-width: 720px; }
+.meta-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.meta-chip {
+  font-size: 12px; color: var(--brand-ink);
+  background: rgba(255, 255, 255, .7);
+  border: 1px solid var(--brand-line);
+  border-radius: 999px; padding: 4px 12px;
+}
+/* ---------- 核心决策卡片 ---------- */
+.decision-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin: 0 0 40px; }
+.decision-grid article {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 18px 20px; box-shadow: var(--shadow);
+}
+.decision-grid .card-index {
+  display: inline-block; font-size: 11.5px; font-weight: 700;
+  letter-spacing: 1px; color: var(--brand);
+  background: var(--brand-soft); border-radius: 6px; padding: 2px 10px; margin-bottom: 10px;
+}
+.decision-grid h3 { margin: 0 0 6px; font-size: 15px; }
+.decision-grid p { margin: 0; font-size: 13px; color: var(--muted); }
+/* ---------- 提示块 ---------- */
+.callout {
+  background: var(--surface); border: 1px solid var(--line);
+  border-left: 4px solid var(--brand);
+  border-radius: var(--radius); padding: 18px 22px; margin: 0 0 24px;
+  box-shadow: var(--shadow);
+}
+.callout-label {
+  display: block; font-size: 12px; font-weight: 700;
+  letter-spacing: 1.5px; color: var(--brand);
+  margin-bottom: 4px;
+}
+.callout p { margin: 0; font-size: 14px; color: var(--ink); }
+.callout p + p { margin-top: 8px; }
+/* ---------- 卡片网格 ---------- */
+.card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+.card-grid article {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 18px 20px; box-shadow: var(--shadow);
+}
+.card-grid .card-index {
+  display: inline-block; font-size: 11.5px; font-weight: 700;
+  letter-spacing: 1px; color: var(--brand);
+  background: var(--brand-soft); border-radius: 6px; padding: 2px 10px; margin-bottom: 10px;
+}
+.card-grid h3 { margin: 0 0 6px; font-size: 15px; }
+.card-grid p { margin: 0; font-size: 13px; color: var(--muted); }
+.card-grid .card-tail { display: block; margin-top: 10px; font-size: 12.5px; color: var(--brand-ink); }
+/* ---------- 表格 ---------- */
+.table-wrap {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); overflow: auto; box-shadow: var(--shadow);
+  margin-bottom: 22px;
+}
+table { width: 100%; border-collapse: collapse; }
+th {
+  text-align: left; font-size: 12.5px; letter-spacing: .3px;
+  color: var(--muted); background: #f1f5fc;
+  padding: 10px 14px; border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+td { padding: 11px 14px; border-bottom: 1px solid var(--line); font-size: 13.5px; vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+td code, th code { white-space: nowrap; }
+.table-wrap.wide table { min-width: 1040px; }
+.table-wrap.wide td, .table-wrap.wide th { word-break: keep-all; font-size: 12.4px; padding: 8px 10px; }
+.table-wrap.wide td:nth-child(11), .table-wrap.wide th:nth-child(11) { max-width: 240px; }
+/* ---------- 标签 ---------- */
+.tag {
+  display: inline-block; font-size: 11.5px; font-weight: 700;
+  border-radius: 6px; padding: 1px 8px; white-space: nowrap;
+  border: 1px solid var(--brand-line); background: var(--brand-soft); color: var(--brand-ink);
+}
+.tag.plain { border-color: var(--line); background: #f1f5fc; color: var(--muted); }
+.tag.warn { border-color: var(--warn-line); background: var(--warn-bg); color: var(--warn-ink); }
+.tag.ok { border-color: var(--ok-line); background: var(--ok-bg); color: var(--ok-ink); }
+/* ---------- 清单 ---------- */
+main ul, main ol { padding-left: 24px; }
+main li { margin: 6px 0; }
+main ul li::marker { color: var(--brand); }
+/* ---------- 页脚 ---------- */
+.document-control {
+  border-top: 1px solid var(--line); margin-top: 20px; padding-top: 22px;
+  color: var(--muted); font-size: 12.5px;
+  display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+}
+.back-to-top {
+  position: fixed; right: 26px; bottom: 26px; z-index: 60;
+  width: 42px; height: 42px; border-radius: 50%;
+  border: 1px solid var(--brand-line); background: #fff; color: var(--brand);
+  font-size: 17px; cursor: pointer; box-shadow: var(--shadow);
+  opacity: 0; pointer-events: none; transition: opacity .2s ease;
+}
+.back-to-top.visible { opacity: 1; pointer-events: auto; }
+@media (max-width: 960px) {
+  .page-shell { flex-direction: column; align-items: stretch; padding: 20px 18px 70px; }
+  .sidebar { position: static; width: 100%; max-width: 100%; max-height: none; margin-bottom: 6px; }
+  main { width: 100%; max-width: 100%; }
+  .table-wrap, pre { max-width: 100%; }
+  #toc {
+    flex-direction: row; flex-wrap: nowrap; gap: 4px;
+    overflow-x: auto; padding-bottom: 8px;
+    -webkit-overflow-scrolling: touch;
+  }
+  #toc a { white-space: nowrap; border-left: none; border-bottom: 3px solid transparent; }
+  #toc a.active { border-left: none; border-bottom-color: var(--brand); }
+  #toc a.depth-3 { padding-left: 12px; }
+  .hero { flex-direction: column; padding: 28px 24px; }
+}
+@media print {
+  .topbar, .sidebar, .back-to-top { display: none; }
+  body { background: #fff; }
+  .page-shell { max-width: none; padding: 0; display: block; }
+  .hero, .callout, .decision-grid article, .card-grid article, .table-wrap { box-shadow: none; break-inside: avoid; }
+  .doc-section { margin-bottom: 34px; }
+  pre { box-shadow: none; }
+}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main-content">跳到正文</a>
+<header class="topbar">
+  <a class="brand" href="#main-content" aria-label="返回文档顶部">
+    <span class="brand-mark">S</span>
+    <span>
+      <strong>SIRIAgent · Phase 2</strong>
+      <small>范围 · 优先级 · 验收标准</small>
+    </span>
+  </a>
+  <div class="topbar-actions">
+    <button type="button" class="primary-button" id="print-document">打印 / 导出 PDF</button>
+  </div>
+</header>
+
+<div class="page-shell">
+  <aside class="sidebar" aria-label="文档导航">
+    <nav id="toc" aria-label="文档导航">
+<a class="depth-2" href="#sec-1">1. 现状与目标</a>
+<a class="depth-3" href="#sec-1-1">1.1 现状核对（2026-10-19）</a>
+<a class="depth-3" href="#sec-1-2">1.2 Phase 2 目标</a>
+<a class="depth-3" href="#sec-1-3">1.3 验收演示（唯一硬标准）</a>
+<a class="depth-2" href="#sec-2">2. 范围与不做</a>
+<a class="depth-3" href="#sec-2-1">2.1 Phase 2 做</a>
+<a class="depth-3" href="#sec-2-2">2.2 Phase 2 明确不做</a>
+<a class="depth-3" href="#sec-2-3">2.3 安全边界（必须写进运维手册）</a>
+<a class="depth-2" href="#sec-3">3. 工作流 A — 仓库与工程基线</a>
+<a class="depth-3" href="#sec-3-1">3.1 仓库清单</a>
+<a class="depth-3" href="#sec-3-2">3.2 待办</a>
+<a class="depth-3" href="#sec-3-3">3.3 目录结构（目标）</a>
+<a class="depth-2" href="#sec-4">4. 工作流 B — 星历数据服务（RS-Service）</a>
+<a class="depth-3" href="#sec-4-1">4.1 技术栈</a>
+<a class="depth-3" href="#sec-4-2">4.2 数据库（12 张表）</a>
+<a class="depth-3" href="#sec-4-3">4.3 数据源与同步</a>
+<a class="depth-3" href="#sec-4-4">4.4 卫星集：111 颗（全部国内、公开轨道，2026-10-19 定稿）</a>
+<a class="depth-3" href="#sec-4-5">4.5 计算能力</a>
+<a class="depth-3" href="#sec-4-6">4.6 精度与口径（强制章节，所有输出必须遵守）</a>
+<a class="depth-3" href="#sec-4-7">4.7 AOI 与坐标系</a>
+<a class="depth-3" href="#sec-4-8">4.8 云量（Phase 2 就接）</a>
+<a class="depth-3" href="#sec-4-9">4.9 保留、备份与迁移</a>
+<a class="depth-3" href="#sec-4-10">4.10 测试与验收</a>
+<a class="depth-2" href="#sec-5">5. 工作流 C — MCP、CLI 与 Skill</a>
+<a class="depth-3" href="#sec-5-1">5.1 接口分工</a>
+<a class="depth-3" href="#sec-5-2">5.2 MCP 工具清单</a>
+<a class="depth-3" href="#sec-5-3">5.3 受控命令 run_command</a>
+<a class="depth-3" href="#sec-5-4">5.4 Skill 契约（&quot;命令式 + MCP&quot;）</a>
+<a class="depth-3" href="#sec-5-5">5.5 注册到 DSH</a>
+<a class="depth-2" href="#sec-6">6. 工作流 D — 前端改版</a>
+<a class="depth-3" href="#sec-6-1">6.1 技术栈</a>
+<a class="depth-3" href="#sec-6-2">6.2 DSH 调用与流式</a>
+<a class="depth-3" href="#sec-6-3">6.3 布局与信息架构</a>
+<a class="depth-3" href="#sec-6-4">6.4 视觉系统</a>
+<a class="depth-3" href="#sec-6-5">6.5 响应式与浏览器适配（硬要求）</a>
+<a class="depth-3" href="#sec-6-6">6.6 性能预算</a>
+<a class="depth-3" href="#sec-6-7">6.7 前端待办</a>
+<a class="depth-2" href="#sec-7">7. 工作流 E — 门禁（Phase 2 不做）</a>
+<a class="depth-3" href="#sec-7-1">7.1 本轮决策</a>
+<a class="depth-3" href="#sec-7-2">7.2 已知风险与缓解</a>
+<a class="depth-3" href="#sec-7-3">7.3 Phase 3 第一项（占位）</a>
+<a class="depth-2" href="#sec-8">8. 优先级总表</a>
+<a class="depth-2" href="#sec-9">9. 依赖与里程碑</a>
+<a class="depth-2" href="#sec-10">10. 风险与回滚</a>
+<a class="depth-2" href="#sec-11">11. 决策记录（已关闭）</a>
+<a class="depth-2" href="#sec-12">12. 附录</a>
+<a class="depth-3" href="#sec-12-1">12.1 术语</a>
+<a class="depth-3" href="#sec-12-2">12.2 关键事实来源</a>
+<a class="depth-3" href="#sec-12-3">12.3 变更记录</a>
+</nav>
+  </aside>
+
+  <main id="main-content">
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">Phase 2 · 需求文档</p>
+        <h1>SIRIAgent Phase 2 需求文档</h1>
+        <p class="hero-lead">两仓库分工、星历数据服务、MCP 与命令式 skill、双栏前端改版。本文档是 Phase 2 的唯一事实源，包含 111 颗国产卫星清单、优先级、验收标准、精度口径与风险边界。</p>
+        <div class="meta-row">
+          <span class="meta-chip">版本 v1.4</span>
+          <span class="meta-chip">2026-10-19</span>
+          <span class="meta-chip">111 颗展示集定稿，无阻塞项</span>
+          <span class="meta-chip">源文件 docs/PHASE2-REQUIREMENTS.md</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="decision-grid">
+      <article><span class="card-index">仓库</span><h3>两个公开仓库</h3><p><b>SIRIAgent</b> 负责前端、DSH 调用与 skill；<b>RS-Service</b> 负责星历库、同步、REST 与 MCP。运行数据不进仓库。</p></article>
+      <article><span class="card-index">数据</span><h3>12 张表</h3><p>卫星目录、TLE 历史、传感器、数据源、同步运行、同步状态、AOI、过境、覆盖等；TLE 追加写入，不覆盖。</p></article>
+      <article><span class="card-index">同步</span><h3>每天 1 次 · 3 次重试</h3><p>03:00 Asia/Shanghai 触发；退避 5/15/45 分钟；三次都失败当天停止，次日自动恢复。</p></article>
+      <article><span class="card-index">前端</span><h3>1/3 + 2/3</h3><p>左栏 Cesium 星历可视化，右栏 Agent；React + Vite + TypeScript，深空青绿，适配多分辨率与主流浏览器。</p></article>
+      <article><span class="card-index">精度</span><h3>口径写死</h3><p>SGP4 约 1 km/天；可视化 5°、成像 10°、光学太阳角 &gt;10°；足迹 ±2–5 km；所有输出带 accuracy_note。</p></article>
+      <article><span class="card-index">卫星</span><h3>111 颗 · 全部国内</h3><p>102 LEO + 9 GEO，商业 64 / 民用 29 / 气象海洋 18，军事 0；LEO 可见 2.57–5.29 次/天。</p></article>
+    </div>
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>版本</td>
+<td>v1.4（草案，待评审）</td>
+</tr>
+<tr>
+<td>日期</td>
+<td>2026-10-19</td>
+</tr>
+<tr>
+<td>状态</td>
+<td>范围与决策已确认；111 颗展示集定稿</td>
+</tr>
+<tr>
+<td>归属</td>
+<td><code>SIRIAgent</code> 仓库（本文档为 Phase 2 唯一事实源）</td>
+</tr>
+<tr>
+<td>上游</td>
+<td><code>PRD.html</code>（遥感智能体平台建设方案 v1.1）</td>
+</tr>
+<tr>
+<td>HTML 版</td>
+<td><code>docs/PHASE2-REQUIREMENTS.html</code>（<code>scripts/build_requirements_html.py</code> 生成）</td>
+</tr>
+</tbody>
+</table></div>
+<div class="callout"><span class="callout-label">说明</span><p>约定：本文档使用 <code>[ ]</code> 待办、<code>[x]</code> 完成、<code>[-]</code> 明确不做、<code>[?]</code> 待拍板。优先级 P0 = 不做就无法验收；P1 = Phase 2 内应完成；P2 = 有余力再做。后续需求变更直接改本文档，不再新建平行 TODO 文件。</p></div>
+<hr />
+<h2 id="sec-1">1. 现状与目标</h2>
+<h3 id="sec-1-1">1.1 现状核对（2026-10-19）</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项</th>
+<th>事实</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>公网入口</td>
+<td>Cloudflare Tunnel：<code>siriagent.dpdns.org → 127.0.0.1:8000</code>，<code>dsh.siriagent.dpdns.org → 127.0.0.1:3080</code>；Cloudflare Access 保护</td>
+</tr>
+<tr>
+<td>Zeabur</td>
+<td>当前只是 mesh/tailnet（<code>100.64.1.58</code>），<strong>不是公网入口</strong>；Phase 2 维持 Tunnel 单源</td>
+</tr>
+<tr>
+<td>SIRIAgent</td>
+<td>Flask + 原生 HTML；无 git、无远端；<code>app.py</code> 用 <code>subprocess.run</code> <strong>全量缓冲</strong>，不是流式</td>
+</tr>
+<tr>
+<td>SIRI-Agent</td>
+<td>老平台，GitHub <code>Me106y/SIRI-Agent</code>；继续保留但<strong>不再接收新文档与新功能</strong></td>
+</tr>
+<tr>
+<td>运行时</td>
+<td>DSH <code>0.2.1-rc.2</code>，MIT；<code>~/.dsh</code> 下有 <code>headless</code> / <code>web</code> 两个 profile、63 个 user skill</td>
+</tr>
+<tr>
+<td>星历数据</td>
+<td>老库 <code>data/tle_cache.sqlite</code> 快照停在 <strong>2026-07-12</strong>（已过期 99 天）；120 颗，含退役星与 3 处 NORAD 错标</td>
+</tr>
+<tr>
+<td>CelesTrak</td>
+<td>2026-10-19 11:55 复测：直连与 7890 代理均恢复，<code>gp.php</code> 返回 200（约 1.3 s）；此前为 TLS EOF，按"会偶发不可达"设计</td>
+</tr>
+<tr>
+<td>Space-Track</td>
+<td>可通；需账号；用户协议禁止向第三方转移数据</td>
+</tr>
+<tr>
+<td><code>gh</code></td>
+<td>已装 <code>~/.local/bin/gh</code> v2.102.0；<strong>尚未登录</strong></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="sec-1-2">1.2 Phase 2 目标</h3>
+<p>把当前"验证台"升级为可日常使用的双栏平台，并建立独立的星历数据服务：</p>
+<ol>
+<li><strong>两仓库分工</strong>：<code>SIRIAgent</code> = 前端 + DSH 调用 + （Phase 3 的）门禁；<code>RS-Service</code> = 星历数据、计算、MCP、CLI。</li>
+<li><strong>本地星历库 + 每日同步</strong>：结构化、可追溯、带精度声明，不再依赖过期 JSON/SQLite 快照。</li>
+<li><strong>前端改版</strong>：左 1/3 星历可视化，右 2/3 Agent 区；深空科技风；多分辨率与主流浏览器可用。</li>
+<li><strong>Skill 命令化 + MCP 取数</strong>：CLI 为唯一实现，MCP 为薄包装，<code>COMMANDS.md</code> 说明命令与风险。</li>
+</ol>
+<h3 id="sec-1-3">1.3 验收演示（唯一硬标准）</h3>
+<ol>
+<li>打开 <code>https://siriagent.dpdns.org</code>，通过 Cloudflare Access 登录。</li>
+<li>左栏 3D 地球显示默认展示集的<strong>实时位置</strong>；选中一颗后显示星下点轨迹、传感器足迹、未来 24h 过境。</li>
+<li>右栏可<strong>任意提问</strong>（不限定话题、不加话题限制）；回答以 token 级流式出现，工具调用卡片、思考块实时呈现。</li>
+<li>问及星历/过境类问题时，Agent 经 <strong>MCP</strong> 调用 <code>RS-Service</code>，返回过境表或覆盖结论，并带精度声明。</li>
+<li>刷新页面后能恢复同一会话继续对话。</li>
+<li>在 1280 / 1920 / 2560 宽度与 Chrome / Edge / Firefox / Safari 下布局不破、不出现横向滚动。</li>
+</ol>
+<hr />
+<h2 id="sec-2">2. 范围与不做</h2>
+<h3 id="sec-2-1">2.1 Phase 2 做</h3>
+<ul>
+<li>两仓库建立、GitHub 公开托管、CI 最小集。</li>
+<li><code>RS-Service</code>：SQLite 星历库、每日同步、REST、MCP、CLI、4 个 skill。</li>
+<li><code>SIRIAgent</code>：Python SDK 常驻运行时调用、SSE/WS 流式、React 前端、Cesium 可视化、响应式。</li>
+<li>精度口径、坐标系、云量、保留与备份策略。</li>
+</ul>
+<h3 id="sec-2-2">2.2 Phase 2 明确不做</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项</th>
+<th>原因</th>
+<th>去向</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>门禁控制（权限/审批/白名单）</td>
+<td>本轮决策：完全不做；bash 全放行</td>
+<td>Phase 3 第一项</td>
+</tr>
+<tr>
+<td>登录 / 配额 / 多用户隔离</td>
+<td>站点访问由 Cloudflare Access 兜底</td>
+<td>Phase 3</td>
+</tr>
+<tr>
+<td>成果库 / 影像切片</td>
+<td>与星历主线无关</td>
+<td>Phase 3+</td>
+</tr>
+<tr>
+<td>GPU 模型 / 地物分类</td>
+<td>依赖显卡与模型资产</td>
+<td>Phase 3+</td>
+</tr>
+<tr>
+<td>对外 API / 多租户</td>
+<td>SQLite 只够单机；Space-Track 数据不可转发</td>
+<td>Phase 3</td>
+</tr>
+<tr>
+<td>历史 TLE &gt;180 天回溯</td>
+<td>存储与合规成本高</td>
+<td>按需</td>
+</tr>
+<tr>
+<td>移动端专项适配</td>
+<td>只保证可读降级</td>
+<td>Phase 3</td>
+</tr>
+<tr>
+<td>全量目录（含退役/军事）默认展示</td>
+<td>见 §4.4 分层</td>
+<td>视决策</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="sec-2-3">2.3 安全边界（必须写进运维手册）</h3>
+<p>Phase 2 <strong>没有应用层门禁</strong>，且 Agent 拥有 bash 全放行权限。公网侧唯一防线是 <strong>Cloudflare Access</strong>。因此：</p>
+<ul>
+<li><code>RS-Service</code> 的 REST/MCP 只绑 <code>127.0.0.1</code>，绝不暴露公网。</li>
+<li><code>dsh.siriagent.dpdns.org</code> 必须保持 Access 保护，不得关闭。</li>
+<li>任何进入 <code>SIRIAgent</code> 工作区的不可信输入都可能触发文件/命令副作用；这是本轮的已知风险，Phase 3 必须补门禁。</li>
+</ul>
+<hr />
+<h2 id="sec-3">3. 工作流 A — 仓库与工程基线</h2>
+<h3 id="sec-3-1">3.1 仓库清单</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>仓库</th>
+<th>位置</th>
+<th>可见性</th>
+<th>职责</th>
+<th>数据</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SIRIAgent</code></td>
+<td><code>~/桌面/SIRIAgent</code></td>
+<td>Public</td>
+<td>前端、DSH 调用、skill、门禁（Phase 3）</td>
+<td>不含运行数据</td>
+</tr>
+<tr>
+<td><code>RS-Service</code></td>
+<td><code>~/桌面/RS-Service</code>（新建）</td>
+<td>Public</td>
+<td>星历库、同步、REST、MCP、CLI</td>
+<td><strong>数据库不入库</strong>，放 <code>~/.local/share/rs-service/</code></td>
+</tr>
+</tbody>
+</table></div>
+<div class="callout"><span class="callout-label">说明</span><p>决策：<strong>不再为 DSH 组件单开仓库</strong>。前端直接依赖 <code>@deepseek-ai/dsh-client-ui-primitives@0.2.1-rc.2</code>（npm <code>next</code> 标签；<code>latest</code> 是旧的 <code>0.0.1-rc.1</code>，不可用）。若后续出现必须改源码的组件，再单独 fork。</p></div>
+<h3 id="sec-3-2">3.2 待办</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>待办</th>
+<th>优先级</th>
+<th>验收</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A1</td>
+<td><code>SIRIAgent</code> 执行 <code>git init</code>，建立公开仓库，<code>main</code> 分支</td>
+<td><span class="tag warn">P0</span></td>
+<td>远端可访问，首次提交含 README/LICENSE/本文档</td>
+</tr>
+<tr>
+<td>A2</td>
+<td>新建 <code>RS-Service</code> 仓库骨架（pyproject、src layout、tests、docs）</td>
+<td><span class="tag warn">P0</span></td>
+<td><code>uv run rs-service --help</code> 可执行</td>
+</tr>
+<tr>
+<td>A3</td>
+<td><code>gh auth login</code> 完成（当前未登录）</td>
+<td><span class="tag warn">P0</span></td>
+<td><code>gh auth status</code> 显示已登录 <code>Me106y</code></td>
+</tr>
+<tr>
+<td>A4</td>
+<td>两仓库统一 MIT <code>LICENSE</code>；<code>THIRD_PARTY_NOTICES.md</code></td>
+<td><span class="tag warn">P0</span></td>
+<td>含 DSH（MIT）、shiki/KaTeX/anser/micromark（MIT）、diff（BSD-3）、simple-icons（CC0）、Montserrat（OFL）</td>
+</tr>
+<tr>
+<td>A5</td>
+<td>品牌约束：项目名不使用 "DeepSeek Harness" 商标，README 用 "built on DeepSeek Harness"</td>
+<td><span class="tag warn">P0</span></td>
+<td>文案检查通过</td>
+</tr>
+<tr>
+<td>A6</td>
+<td><code>.gitignore</code>：<code>.venv/</code>、<code>node_modules/</code>、<code>*.db</code>、<code>data/</code>、<code>dist/</code>、<code>.env</code></td>
+<td><span class="tag warn">P0</span></td>
+<td><code>git status</code> 干净</td>
+</tr>
+<tr>
+<td>A7</td>
+<td>最小 CI：Python（ruff + pytest）、前端（tsc + vite build）</td>
+<td><span class="tag">P1</span></td>
+<td>PR 上绿</td>
+</tr>
+<tr>
+<td>A8</td>
+<td><code>SIRIAgent</code> 增加 <code>docs/</code> 与 <code>AGENTS.md</code>（本仓开发规范）</td>
+<td><span class="tag">P1</span></td>
+<td>文档可检索</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="sec-3-3">3.3 目录结构（目标）</h3>
+<pre><code class="language-text">SIRIAgent/
+├── app.py                    # Flask/FastAPI 入口（保留文件名，内部重构）
+├── dsh_runtime/              # Python SDK 调用、事件桥、会话管理
+├── skills/                   # &lt;slug&gt;/SKILL.md + COMMANDS.md
+├── web/                      # React + Vite + TS 源码
+│   ├── src/
+│   │   ├── layout/           # 1/3 + 2/3 框架
+│   │   ├── ephemeris/        # Cesium 地球、轨迹、足迹、时间轴
+│   │   ├── agent/            # 消息流、工具卡、思考块、输入区
+│   │   ├── components/       # 自研通用组件
+│   │   ├── theme/            # 深空青绿 token
+│   │   └── api/              # SSE/WS 客户端
+│   └── dist/                 # 构建产物（gitignore）
+├── docs/
+│   ├── PHASE2-REQUIREMENTS.md
+│   └── ...
+└── static/                   # 旧页面（过渡期保留）
+
+RS-Service/
+├── pyproject.toml
+├── src/rs_service/
+│   ├── api/                  # FastAPI /api/v1
+│   ├── mcp/                  # MCP server（Streamable HTTP）
+│   ├── db/                   # SQLAlchemy 模型、迁移、仓储
+│   ├── sync/                 # 抓取、解析、调度
+│   ├── astro/                # SGP4、坐标、过境、覆盖
+│   ├── cli.py                # rs-service sync/query/serve-mcp
+│   └── settings.py
+├── migrations/               # Alembic
+├── tests/
+└── docs/
+</code></pre>
+<hr />
+<h2 id="sec-4">4. 工作流 B — 星历数据服务（RS-Service）</h2>
+<h3 id="sec-4-1">4.1 技术栈</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>层</th>
+<th>选型</th>
+<th>理由</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>语言/环境</td>
+<td>Python 3.12 + <code>uv</code></td>
+<td>本机已有；<code>sgp4</code>/<code>skyfield</code> 成熟</td>
+</tr>
+<tr>
+<td>Web</td>
+<td>FastAPI + Pydantic v2</td>
+<td>类型化、OpenAPI、async</td>
+</tr>
+<tr>
+<td>ORM/迁移</td>
+<td>SQLAlchemy 2 + Alembic</td>
+<td>仓储层可换 Postgres</td>
+</tr>
+<tr>
+<td>数据库</td>
+<td><strong>SQLite（WAL）</strong></td>
+<td>单机、单写入、零运维；迁移阈值见 §4.9</td>
+</tr>
+<tr>
+<td>轨道</td>
+<td><code>sgp4</code>（数值内核）+ <code>skyfield</code>（几何/验收基准）</td>
+<td>性能 + 可对照</td>
+</tr>
+<tr>
+<td>数值</td>
+<td><code>numpy</code></td>
+<td>覆盖计算向量化，禁止双重循环</td>
+</tr>
+<tr>
+<td>HTTP</td>
+<td><code>httpx</code></td>
+<td>超时、重试、代理</td>
+</tr>
+<tr>
+<td>定时</td>
+<td><strong>systemd user timer</strong>，每日 03:00 Asia/Shanghai</td>
+<td>不依赖 Web 进程，不会多 worker 重复跑</td>
+</tr>
+<tr>
+<td>日志</td>
+<td>结构化 JSON 到 stderr + <code>sync_run</code> 表</td>
+<td>可审计</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="sec-4-2">4.2 数据库（12 张表）</h3>
+<p>数据库文件：<code>~/.local/share/rs-service/rs.db</code>（<strong>不在仓库内</strong>）。连接参数：<code>journal_mode=WAL</code>、<code>synchronous=NORMAL</code>、<code>foreign_keys=ON</code>、<code>busy_timeout=5000</code>。时间统一 <code>TEXT ISO8601 'Z'</code>。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>表</th>
+<th>关键字段</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>satellite</code></td>
+<td><code>sat_id</code> INTEGER PK（NORAD）、<code>norad_alpha5</code>、<code>intl_designator</code>、<code>name</code>、<code>name_zh</code>、<code>operator</code>、<code>country</code>、<code>category</code>、<code>object_type</code>、<code>status</code>、<code>orbit_regime</code>、<code>launch_date</code>、<code>is_domestic</code>、<code>metadata_source</code>、<code>updated_at</code></td>
+<td>卫星目录；<code>is_domestic</code> 由 <code>operator/country</code> 派生，不再手填</td>
+</tr>
+<tr>
+<td><code>satellite_alias</code></td>
+<td><code>sat_id</code>、<code>alias</code>、<code>alias_norm</code>、<code>source</code>、<code>kind</code></td>
+<td>解决 <code>JL-1</code> ↔ <code>JILIN-1 GAOFEN 03D52</code>、中文名</td>
+</tr>
+<tr>
+<td><code>tle_record</code></td>
+<td><code>sat_id</code>、<code>epoch_utc</code>、<code>line1</code>、<code>line2</code>、<code>omm_json</code>、<code>checksum_ok</code>、<code>mean_motion</code>、<code>inclination_deg</code>、<code>eccentricity</code>、<code>raan_deg</code>、<code>argp_deg</code>、<code>mean_anomaly_deg</code>、<code>bstar</code>、<code>mean_motion_dot</code>、<code>mean_motion_ddot</code>、<code>ephemeris_type</code>、<code>element_set_no</code>、<code>rev_at_epoch</code>、<code>source_id</code>、<code>fetched_at_utc</code>；<code>UNIQUE(sat_id, epoch_utc, source_id)</code></td>
+<td>append-only；<code>omm_json</code> 是 6 位号时代的唯一载体</td>
+</tr>
+<tr>
+<td><code>tle_current</code></td>
+<td><code>sat_id</code> PK、<code>tle_id</code>、<code>epoch_utc</code>、<code>age_hours</code>、<code>updated_at</code></td>
+<td>按 <code>data_source.priority</code> 择优</td>
+</tr>
+<tr>
+<td><code>sensor</code></td>
+<td><code>sat_id</code>、<code>sensor_name</code>、<code>sensor_type</code>、<code>pan_resolution_m</code>、<code>ms_resolution_m</code>、<code>tir_resolution_m</code>、<code>swath_km</code>、<code>along_track_km</code>、<code>fov_deg</code>、<code>bands_json</code>、<code>imaging_modes_json</code>、<code>revisit_days_nominal</code>、<strong><code>confidence</code></strong>、<code>source_url</code>、<code>updated_at</code></td>
+<td><code>confidence ∈ official/vendor/approx/unknown</code>；3 处错标就是缺这一层</td>
+</tr>
+<tr>
+<td><code>data_source</code></td>
+<td><code>code</code>、<code>name</code>、<code>kind</code>、<code>base_url</code>、<code>query_template</code>、<code>auth_type</code>、<code>credential_ref</code>、<code>min_interval_s</code>、<code>daily_budget</code>、<code>priority</code>、<code>enabled</code>、<code>terms_url</code>、<code>last_success_at</code>、<code>last_http_status</code>、<code>notes</code></td>
+<td>源注册与限流预算</td>
+</tr>
+<tr>
+<td><code>sync_run</code></td>
+<td><code>source_id</code>、<code>started_at_utc</code>、<code>finished_at_utc</code>、<code>status</code>、<code>attempt_no</code>、<code>max_attempts</code>、<code>next_retry_at</code>、<code>http_status</code>、<code>requested</code>、<code>inserted</code>、<code>updated</code>、<code>unchanged</code>、<code>failed</code>、<code>bytes</code>、<code>duration_ms</code>、<code>error_code</code>、<code>error_message</code></td>
+<td><code>status ∈ ok/partial/retrying/failed/abandoned/skipped_not_modified</code>；<code>failed</code> = 本次尝试失败但还会重试，<code>abandoned</code> = 3 次都失败、当天停止</td>
+</tr>
+<tr>
+<td><code>sync_item_error</code></td>
+<td><code>run_id</code>、<code>sat_id</code>、<code>attempt_no</code>、<code>http_status</code>、<code>error_code</code>、<code>error_message</code>、<code>retry_count</code>、<code>created_at_utc</code></td>
+<td>单星失败明细</td>
+</tr>
+<tr>
+<td><code>sync_state</code></td>
+<td><code>source_id</code> PK、<code>last_attempt_at</code>、<code>last_success_at</code>、<code>last_status</code>、<code>consecutive_failures</code>、<code>attempts_today</code>、<code>retry_count_today</code>、<code>circuit_open_until</code>、<code>next_scheduled_at</code>、<code>updated_at</code></td>
+<td>每日一次的调度与重试状态；<strong>重启进程不丢</strong>，避免同一天重复抓取</td>
+</tr>
+<tr>
+<td><code>aoi</code></td>
+<td><code>code</code>、<code>name</code>、<code>level</code>、<code>adcode</code>、<code>geom_wkt</code>、<code>min_lat</code>、<code>min_lon</code>、<code>max_lat</code>、<code>max_lon</code>、<code>area_km2</code>、<code>source</code>、<code>datum</code>、<code>accuracy</code></td>
+<td>城市/区县/自定义</td>
+</tr>
+<tr>
+<td><code>pass_window</code></td>
+<td><code>sat_id</code>、<code>aoi_id</code>、<code>tle_id</code>、<code>algo_version</code>、<code>aos_utc</code>、<code>los_utc</code>、<code>tca_utc</code>、<code>max_elev_deg</code>、<code>aos_az_deg</code>、<code>los_az_deg</code>、<code>duration_s</code>、<code>min_range_km</code>、<code>sun_elev_deg</code>、<code>is_daylight</code>、<code>footprint_hit</code>、<code>coverage_ratio</code>、<strong><code>cloud_cover_pct</code></strong>、<code>computed_at</code>；<code>UNIQUE(sat_id, aoi_id, aos_utc, algo_version)</code></td>
+<td>换 TLE 即失效</td>
+</tr>
+<tr>
+<td><code>coverage_snapshot</code></td>
+<td><code>aoi_id</code>、<code>window_start_utc</code>、<code>window_end_utc</code>、<code>sat_set_hash</code>、<code>grid_spacing_deg</code>、<code>k_min</code>、<code>temporal_coverage_pct</code>、<code>area_coverage_pct</code>、<code>mrt_s</code>、<code>art_s</code>、<code>algo_version</code>、<code>computed_at</code></td>
+<td>面向 Agent 查询与报表</td>
+</tr>
+</tbody>
+</table></div>
+<p>索引最小集：</p>
+<pre><code class="language-sql">CREATE INDEX idx_tle_sat_epoch  ON tle_record(sat_id, epoch_utc DESC);
+CREATE INDEX idx_tle_epoch      ON tle_record(epoch_utc);
+CREATE INDEX idx_sat_status_cat ON satellite(status, category);
+CREATE INDEX idx_sat_operator   ON satellite(operator);
+CREATE INDEX idx_pass_aoi_aos   ON pass_window(aoi_id, aos_utc);
+CREATE INDEX idx_pass_sat_aos   ON pass_window(sat_id, aos_utc);
+CREATE INDEX idx_pass_tle       ON pass_window(tle_id);
+CREATE INDEX idx_sync_src_time  ON sync_run(source_id, started_at_utc);
+CREATE INDEX idx_sensor_sat     ON sensor(sat_id);
+</code></pre>
+<h3 id="sec-4-3">4.3 数据源与同步</h3>
+<div class="callout"><span class="callout-label">说明</span><p>2026-10-19 11:55 复测：CelesTrak 直连与 7890 代理均返回 200（单星约 1.3 s，<code>GROUP=resource/sar/weather</code> 均正常）。主源恢复，Phase 2 直接使用 CelesTrak GP，不部署 Zeabur 中转；但同步层仍必须<strong>源无关 + 熔断 + 保留上一版</strong>，因为该线路此前出现过整段 TLS EOF。</p></div>
+<ul>
+<li>主源：CelesTrak GP，<code>FORMAT=json</code>（OMM 字段），按 <code>GROUP=resource,sar,weather</code> + <code>CATNR</code> 补齐；<strong>不得</strong>使用 <code>.com</code> 域名。</li>
+<li>备源：Space-Track GP（<strong>仅内部核对，不进入对外输出</strong>）；CelesTrak SupGP（仅 ISS/CSS/Planet 等有 SupGP 的对象）。</li>
+<li>元数据：CelesTrak SATCAT，每日 1 次。</li>
+<li>抓取纪律（<strong>2026-10-19 定稿</strong>）：</li>
+<li><strong>每天只同步 1 次</strong>：03:00 Asia/Shanghai，由 systemd timer 触发；不再做"每日 2–4 次"。</li>
+<li><strong>每次同步最多 3 次重试</strong>：首次尝试 + 3 次重试（共最多 4 次请求，<code>max_retries=3</code>，可配置）；退避 5 / 15 / 45 分钟。</li>
+<li><strong>3 次重试都失败就停止当天抓取</strong>：<code>sync_run.status='abandoned'</code>，<code>sync_state.circuit_open_until</code> 设为次日 03:00；当天不再自动请求，人工 <code>--force</code> 除外。</li>
+<li>手动触发也计入 <code>attempts_today</code>，默认不绕过熔断；排障时才允许 <code>--force</code>。</li>
+<li>带 <code>If-Modified-Since</code> / <code>ETag</code>；<code>304</code> 记 <code>skipped_not_modified</code>，不算失败。</li>
+<li>单次尝试遇到<strong>非 200 立即终止本次尝试</strong>（不是整轮终止），进入下一次重试；重试用尽才 <code>abandoned</code>。</li>
+<li>301/403/404 计入熔断计数（CelesTrak：50 次/2h 进防火墙）；<strong>403 "not updated since last download" 不重试</strong>。</li>
+<li>失败时保留上一版本数据，服务仍可读；<code>sync_status</code> 标记 <code>stale</code>。</li>
+<li>代理：沿用 <code>HTTPS_PROXY=http://127.0.0.1:7890</code>（CelesTrak/Space-Track/Open-Meteo 实测可通）。</li>
+</ul>
+<p>状态机：</p>
+<pre><code class="language-text">03:00 → running ──ok──→ ok
+              └─fail→ retrying(1) ──fail→ retrying(2) ──fail→ retrying(3) ──fail→ abandoned
+                           │                  │                  │
+                           └────── ok ────────┴────── ok ───────┘
+</code></pre>
+<ul>
+<li>状态持久化：<code>sync_state</code> 记录 <code>last_attempt_at</code>、<code>last_success_at</code>、<code>last_status</code>、<code>consecutive_failures</code>、<code>attempts_today</code>、<code>retry_count_today</code>、<code>circuit_open_until</code>；进程重启后从表里恢复，<strong>不会因为重启在同一天重复抓取</strong>。</li>
+<li>星历数据落库：每次成功同步把逐星结果写入 <code>tle_record</code>（append-only，含 <code>epoch_utc</code>、<code>line1/line2</code>、<code>omm_json</code>、六根数、<code>checksum_ok</code>、<code>source_id</code>、<code>fetched_at_utc</code>），并更新 <code>tle_current</code>；失败明细写 <code>sync_item_error</code>。<strong>不要只存一个覆盖式快照</strong>。</li>
+<li>解析：优先 OMM/JSON；TLE 文本仅作兼容，校验行校验位；<code>sat_id</code> 用整数，接口同时接受 Alpha-5。</li>
+<li>幂等：<code>UNIQUE(sat_id, epoch_utc, source_id)</code>，重复抓取只更新 <code>fetched_at</code>。</li>
+</ul>
+<h3 id="sec-4-4">4.4 卫星集：111 颗（全部国内、公开轨道，2026-10-19 定稿）</h3>
+<div class="callout"><span class="callout-label">说明</span><p>2026-10-19 决策：<strong>不使用历史 120 颗名单</strong>，改为按"杭州 7 天真实过境频次 + 全部国内公开轨道"重新计算。方法：杭州 30.27°N / 120.16°E；2026-10-19T00:00Z 起 7 天；可见门限 5°；光学成像 = 最大仰角 ≥10° 且 TCA 太阳高度 &gt;10°；SAR/微波 = ≥10°（不看太阳）；30 s 扫描 + 峰值抛物线插值；TLE 历元 2026-10-18/19。研究用镜像取 TLE，<strong>生产仍用 CelesTrak GP</strong>。7 天 SGP4 的 TCA 误差约数秒至 1 分钟。</p></div>
+<p><strong>结果：111 颗 = 102 颗 LEO + 9 颗 GEO；商业 64、民用 29、气象海洋 18；军事/双用途 0 颗。</strong> 其中 <code>payload_public=true</code> 98 颗，<code>false</code> 13 颗（仅给轨道/可见性，不做成像承诺）。</p>
+<h4>4.4.1 口径与阈值</h4>
+<p>纳入阈值（同时满足）：</p>
+<ol>
+<li><strong>国内</strong>：中国民用、商业或气象海洋卫星；不含 Sentinel/Landsat/WorldView 等国外星。</li>
+<li><strong>在轨且非退役</strong>：剔除已退役/失效（FY-1D、FY-3A/B/C、HJ-1A/B、HY-1B、HY-2A、ZY-1 02C 等）、已再入、140–185 km 待再入对象。</li>
+<li><strong>高度</strong>：LEO 高度 ≥200 km；本表最低为 Jilin-1 GF-03D09（284 km），已标注"低轨"。</li>
+<li><strong>可见过境</strong>：LEO 在杭州 7 天平均 ≥2.5 次/天（5° 门限）；GEO 为常驻可见（仰角 &gt;5°，可见率 100%），单列、不参与 LEO 排名。</li>
+<li><strong>TLE</strong>：有可用 TLE，年龄 ≤60 天；本表 <strong>111 颗全部 ≤0.9 天</strong>，无 &gt;14 天条目。</li>
+<li><strong>载荷</strong>：优先公开载荷；商业星座中 13 颗载荷未核实（Tianyi A–F、Xingshidai 20、Honghu 2、Dongpo 08/09/10、KX-09、LuTan-4 01A），标 <code>payload_public=false</code>，只给轨道/可见性。</li>
+<li><strong>去重</strong>：按 NORAD 去重；<code>JILIN-1 GAOFEN 3A</code>（44312）已确认是 <strong>Bufeng-1A（GNSS-R）</strong> 的镜像别名，<strong>从本清单剔除</strong>；本表无 OBJECT A/B/C 重复对象。</li>
+</ol>
+<p><strong>为什么 0 军事</strong>：Yaogan、Yunhai、Ningxia、GF-8/9/10R/11/12/14 无公开载荷参数；本轮按要求把 110–120 全部限定在公开载荷的商业/民用/气象海洋，军事 0 颗。</p>
+<p><strong>数量差异</strong>：若把退役星、140–185 km 待再入、44312 别名和 GF-8/9/10R/11/12/14 双用途也算入，会得到约 121 颗；按上述硬性排除后为 <strong>111 颗</strong>。</p>
+<h4>4.4.2 LEO 展示集（102 颗，按可见过境/天降序）</h4>
+<div class="callout"><span class="callout-label">说明</span><p>该表较宽，可横向滚动查看 TLE 年龄与置信度列。</p></div>
+<div class="table-wrap wide"><table>
+<thead>
+<tr>
+<th style="text-align: right;">#</th>
+<th style="text-align: right;">NORAD</th>
+<th>名称</th>
+<th>类别</th>
+<th style="text-align: right;">i(°)/h(km)</th>
+<th style="text-align: right;">可见/天</th>
+<th style="text-align: right;">成像/天</th>
+<th style="text-align: right;">最大仰角(°)</th>
+<th style="text-align: right;">TLE(d)</th>
+<th>公开</th>
+<th>传感器（分辨率/幅宽）</th>
+<th>conf</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">48621</td>
+<td>HY-2D</td>
+<td>气象海洋</td>
+<td style="text-align: right;">66.0 / 950</td>
+<td style="text-align: right;">5.29</td>
+<td style="text-align: right;">4.43</td>
+<td style="text-align: right;">86.4</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>高度计 / 散射计；足印约 2–25 km</td>
+<td>approx</td>
+</tr>
+<tr>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">46469</td>
+<td>HY-2C</td>
+<td>气象海洋</td>
+<td style="text-align: right;">66.0 / 950</td>
+<td style="text-align: right;">5.14</td>
+<td style="text-align: right;">4.43</td>
+<td style="text-align: right;">86.3</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>高度计 / 散射计；足印约 2–25 km</td>
+<td>approx</td>
+</tr>
+<tr>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">56232</td>
+<td>FY-3G</td>
+<td>气象海洋</td>
+<td style="text-align: right;">50.0 / 409</td>
+<td style="text-align: right;">5.0</td>
+<td style="text-align: right;">3.71</td>
+<td style="text-align: right;">80.6</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>降水测量雷达 / 微波成像；约 0.5–5 km</td>
+<td>approx</td>
+</tr>
+<tr>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">43609</td>
+<td>HY-1C</td>
+<td>气象海洋</td>
+<td style="text-align: right;">98.5 / 775</td>
+<td style="text-align: right;">4.86</td>
+<td style="text-align: right;">1.57</td>
+<td style="text-align: right;">87.1</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>50 m（CZI）；1000 km</td>
+<td>official</td>
+</tr>
+<tr>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">43655</td>
+<td>HY-2B</td>
+<td>气象海洋</td>
+<td style="text-align: right;">99.3 / 964</td>
+<td style="text-align: right;">4.57</td>
+<td style="text-align: right;">3.86</td>
+<td style="text-align: right;">84.2</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>高度计 / 散射计；足印约 2–25 km</td>
+<td>approx</td>
+</tr>
+<tr>
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">69737</td>
+<td>HY-2E</td>
+<td>气象海洋</td>
+<td style="text-align: right;">99.3 / 964</td>
+<td style="text-align: right;">4.57</td>
+<td style="text-align: right;">3.86</td>
+<td style="text-align: right;">85.3</td>
+<td style="text-align: right;">0.5</td>
+<td>是</td>
+<td>高度计 / 散射计；足印约 2–25 km</td>
+<td>approx</td>
+</tr>
+<tr>
+<td style="text-align: right;">7</td>
+<td style="text-align: right;">58349</td>
+<td>HY-3A</td>
+<td>气象海洋</td>
+<td style="text-align: right;">98.5 / 775</td>
+<td style="text-align: right;">4.57</td>
+<td style="text-align: right;">1.71</td>
+<td style="text-align: right;">87.5</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>约 50 m；约 1000 km</td>
+<td>approx</td>
+</tr>
+<tr>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">44528</td>
+<td>ZY-1 02D</td>
+<td>民用</td>
+<td style="text-align: right;">98.7 / 771</td>
+<td style="text-align: right;">4.57</td>
+<td style="text-align: right;">1.71</td>
+<td style="text-align: right;">83.9</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>5 m / 10 m；115 km；30 m 高光谱 60 km</td>
+<td>official</td>
+</tr>
+<tr>
+<td style="text-align: right;">9</td>
+<td style="text-align: right;">43010</td>
+<td>FY-3D</td>
+<td>气象海洋</td>
+<td style="text-align: right;">99.0 / 823</td>
+<td style="text-align: right;">4.43</td>
+<td style="text-align: right;">1.43</td>
+<td style="text-align: right;">81.8</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>250 m 可见 / 1 km 红外；2900 km</td>
+<td>official</td>
+</tr>
+<tr>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">49008</td>
+<td>FY-3E</td>
+<td>气象海洋</td>
+<td style="text-align: right;">98.8 / 823</td>
+<td style="text-align: right;">4.43</td>
+<td style="text-align: right;">0.86</td>
+<td style="text-align: right;">78.3</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>250 m 可见 / 1 km 红外；2900 km</td>
+<td>official</td>
+</tr>
+<tr>
+<td style="text-align: right;">11</td>
+<td style="text-align: right;">65815</td>
+<td>FY-3H</td>
+<td>气象海洋</td>
+<td style="text-align: right;">98.7 / 823</td>
+<td style="text-align: right;">4.43</td>
+<td style="text-align: right;">1.86</td>
+<td style="text-align: right;">80.2</td>
+<td style="text-align: right;">0.7</td>
+<td>是</td>
+<td>250 m / 1 km；2900 km</td>
+<td>approx</td>
+</tr>
+<tr>
+<td style="text-align: right;">12</td>
+<td style="text-align: right;">45721</td>
+<td>HY-1D</td>
+<td>气象海洋</td>
+<td style="text-align: right;">98.5 / 775</td>
+<td style="text-align: right;">4.43</td>
+<td style="text-align: right;">2.0</td>
+<td style="text-align: right;">84.4</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>50 m（CZI）；1000 km</td>
+<td>official</td>
+</tr>
+<tr>
+<td style="text-align: right;">13</td>
+<td style="text-align: right;">57490</td>
+<td>FY-3F</td>
+<td>气象海洋</td>
+<td style="text-align: right;">98.7 / 823</td>
+<td style="text-align: right;">4.29</td>
+<td style="text-align: right;">1.86</td>
+<td style="text-align: right;">79.7</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>250 m 可见 / 1 km 红外；2900 km</td>
+<td>official</td>
+</tr>
+<tr>
+<td style="text-align: right;">14</td>
+<td style="text-align: right;">41727</td>
+<td>GF-3</td>
+<td>民用</td>
+<td style="text-align: right;">98.4 / 748</td>
+<td style="text-align: right;">4.29</td>
+<td style="text-align: right;">3.57</td>
+<td style="text-align: right;">77.8</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>C 波段；1 m 聚束 / 3 m 条带 / 10–500 m 扫描；10–650 km</td>
+<td>official</td>
+</tr>
+<tr>
+<td style="text-align: right;">15</td>
+<td style="text-align: right;">49122</td>
+<td>GF-5 02</td>
+<td>民用</td>
+<td style="text-align: right;">98.2 / 698</td>
+<td style="text-align: right;">4.29</td>
+<td style="text-align: right;">1.71</td>
+<td style="text-align: right;">82.8</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>30 m；330 波段；60 km</td>
+<td>official</td>
+</tr>
+<tr>
+<td style="text-align: right;">16</td>
+<td style="text-align: right;">49495</td>
+<td>GF-3 02</td>
+<td>民用</td>
+<td style="text-align: right;">98.4 / 748</td>
+<td style="text-align: right;">4.14</td>
+<td style="text-align: right;">3.57</td>
+<td style="text-align: right;">87.6</td>
+<td style="text-align: right;">0.1</td>
+<td>是</td>
+<td>C 波段；1 m 聚束 / 3 m 条带 / 10–500 m 扫描；10–650 km</td>
+<td>official</td>
+</tr>
+<tr>
+<td style="text-align: right;">17</td>
+<td style="text-align: right;">52200</td>
+<td>GF-3 03</td>
+<td>民用</td>
+<td style="text-align: right;">98.4 / 748</td>
+<td style="text-align: right;">4.14</td>
+<td style="text-align: right;">3.57</td>
+<td style="text-align: right;">83.9</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>C 波段；1 m 聚束 / 3 m 条带 / 10–500 m 扫描；10–650 km</td>
+<td>official</td>
+</tr>
+<tr>
+<td style="text-align: right;">18</td>
+<td style="text-align: right;">39150</td>
+<td>GF-1</td>
+<td>民用</td>
+<td style="text-align: right;">97.9 / 637</td>
+<td style="text-align: right;">4.0</td>
+<td style="text-align: right;">1.57</td>
+<td style="text-align: right;">82.2</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>2 m / 8 m；60 km；16 m 宽幅 800 km</td>
+<td>official</td>
+</tr>
+<tr>
+<td style="text-align: right;">19</td>
+<td style="text-align: right;">43260</td>
+<td>GF-1 03</td>
+<td>民用</td>
+<td style="text-align: right;">98.0 / 637</td>
+<td style="text-align: right;">4.0</td>
+<td style="text-align: right;">1.71</td>
+<td style="text-align: right;">84.5</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>2 m / 8 m；60 km；16 m 宽幅 800 km</td>
+<td>official</td>
+</tr>
+<tr>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">43262</td>
+<td>GF-1 04</td>
+<td>民用</td>
+<td style="text-align: right;">98.0 / 638</td>
+<td style="text-align: right;">4.0</td>
+<td style="text-align: right;">1.57</td>
+<td style="text-align: right;">77.4</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>2 m / 8 m；60 km；16 m 宽幅 800 km</td>
+<td>official</td>
+</tr>
+<tr>
+<td style="text-align: right;">21</td>
+<td style="text-align: right;">40118</td>
+<td>GF-2</td>
+<td>民用</td>
+<td style="text-align: right;">98.0 / 623</td>
+<td style="text-align: right;">4.0</td>
+<td style="text-align: right;">1.71</td>
+<td style="text-align: right;">83.3</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>0.8 m 全色 / 3.2 m 多光谱；45 km</td>
+<td>official</td>
+</tr>
+<tr>
+<td style="text-align: right;">22</td>
+<td style="text-align: right;">43461</td>
+<td>GF-5 01</td>
+<td>民用</td>
+<td style="text-align: right;">98.5 / 688</td>
+<td style="text-align: right;">4.0</td>
+<td style="text-align: right;">1.43</td>
+<td style="text-align: right;">78.5</td>
+<td style="text-align: right;">0.6</td>
+<td>是</td>
+<td>30 m；330 波段；60 km</td>
+<td>official</td>
+</tr>
+<tr>
+<td style="text-align: right;">23</td>
+<td style="text-align: right;">43484</td>
+<td>GF-6</td>
+<td>民用</td>
+<td style="text-align: right;">98.1 / 638</td>
+<td style="text-align: right;">4.0</td>
+<td style="text-align: right;">1.71</td>
+<td style="text-align: right;">83.3</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>2 m / 8 m；90 km；16 m 宽幅 800 km</td>
+<td>official</td>
+</tr>
+<tr>
+<td style="text-align: right;">24</td>
+<td style="text-align: right;">46478</td>
+<td>HJ-2A</td>
+<td>民用</td>
+<td style="text-align: right;">97.9 / 637</td>
+<td style="text-align: right;">4.0</td>
+<td style="text-align: right;">1.71</td>
+<td style="text-align: right;">78.7</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>2 m / 8 m；90 km</td>
+<td>official</td>
+</tr>
+<tr>
+<td style="text-align: right;">25</td>
+<td style="text-align: right;">46479</td>
+<td>HJ-2B</td>
+<td>民用</td>
+<td style="text-align: right;">97.9 / 637</td>
+<td style="text-align: right;">4.0</td>
+<td style="text-align: right;">1.57</td>
+<td style="text-align: right;">84.2</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>2 m / 8 m；90 km</td>
+<td>official</td>
+</tr>
+<tr>
+<td style="text-align: right;">26</td>
+<td style="text-align: right;">61936</td>
+<td>HY-4A</td>
+<td>气象海洋</td>
+<td style="text-align: right;">98.0 / 648</td>
+<td style="text-align: right;">4.0</td>
+<td style="text-align: right;">3.29</td>
+<td style="text-align: right;">86.2</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>盐度/微波遥感；幅宽未公开</td>
+<td>approx</td>
+</tr>
+<tr>
+<td style="text-align: right;">27</td>
+<td style="text-align: right;">40961</td>
+<td>Jilin-1</td>
+<td>商业</td>
+<td style="text-align: right;">97.7 / 632</td>
+<td style="text-align: right;">4.0</td>
+<td style="text-align: right;">0.43</td>
+<td style="text-align: right;">77.3</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>0.72 m 全色 / 2.9 m 多光谱；约 4.5 km</td>
+<td>approx</td>
+</tr>
+<tr>
+<td style="text-align: right;">28</td>
+<td style="text-align: right;">53445</td>
+<td>Jilin-1 GF-03D09</td>
+<td>商业</td>
+<td style="text-align: right;">97.6 / 284</td>
+<td style="text-align: right;">4.0</td>
+<td style="text-align: right;">1.0</td>
+<td style="text-align: right;">16.2</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>0.75 m 全色 / 3 m 多光谱；17 km</td>
+<td>vendor</td>
+</tr>
+<tr>
+<td style="text-align: right;">29</td>
+<td style="text-align: right;">44520</td>
+<td>KX-09</td>
+<td>商业</td>
+<td style="text-align: right;">97.8 / 573</td>
+<td style="text-align: right;">4.0</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">65.0</td>
+<td style="text-align: right;">0.4</td>
+<td>否</td>
+<td>未公开</td>
+<td>unknown</td>
+</tr>
+<tr>
+<td style="text-align: right;">30</td>
+<td style="text-align: right;">50465</td>
+<td>ZY-1 02E</td>
+<td>民用</td>
+<td style="text-align: right;">98.4 / 771</td>
+<td style="text-align: right;">4.0</td>
+<td style="text-align: right;">1.86</td>
+<td style="text-align: right;">75.6</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>2 m 级 / 5 m 级；约 90 km</td>
+<td>approx</td>
+</tr>
+<tr>
+<td style="text-align: right;">31</td>
+<td style="text-align: right;">53587</td>
+<td>Beijing-3B</td>
+<td>商业</td>
+<td style="text-align: right;">97.8 / 604</td>
+<td style="text-align: right;">3.86</td>
+<td style="text-align: right;">1.71</td>
+<td style="text-align: right;">85.7</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>0.5 m 全色 / 2 m 多光谱；150 km</td>
+<td>vendor</td>
+</tr>
+<tr>
+<td style="text-align: right;">32</td>
+<td style="text-align: right;">43259</td>
+<td>GF-1 02</td>
+<td>民用</td>
+<td style="text-align: right;">98.0 / 638</td>
+<td style="text-align: right;">3.86</td>
+<td style="text-align: right;">1.57</td>
+<td style="text-align: right;">85.4</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>2 m / 8 m；60 km；16 m 宽幅 800 km</td>
+<td>official</td>
+</tr>
+<tr>
+<td style="text-align: right;">33</td>
+<td style="text-align: right;">45856</td>
+<td>Gaofen Duomo</td>
+<td>民用</td>
+<td style="text-align: right;">97.8 / 636</td>
+<td style="text-align: right;">3.86</td>
+<td style="text-align: right;">1.86</td>
+<td style="text-align: right;">84.6</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>0.5 m 级 / 2 m 级；约 90 km</td>
+<td>approx</td>
+</tr>
+<tr>
+<td style="text-align: right;">34</td>
+<td style="text-align: right;">51284</td>
+<td>LuTan-1 01A</td>
+<td>民用</td>
+<td style="text-align: right;">97.8 / 600</td>
+<td style="text-align: right;">3.86</td>
+<td style="text-align: right;">3.29</td>
+<td style="text-align: right;">82.4</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>L 波段 InSAR；3 m；50 km</td>
+<td>approx</td>
+</tr>
+<tr>
+<td style="text-align: right;">35</td>
+<td style="text-align: right;">51822</td>
+<td>LuTan-1 01B</td>
+<td>民用</td>
+<td style="text-align: right;">97.8 / 600</td>
+<td style="text-align: right;">3.86</td>
+<td style="text-align: right;">3.29</td>
+<td style="text-align: right;">83.3</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>L 波段 InSAR；3 m；50 km</td>
+<td>approx</td>
+</tr>
+<tr>
+<td style="text-align: right;">36</td>
+<td style="text-align: right;">43485</td>
+<td>Luojia-1</td>
+<td>民用</td>
+<td style="text-align: right;">97.8 / 602</td>
+<td style="text-align: right;">3.86</td>
+<td style="text-align: right;">1.43</td>
+<td style="text-align: right;">78.3</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>130 m；250 km</td>
+<td>official</td>
+</tr>
+<tr>
+<td style="text-align: right;">37</td>
+<td style="text-align: right;">49338</td>
+<td>Jilin-1 GF-02F</td>
+<td>商业</td>
+<td style="text-align: right;">97.7 / 538</td>
+<td style="text-align: right;">3.71</td>
+<td style="text-align: right;">1.29</td>
+<td style="text-align: right;">79.3</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>0.75 m 全色 / 3 m 多光谱；17 km</td>
+<td>vendor</td>
+</tr>
+<tr>
+<td style="text-align: right;">38</td>
+<td style="text-align: right;">57696</td>
+<td>Jilin-1 Kuanfu 02A</td>
+<td>商业</td>
+<td style="text-align: right;">97.6 / 534</td>
+<td style="text-align: right;">3.71</td>
+<td style="text-align: right;">1.14</td>
+<td style="text-align: right;">81.3</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>0.5 m 全色 / 2 m 多光谱；150 km</td>
+<td>vendor</td>
+</tr>
+<tr>
+<td style="text-align: right;">39</td>
+<td style="text-align: right;">52320</td>
+<td>SuperView Neo-1 01</td>
+<td>商业</td>
+<td style="text-align: right;">97.3 / 511</td>
+<td style="text-align: right;">3.71</td>
+<td style="text-align: right;">1.43</td>
+<td style="text-align: right;">80.3</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>0.3 m 全色 / 1.2 m 多光谱；13 km</td>
+<td>vendor</td>
+</tr>
+<tr>
+<td style="text-align: right;">40</td>
+<td style="text-align: right;">52322</td>
+<td>SuperView Neo-1 02</td>
+<td>商业</td>
+<td style="text-align: right;">97.3 / 511</td>
+<td style="text-align: right;">3.71</td>
+<td style="text-align: right;">1.43</td>
+<td style="text-align: right;">86.9</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>0.3 m 全色 / 1.2 m 多光谱；13 km</td>
+<td>vendor</td>
+</tr>
+<tr>
+<td style="text-align: right;">41</td>
+<td style="text-align: right;">64048</td>
+<td>Tianyi A</td>
+<td>商业</td>
+<td style="text-align: right;">97.4 / 505</td>
+<td style="text-align: right;">3.71</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">74.3</td>
+<td style="text-align: right;">0.4</td>
+<td>否</td>
+<td>未公开</td>
+<td>unknown</td>
+</tr>
+<tr>
+<td style="text-align: right;">42</td>
+<td style="text-align: right;">44703</td>
+<td>GF-7</td>
+<td>民用</td>
+<td style="text-align: right;">97.6 / 498</td>
+<td style="text-align: right;">3.57</td>
+<td style="text-align: right;">1.29</td>
+<td style="text-align: right;">86.2</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>0.8 m 全色（双线阵）/ 2.5 m 多光谱；20 km</td>
+<td>official</td>
+</tr>
+<tr>
+<td style="text-align: right;">43</td>
+<td style="text-align: right;">54035</td>
+<td>HJ-2E</td>
+<td>民用</td>
+<td style="text-align: right;">97.4 / 502</td>
+<td style="text-align: right;">3.57</td>
+<td style="text-align: right;">2.86</td>
+<td style="text-align: right;">86.0</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>S 波段；5 m；20–100 km</td>
+<td>official</td>
+</tr>
+<tr>
+<td style="text-align: right;">44</td>
+<td style="text-align: right;">44836</td>
+<td>Jilin-1 GF-02B</td>
+<td>商业</td>
+<td style="text-align: right;">97.5 / 497</td>
+<td style="text-align: right;">3.57</td>
+<td style="text-align: right;">1.57</td>
+<td style="text-align: right;">78.4</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>0.75 m 全色 / 3 m 多光谱；17 km</td>
+<td>vendor</td>
+</tr>
+<tr>
+<td style="text-align: right;">45</td>
+<td style="text-align: right;">49256</td>
+<td>Jilin-1 GF-02D</td>
+<td>商业</td>
+<td style="text-align: right;">97.7 / 537</td>
+<td style="text-align: right;">3.57</td>
+<td style="text-align: right;">1.86</td>
+<td style="text-align: right;">81.4</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>0.75 m 全色 / 3 m 多光谱；17 km</td>
+<td>vendor</td>
+</tr>
+<tr>
+<td style="text-align: right;">46</td>
+<td style="text-align: right;">52443</td>
+<td>Jilin-1 Kuanfu 01C</td>
+<td>商业</td>
+<td style="text-align: right;">97.5 / 533</td>
+<td style="text-align: right;">3.57</td>
+<td style="text-align: right;">1.43</td>
+<td style="text-align: right;">80.9</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>0.75 m 全色 / 3 m 多光谱；136 km</td>
+<td>vendor</td>
+</tr>
+<tr>
+<td style="text-align: right;">47</td>
+<td style="text-align: right;">56153</td>
+<td>PIESAT-1 A</td>
+<td>商业</td>
+<td style="text-align: right;">97.5 / 520</td>
+<td style="text-align: right;">3.57</td>
+<td style="text-align: right;">2.86</td>
+<td style="text-align: right;">74.8</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>X 波段 InSAR；0.5 m 聚束；80 km 拼接</td>
+<td>vendor</td>
+</tr>
+<tr>
+<td style="text-align: right;">48</td>
+<td style="text-align: right;">56154</td>
+<td>PIESAT-1 B</td>
+<td>商业</td>
+<td style="text-align: right;">97.5 / 520</td>
+<td style="text-align: right;">3.57</td>
+<td style="text-align: right;">2.86</td>
+<td style="text-align: right;">74.9</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>X 波段 InSAR；0.5 m 聚束；80 km 拼接</td>
+<td>vendor</td>
+</tr>
+<tr>
+<td style="text-align: right;">49</td>
+<td style="text-align: right;">56155</td>
+<td>PIESAT-1 C</td>
+<td>商业</td>
+<td style="text-align: right;">97.5 / 520</td>
+<td style="text-align: right;">3.57</td>
+<td style="text-align: right;">2.86</td>
+<td style="text-align: right;">75.2</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>X 波段 InSAR；0.5 m 聚束；80 km 拼接</td>
+<td>vendor</td>
+</tr>
+<tr>
+<td style="text-align: right;">50</td>
+<td style="text-align: right;">56156</td>
+<td>PIESAT-1 D</td>
+<td>商业</td>
+<td style="text-align: right;">97.5 / 520</td>
+<td style="text-align: right;">3.57</td>
+<td style="text-align: right;">2.86</td>
+<td style="text-align: right;">74.7</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>X 波段 InSAR；0.5 m 聚束；80 km 拼接</td>
+<td>vendor</td>
+</tr>
+<tr>
+<td style="text-align: right;">51</td>
+<td style="text-align: right;">62333</td>
+<td>PIESAT-2 09</td>
+<td>商业</td>
+<td style="text-align: right;">97.5 / 516</td>
+<td style="text-align: right;">3.57</td>
+<td style="text-align: right;">2.86</td>
+<td style="text-align: right;">85.6</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>X 波段 InSAR；0.5 m 级；80 km 拼接</td>
+<td>approx</td>
+</tr>
+<tr>
+<td style="text-align: right;">52</td>
+<td style="text-align: right;">62334</td>
+<td>PIESAT-2 10</td>
+<td>商业</td>
+<td style="text-align: right;">97.5 / 516</td>
+<td style="text-align: right;">3.57</td>
+<td style="text-align: right;">3.0</td>
+<td style="text-align: right;">83.4</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>X 波段 InSAR；0.5 m 级；80 km 拼接</td>
+<td>approx</td>
+</tr>
+<tr>
+<td style="text-align: right;">53</td>
+<td style="text-align: right;">62335</td>
+<td>PIESAT-2 11</td>
+<td>商业</td>
+<td style="text-align: right;">97.5 / 516</td>
+<td style="text-align: right;">3.57</td>
+<td style="text-align: right;">3.0</td>
+<td style="text-align: right;">84.7</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>X 波段 InSAR；0.5 m 级；80 km 拼接</td>
+<td>approx</td>
+</tr>
+<tr>
+<td style="text-align: right;">54</td>
+<td style="text-align: right;">62336</td>
+<td>PIESAT-2 12</td>
+<td>商业</td>
+<td style="text-align: right;">97.5 / 516</td>
+<td style="text-align: right;">3.57</td>
+<td style="text-align: right;">2.86</td>
+<td style="text-align: right;">85.2</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>X 波段 InSAR；0.5 m 级；80 km 拼接</td>
+<td>approx</td>
+</tr>
+<tr>
+<td style="text-align: right;">55</td>
+<td style="text-align: right;">61871</td>
+<td>PIESAT-2 C</td>
+<td>商业</td>
+<td style="text-align: right;">97.4 / 483</td>
+<td style="text-align: right;">3.57</td>
+<td style="text-align: right;">3.0</td>
+<td style="text-align: right;">70.6</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>X 波段 InSAR；0.5 m 级；80 km 拼接</td>
+<td>approx</td>
+</tr>
+<tr>
+<td style="text-align: right;">56</td>
+<td style="text-align: right;">63125</td>
+<td>SuperView Neo-1 03</td>
+<td>商业</td>
+<td style="text-align: right;">97.4 / 498</td>
+<td style="text-align: right;">3.57</td>
+<td style="text-align: right;">1.43</td>
+<td style="text-align: right;">73.1</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>0.3 m 全色 / 1.2 m 多光谱；13 km</td>
+<td>vendor</td>
+</tr>
+<tr>
+<td style="text-align: right;">57</td>
+<td style="text-align: right;">63126</td>
+<td>SuperView Neo-1 04</td>
+<td>商业</td>
+<td style="text-align: right;">97.4 / 498</td>
+<td style="text-align: right;">3.57</td>
+<td style="text-align: right;">1.57</td>
+<td style="text-align: right;">72.8</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>0.3 m 全色 / 1.2 m 多光谱；13 km</td>
+<td>vendor</td>
+</tr>
+<tr>
+<td style="text-align: right;">58</td>
+<td style="text-align: right;">53130</td>
+<td>SuperView Neo-2 02</td>
+<td>商业</td>
+<td style="text-align: right;">97.4 / 489</td>
+<td style="text-align: right;">3.57</td>
+<td style="text-align: right;">0.43</td>
+<td style="text-align: right;">77.1</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>0.5 m 全色 / 2 m 多光谱；15 km</td>
+<td>vendor</td>
+</tr>
+<tr>
+<td style="text-align: right;">59</td>
+<td style="text-align: right;">62079</td>
+<td>SuperView Neo-2 03</td>
+<td>商业</td>
+<td style="text-align: right;">97.4 / 504</td>
+<td style="text-align: right;">3.57</td>
+<td style="text-align: right;">0.43</td>
+<td style="text-align: right;">67.9</td>
+<td style="text-align: right;">0.5</td>
+<td>是</td>
+<td>0.5 m 全色 / 2 m 多光谱；15 km</td>
+<td>vendor</td>
+</tr>
+<tr>
+<td style="text-align: right;">60</td>
+<td style="text-align: right;">62080</td>
+<td>SuperView Neo-2 04</td>
+<td>商业</td>
+<td style="text-align: right;">97.4 / 504</td>
+<td style="text-align: right;">3.57</td>
+<td style="text-align: right;">0.43</td>
+<td style="text-align: right;">67.8</td>
+<td style="text-align: right;">0.5</td>
+<td>是</td>
+<td>0.5 m 全色 / 2 m 多光谱；15 km</td>
+<td>vendor</td>
+</tr>
+<tr>
+<td style="text-align: right;">61</td>
+<td style="text-align: right;">68377</td>
+<td>SuperView Neo-2 05</td>
+<td>商业</td>
+<td style="text-align: right;">97.4 / 504</td>
+<td style="text-align: right;">3.57</td>
+<td style="text-align: right;">0.14</td>
+<td style="text-align: right;">82.0</td>
+<td style="text-align: right;">0.5</td>
+<td>是</td>
+<td>0.5 m 全色 / 2 m 多光谱；15 km</td>
+<td>vendor</td>
+</tr>
+<tr>
+<td style="text-align: right;">62</td>
+<td style="text-align: right;">68378</td>
+<td>SuperView Neo-2 06</td>
+<td>商业</td>
+<td style="text-align: right;">97.4 / 504</td>
+<td style="text-align: right;">3.57</td>
+<td style="text-align: right;">0.14</td>
+<td style="text-align: right;">82.0</td>
+<td style="text-align: right;">0.5</td>
+<td>是</td>
+<td>0.5 m 全色 / 2 m 多光谱；15 km</td>
+<td>vendor</td>
+</tr>
+<tr>
+<td style="text-align: right;">63</td>
+<td style="text-align: right;">63208</td>
+<td>SuperView Neo-3 02</td>
+<td>商业</td>
+<td style="text-align: right;">97.4 / 496</td>
+<td style="text-align: right;">3.57</td>
+<td style="text-align: right;">1.43</td>
+<td style="text-align: right;">86.3</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>0.5 m 全色 / 2 m 多光谱；15 km</td>
+<td>approx</td>
+</tr>
+<tr>
+<td style="text-align: right;">64</td>
+<td style="text-align: right;">64051</td>
+<td>Tianyi D</td>
+<td>商业</td>
+<td style="text-align: right;">97.4 / 503</td>
+<td style="text-align: right;">3.57</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">75.2</td>
+<td style="text-align: right;">0.4</td>
+<td>否</td>
+<td>未公开</td>
+<td>unknown</td>
+</tr>
+<tr>
+<td style="text-align: right;">65</td>
+<td style="text-align: right;">64053</td>
+<td>Tianyi F</td>
+<td>商业</td>
+<td style="text-align: right;">97.4 / 504</td>
+<td style="text-align: right;">3.57</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">75.9</td>
+<td style="text-align: right;">0.4</td>
+<td>否</td>
+<td>未公开</td>
+<td>unknown</td>
+</tr>
+<tr>
+<td style="text-align: right;">66</td>
+<td style="text-align: right;">41556</td>
+<td>ZY-3 02</td>
+<td>民用</td>
+<td style="text-align: right;">97.4 / 498</td>
+<td style="text-align: right;">3.57</td>
+<td style="text-align: right;">1.29</td>
+<td style="text-align: right;">77.9</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>2.1 m 全色 / 5.8 m 多光谱；51 km</td>
+<td>official</td>
+</tr>
+<tr>
+<td style="text-align: right;">67</td>
+<td style="text-align: right;">67131</td>
+<td>ZY-3 04</td>
+<td>民用</td>
+<td style="text-align: right;">97.5 / 499</td>
+<td style="text-align: right;">3.57</td>
+<td style="text-align: right;">1.43</td>
+<td style="text-align: right;">84.4</td>
+<td style="text-align: right;">0.8</td>
+<td>是</td>
+<td>2.1 m 全色 / 5.8 m 多光谱；51 km</td>
+<td>official</td>
+</tr>
+<tr>
+<td style="text-align: right;">68</td>
+<td style="text-align: right;">54686</td>
+<td>Dongpo 08</td>
+<td>商业</td>
+<td style="text-align: right;">97.7 / 456</td>
+<td style="text-align: right;">3.43</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">62.3</td>
+<td style="text-align: right;">0.4</td>
+<td>否</td>
+<td>未公开</td>
+<td>unknown</td>
+</tr>
+<tr>
+<td style="text-align: right;">69</td>
+<td style="text-align: right;">57519</td>
+<td>HJ-2F</td>
+<td>民用</td>
+<td style="text-align: right;">97.4 / 502</td>
+<td style="text-align: right;">3.43</td>
+<td style="text-align: right;">2.86</td>
+<td style="text-align: right;">72.1</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>S 波段；5 m；20–100 km</td>
+<td>official</td>
+</tr>
+<tr>
+<td style="text-align: right;">70</td>
+<td style="text-align: right;">58555</td>
+<td>Honghu 2</td>
+<td>商业</td>
+<td style="text-align: right;">97.3 / 471</td>
+<td style="text-align: right;">3.43</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">81.3</td>
+<td style="text-align: right;">0.4</td>
+<td>否</td>
+<td>未公开</td>
+<td>unknown</td>
+</tr>
+<tr>
+<td style="text-align: right;">71</td>
+<td style="text-align: right;">43946</td>
+<td>Jilin-1 10</td>
+<td>商业</td>
+<td style="text-align: right;">97.5 / 482</td>
+<td style="text-align: right;">3.43</td>
+<td style="text-align: right;">1.29</td>
+<td style="text-align: right;">80.4</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>0.72 m 全色 / 2.9 m 多光谱；约 4.5 km</td>
+<td>approx</td>
+</tr>
+<tr>
+<td style="text-align: right;">72</td>
+<td style="text-align: right;">44777</td>
+<td>Jilin-1 GF-02A</td>
+<td>商业</td>
+<td style="text-align: right;">97.5 / 436</td>
+<td style="text-align: right;">3.43</td>
+<td style="text-align: right;">1.29</td>
+<td style="text-align: right;">77.1</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>0.75 m 全色 / 3 m 多光谱；17 km</td>
+<td>vendor</td>
+</tr>
+<tr>
+<td style="text-align: right;">73</td>
+<td style="text-align: right;">54695</td>
+<td>Jilin-1 GF-03D48</td>
+<td>商业</td>
+<td style="text-align: right;">97.7 / 450</td>
+<td style="text-align: right;">3.43</td>
+<td style="text-align: right;">0.0</td>
+<td style="text-align: right;">79.7</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>0.75 m 全色 / 3 m 多光谱；17 km</td>
+<td>vendor</td>
+</tr>
+<tr>
+<td style="text-align: right;">74</td>
+<td style="text-align: right;">54690</td>
+<td>Jilin-1 GF-03D50</td>
+<td>商业</td>
+<td style="text-align: right;">97.7 / 453</td>
+<td style="text-align: right;">3.43</td>
+<td style="text-align: right;">0.14</td>
+<td style="text-align: right;">87.5</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>0.75 m 全色 / 3 m 多光谱；17 km</td>
+<td>vendor</td>
+</tr>
+<tr>
+<td style="text-align: right;">75</td>
+<td style="text-align: right;">45016</td>
+<td>Jilin-1 Kuanfu 01</td>
+<td>商业</td>
+<td style="text-align: right;">97.5 / 529</td>
+<td style="text-align: right;">3.43</td>
+<td style="text-align: right;">1.43</td>
+<td style="text-align: right;">78.4</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>0.75 m 全色 / 3 m 多光谱；136 km</td>
+<td>vendor</td>
+</tr>
+<tr>
+<td style="text-align: right;">76</td>
+<td style="text-align: right;">61189</td>
+<td>Jilin-1 Kuanfu 02B-01</td>
+<td>商业</td>
+<td style="text-align: right;">97.6 / 537</td>
+<td style="text-align: right;">3.43</td>
+<td style="text-align: right;">1.57</td>
+<td style="text-align: right;">83.0</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>0.5 m 全色 / 2 m 多光谱；150 km</td>
+<td>vendor</td>
+</tr>
+<tr>
+<td style="text-align: right;">77</td>
+<td style="text-align: right;">61869</td>
+<td>PIESAT-2 A</td>
+<td>商业</td>
+<td style="text-align: right;">97.4 / 464</td>
+<td style="text-align: right;">3.43</td>
+<td style="text-align: right;">2.71</td>
+<td style="text-align: right;">69.7</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>X 波段 InSAR；0.5 m 级；80 km 拼接</td>
+<td>approx</td>
+</tr>
+<tr>
+<td style="text-align: right;">78</td>
+<td style="text-align: right;">61872</td>
+<td>PIESAT-2 D</td>
+<td>商业</td>
+<td style="text-align: right;">97.4 / 476</td>
+<td style="text-align: right;">3.43</td>
+<td style="text-align: right;">2.86</td>
+<td style="text-align: right;">81.4</td>
+<td style="text-align: right;">0.3</td>
+<td>是</td>
+<td>X 波段 InSAR；0.5 m 级；80 km 拼接</td>
+<td>approx</td>
+</tr>
+<tr>
+<td style="text-align: right;">79</td>
+<td style="text-align: right;">53128</td>
+<td>SuperView Neo-2 01</td>
+<td>商业</td>
+<td style="text-align: right;">97.4 / 489</td>
+<td style="text-align: right;">3.43</td>
+<td style="text-align: right;">0.57</td>
+<td style="text-align: right;">78.5</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>0.5 m 全色 / 2 m 多光谱；15 km</td>
+<td>vendor</td>
+</tr>
+<tr>
+<td style="text-align: right;">80</td>
+<td style="text-align: right;">59510</td>
+<td>SuperView Neo-3 01</td>
+<td>商业</td>
+<td style="text-align: right;">97.4 / 495</td>
+<td style="text-align: right;">3.43</td>
+<td style="text-align: right;">1.43</td>
+<td style="text-align: right;">73.5</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>0.5 m 全色 / 2 m 多光谱；15 km</td>
+<td>approx</td>
+</tr>
+<tr>
+<td style="text-align: right;">81</td>
+<td style="text-align: right;">64049</td>
+<td>Tianyi B</td>
+<td>商业</td>
+<td style="text-align: right;">97.4 / 501</td>
+<td style="text-align: right;">3.43</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">76.3</td>
+<td style="text-align: right;">0.4</td>
+<td>否</td>
+<td>未公开</td>
+<td>unknown</td>
+</tr>
+<tr>
+<td style="text-align: right;">82</td>
+<td style="text-align: right;">64050</td>
+<td>Tianyi C</td>
+<td>商业</td>
+<td style="text-align: right;">97.4 / 501</td>
+<td style="text-align: right;">3.43</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">79.3</td>
+<td style="text-align: right;">0.4</td>
+<td>否</td>
+<td>未公开</td>
+<td>unknown</td>
+</tr>
+<tr>
+<td style="text-align: right;">83</td>
+<td style="text-align: right;">64052</td>
+<td>Tianyi E</td>
+<td>商业</td>
+<td style="text-align: right;">97.4 / 484</td>
+<td style="text-align: right;">3.43</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">74.2</td>
+<td style="text-align: right;">0.4</td>
+<td>否</td>
+<td>未公开</td>
+<td>unknown</td>
+</tr>
+<tr>
+<td style="text-align: right;">84</td>
+<td style="text-align: right;">58918</td>
+<td>Xingshidai 20</td>
+<td>商业</td>
+<td style="text-align: right;">97.3 / 498</td>
+<td style="text-align: right;">3.43</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">76.8</td>
+<td style="text-align: right;">0.4</td>
+<td>否</td>
+<td>未公开</td>
+<td>unknown</td>
+</tr>
+<tr>
+<td style="text-align: right;">85</td>
+<td style="text-align: right;">45939</td>
+<td>ZY-3 03</td>
+<td>民用</td>
+<td style="text-align: right;">97.5 / 499</td>
+<td style="text-align: right;">3.43</td>
+<td style="text-align: right;">1.71</td>
+<td style="text-align: right;">79.4</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>2.1 m 全色 / 5.8 m 多光谱；51 km</td>
+<td>official</td>
+</tr>
+<tr>
+<td style="text-align: right;">86</td>
+<td style="text-align: right;">43440</td>
+<td>Zhuhai-1 OVS-02</td>
+<td>商业</td>
+<td style="text-align: right;">97.0 / 484</td>
+<td style="text-align: right;">3.43</td>
+<td style="text-align: right;">0.57</td>
+<td style="text-align: right;">73.1</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>0.9 m 全色 / 2.5 m 多光谱；12 km</td>
+<td>approx</td>
+</tr>
+<tr>
+<td style="text-align: right;">87</td>
+<td style="text-align: right;">54685</td>
+<td>Dongpo 09</td>
+<td>商业</td>
+<td style="text-align: right;">97.7 / 447</td>
+<td style="text-align: right;">3.29</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">83.3</td>
+<td style="text-align: right;">0.4</td>
+<td>否</td>
+<td>未公开</td>
+<td>unknown</td>
+</tr>
+<tr>
+<td style="text-align: right;">88</td>
+<td style="text-align: right;">54689</td>
+<td>Dongpo 10</td>
+<td>商业</td>
+<td style="text-align: right;">97.7 / 453</td>
+<td style="text-align: right;">3.29</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">79.0</td>
+<td style="text-align: right;">0.4</td>
+<td>否</td>
+<td>未公开</td>
+<td>unknown</td>
+</tr>
+<tr>
+<td style="text-align: right;">89</td>
+<td style="text-align: right;">54692</td>
+<td>Jilin-1 GF-03D47</td>
+<td>商业</td>
+<td style="text-align: right;">97.7 / 455</td>
+<td style="text-align: right;">3.29</td>
+<td style="text-align: right;">0.0</td>
+<td style="text-align: right;">83.7</td>
+<td style="text-align: right;">0.3</td>
+<td>是</td>
+<td>0.75 m 全色 / 3 m 多光谱；17 km</td>
+<td>vendor</td>
+</tr>
+<tr>
+<td style="text-align: right;">90</td>
+<td style="text-align: right;">54694</td>
+<td>Jilin-1 GF-03D49</td>
+<td>商业</td>
+<td style="text-align: right;">97.7 / 443</td>
+<td style="text-align: right;">3.29</td>
+<td style="text-align: right;">0.0</td>
+<td style="text-align: right;">85.6</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>0.75 m 全色 / 3 m 多光谱；17 km</td>
+<td>vendor</td>
+</tr>
+<tr>
+<td style="text-align: right;">91</td>
+<td style="text-align: right;">61870</td>
+<td>PIESAT-2 B</td>
+<td>商业</td>
+<td style="text-align: right;">97.4 / 463</td>
+<td style="text-align: right;">3.29</td>
+<td style="text-align: right;">2.71</td>
+<td style="text-align: right;">75.3</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>X 波段 InSAR；0.5 m 级；80 km 拼接</td>
+<td>approx</td>
+</tr>
+<tr>
+<td style="text-align: right;">92</td>
+<td style="text-align: right;">43099</td>
+<td>SuperView-1 03</td>
+<td>商业</td>
+<td style="text-align: right;">97.3 / 434</td>
+<td style="text-align: right;">3.29</td>
+<td style="text-align: right;">1.29</td>
+<td style="text-align: right;">83.8</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>0.5 m 全色 / 2 m 多光谱；12 km</td>
+<td>vendor</td>
+</tr>
+<tr>
+<td style="text-align: right;">93</td>
+<td style="text-align: right;">44539</td>
+<td>Zhuhai-1 03E</td>
+<td>商业</td>
+<td style="text-align: right;">97.6 / 429</td>
+<td style="text-align: right;">3.29</td>
+<td style="text-align: right;">0.86</td>
+<td style="text-align: right;">81.4</td>
+<td style="text-align: right;">0.3</td>
+<td>是</td>
+<td>0.9 m 级；12 km</td>
+<td>approx</td>
+</tr>
+<tr>
+<td style="text-align: right;">94</td>
+<td style="text-align: right;">43441</td>
+<td>Zhuhai-1 OHS-02</td>
+<td>商业</td>
+<td style="text-align: right;">97.0 / 481</td>
+<td style="text-align: right;">3.29</td>
+<td style="text-align: right;">0.57</td>
+<td style="text-align: right;">80.1</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>10 m；150 km（32 波段）</td>
+<td>vendor</td>
+</tr>
+<tr>
+<td style="text-align: right;">95</td>
+<td style="text-align: right;">44536</td>
+<td>Zhuhai-1 03B</td>
+<td>商业</td>
+<td style="text-align: right;">97.6 / 381</td>
+<td style="text-align: right;">3.14</td>
+<td style="text-align: right;">0.29</td>
+<td style="text-align: right;">85.1</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>0.9 m 级；12 km</td>
+<td>approx</td>
+</tr>
+<tr>
+<td style="text-align: right;">96</td>
+<td style="text-align: right;">44538</td>
+<td>Zhuhai-1 03D</td>
+<td>商业</td>
+<td style="text-align: right;">97.5 / 392</td>
+<td style="text-align: right;">3.14</td>
+<td style="text-align: right;">0.57</td>
+<td style="text-align: right;">73.3</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>0.9 m 级；12 km</td>
+<td>approx</td>
+</tr>
+<tr>
+<td style="text-align: right;">97</td>
+<td style="text-align: right;">54252</td>
+<td>Jilin-1 GF-03D51</td>
+<td>商业</td>
+<td style="text-align: right;">97.6 / 336</td>
+<td style="text-align: right;">3.0</td>
+<td style="text-align: right;">0.71</td>
+<td style="text-align: right;">77.2</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>0.75 m 全色 / 3 m 多光谱；17 km</td>
+<td>vendor</td>
+</tr>
+<tr>
+<td style="text-align: right;">98</td>
+<td style="text-align: right;">54255</td>
+<td>Jilin-1 GF-03D52</td>
+<td>商业</td>
+<td style="text-align: right;">97.6 / 350</td>
+<td style="text-align: right;">3.0</td>
+<td style="text-align: right;">0.86</td>
+<td style="text-align: right;">80.5</td>
+<td style="text-align: right;">0.3</td>
+<td>是</td>
+<td>0.75 m 全色 / 3 m 多光谱；17 km</td>
+<td>vendor</td>
+</tr>
+<tr>
+<td style="text-align: right;">99</td>
+<td style="text-align: right;">54253</td>
+<td>Jilin-1 GF-03D53</td>
+<td>商业</td>
+<td style="text-align: right;">97.6 / 382</td>
+<td style="text-align: right;">3.0</td>
+<td style="text-align: right;">1.0</td>
+<td style="text-align: right;">76.5</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>0.75 m 全色 / 3 m 多光谱；17 km</td>
+<td>vendor</td>
+</tr>
+<tr>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">54251</td>
+<td>Jilin-1 GF-03D08</td>
+<td>商业</td>
+<td style="text-align: right;">97.6 / 320</td>
+<td style="text-align: right;">2.57</td>
+<td style="text-align: right;">0.57</td>
+<td style="text-align: right;">75.2</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>0.75 m 全色 / 3 m 多光谱；17 km</td>
+<td>vendor</td>
+</tr>
+<tr>
+<td style="text-align: right;">101</td>
+<td style="text-align: right;">46457</td>
+<td>Jilin-1 GF-03E</td>
+<td>商业</td>
+<td style="text-align: right;">97.2 / 307</td>
+<td style="text-align: right;">2.57</td>
+<td style="text-align: right;">1.0</td>
+<td style="text-align: right;">79.6</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>0.75 m 全色 / 3 m 多光谱；17 km</td>
+<td>vendor</td>
+</tr>
+<tr>
+<td style="text-align: right;">102</td>
+<td style="text-align: right;">46458</td>
+<td>Jilin-1 GF-03F</td>
+<td>商业</td>
+<td style="text-align: right;">97.2 / 332</td>
+<td style="text-align: right;">2.57</td>
+<td style="text-align: right;">1.14</td>
+<td style="text-align: right;">81.8</td>
+<td style="text-align: right;">0.4</td>
+<td>是</td>
+<td>0.75 m 全色 / 3 m 多光谱；17 km</td>
+<td>vendor</td>
+</tr>
+</tbody>
+</table></div>
+<div class="callout"><span class="callout-label">说明</span><p><strong>成像/天口径</strong>：光学 = 最大仰角 ≥10° 且 TCA 太阳高度 &gt;10°；SAR/微波 = 最大仰角 ≥10°（不看太阳）；载荷未核实 = "—"。</p>
+<p><strong>低轨/异常提示</strong>：Jilin-1 GF-03D08/09/51/52/53、GF-03E/F 的高度为 284–382 km，处于低轨衰减段；其中 GF-03D09 最大仰角仅 16.2°，TLE 可能异常，UI 标灰并标"低置信"，不纳入成像推荐。</p></div>
+<h4>4.4.3 GEO 常驻可见性（9 颗，不参与过境排名）</h4>
+<div class="table-wrap wide"><table>
+<thead>
+<tr>
+<th style="text-align: right;">NORAD</th>
+<th>名称</th>
+<th>类别</th>
+<th style="text-align: right;">定点经度(°E)</th>
+<th style="text-align: right;">仰角范围(°)</th>
+<th style="text-align: right;">方位角范围(°)</th>
+<th style="text-align: right;">可见率</th>
+<th>类型/载荷</th>
+<th>公开</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">41194</td>
+<td>GF-4</td>
+<td>民用</td>
+<td style="text-align: right;">105.7</td>
+<td style="text-align: right;">50.7–52.0</td>
+<td style="text-align: right;">206.6–207.7</td>
+<td style="text-align: right;">100%</td>
+<td>GEO 光学 50 m / 400 m</td>
+<td>是</td>
+</tr>
+<tr>
+<td style="text-align: right;">46610</td>
+<td>GF-13 01</td>
+<td>民用</td>
+<td style="text-align: right;">118.4</td>
+<td style="text-align: right;">54.5–54.9</td>
+<td style="text-align: right;">182.3–184.7</td>
+<td style="text-align: right;">100%</td>
+<td>GEO 光学 50 m / 400 m</td>
+<td>是</td>
+</tr>
+<tr>
+<td style="text-align: right;">55912</td>
+<td>GF-13 02</td>
+<td>民用</td>
+<td style="text-align: right;">148.1</td>
+<td style="text-align: right;">42.5–44.3</td>
+<td style="text-align: right;">132.4–134.5</td>
+<td style="text-align: right;">100%</td>
+<td>GEO 光学 50 m / 400 m 级</td>
+<td>是</td>
+</tr>
+<tr>
+<td style="text-align: right;">57624</td>
+<td>LuTan-4 01A</td>
+<td>民用</td>
+<td style="text-align: right;">89.5</td>
+<td style="text-align: right;">28.2–53.1</td>
+<td style="text-align: right;">217.2–248.6</td>
+<td style="text-align: right;">100%</td>
+<td>GEO SAR，载荷未公开</td>
+<td>否</td>
+</tr>
+<tr>
+<td style="text-align: right;">40367</td>
+<td>FY-2G</td>
+<td>气象海洋</td>
+<td style="text-align: right;">99.5</td>
+<td style="text-align: right;">42.3–53.8</td>
+<td style="text-align: right;">212.0–222.9</td>
+<td style="text-align: right;">100%</td>
+<td>GEO 气象 1.25 km / 5 km</td>
+<td>是</td>
+</tr>
+<tr>
+<td style="text-align: right;">43491</td>
+<td>FY-2H</td>
+<td>气象海洋</td>
+<td style="text-align: right;">79.1</td>
+<td style="text-align: right;">31.0–35.8</td>
+<td style="text-align: right;">236.7–243.4</td>
+<td style="text-align: right;">100%</td>
+<td>GEO 气象 1.25 km / 5 km</td>
+<td>是</td>
+</tr>
+<tr>
+<td style="text-align: right;">41882</td>
+<td>FY-4A</td>
+<td>气象海洋</td>
+<td style="text-align: right;">123.4</td>
+<td style="text-align: right;">51.6–57.6</td>
+<td style="text-align: right;">173.2–174.0</td>
+<td style="text-align: right;">100%</td>
+<td>GEO 气象 AGRI 1 km / 4 km</td>
+<td>是</td>
+</tr>
+<tr>
+<td style="text-align: right;">48808</td>
+<td>FY-4B</td>
+<td>气象海洋</td>
+<td style="text-align: right;">104.7</td>
+<td style="text-align: right;">50.4–51.4</td>
+<td style="text-align: right;">208.5–209.2</td>
+<td style="text-align: right;">100%</td>
+<td>GEO 气象 AGRI 0.5–2 km / 2–4 km</td>
+<td>是</td>
+</tr>
+<tr>
+<td style="text-align: right;">67246</td>
+<td>FY-4C</td>
+<td>气象海洋</td>
+<td style="text-align: right;">133.0</td>
+<td style="text-align: right;">52.0–52.1</td>
+<td style="text-align: right;">155.7–155.9</td>
+<td style="text-align: right;">100%</td>
+<td>GEO 气象 AGRI 0.5–2 km / 2–4 km</td>
+<td>是</td>
+</tr>
+</tbody>
+</table></div>
+<h4>4.4.4 分类统计</h4>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>类别</th>
+<th style="text-align: right;">LEO</th>
+<th style="text-align: right;">GEO</th>
+<th style="text-align: right;">合计</th>
+<th style="text-align: right;">payload_public=false</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>商业</td>
+<td style="text-align: right;">64</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">64</td>
+<td style="text-align: right;">12</td>
+</tr>
+<tr>
+<td>民用</td>
+<td style="text-align: right;">25</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">29</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr>
+<td>气象海洋</td>
+<td style="text-align: right;">13</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">18</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td><strong>合计</strong></td>
+<td style="text-align: right;"><strong>102</strong></td>
+<td style="text-align: right;"><strong>9</strong></td>
+<td style="text-align: right;"><strong>111</strong></td>
+<td style="text-align: right;"><strong>13</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>其中 <code>payload_public=true</code> 共 <strong>98</strong> 颗，<code>false</code> 共 <strong>13</strong> 颗。商业 12 颗未核实载荷为：Tianyi A–F（6）、Xingshidai 20（1）、Honghu 2（1）、Dongpo 08/09/10（3）、KX-09（1）；民用 1 颗为 LuTan-4 01A。</p>
+<h4>4.4.5 频次结论</h4>
+<ul>
+<li>LEO 可见过境 <strong>2.57–5.29 次/天</strong>；光学成像 <strong>0–2.00 次/天</strong>；SAR 在 ≥10° 下 <strong>2.71–3.57 次/天</strong>，夜间同样可用。</li>
+<li>杭州最高频：HY-2D <strong>5.29</strong>、HY-2C <strong>5.14</strong>、FY-3G <strong>5.00</strong>、HY-1C <strong>4.86</strong>、HY-2B / HY-2E / HY-3A / ZY-1 02D <strong>4.57</strong>。</li>
+<li>光学成像最高：HY-1D <strong>2.00</strong>、FY-3F / FY-3H / ZY-1 02E / Jilin-1 GF-02D <strong>1.86</strong>。</li>
+<li>结论：杭州的高频星不是 YAOGAN，而是 66° 倾角的 HY-2C/D、50° 倾角的 FY-3G，以及 700–800 km 的 SSO 星。<strong>军事/电子侦察星全部不进入展示集。</strong></li>
+</ul>
+<h4>4.4.6 数据质量与排除项（必须保留）</h4>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>对象</th>
+<th>处理</th>
+<th>依据</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>41335</td>
+<td><strong>排除（国外）</strong></td>
+<td>实为 Sentinel-3A（ESA），历史库误标为 Gaofen-3</td>
+</tr>
+<tr>
+<td>43437</td>
+<td><strong>排除（国外）</strong></td>
+<td>实为 Sentinel-3B（ESA），历史库误标为 Gaofen-5</td>
+</tr>
+<tr>
+<td>44312</td>
+<td><strong>排除（类型不符）</strong></td>
+<td>实为 <strong>捕风一号A（Bufeng-1A）</strong>，GNSS-R 海面风场星，i=45°、462 km；不是 GF-3A，也不是光学/SAR 成像星</td>
+</tr>
+<tr>
+<td>40143</td>
+<td><strong>排除（名称错配）</strong></td>
+<td>实为 Yaogan-21（LEO）；GF-4 是 41194（GEO）</td>
+</tr>
+<tr>
+<td>GF-12 系列</td>
+<td><strong>不按光学处理</strong></td>
+<td>实为 SAR；历史库标成"光学 0.8 m/16 km"是错的</td>
+</tr>
+<tr>
+<td>GF-8 / 9 / 10R / 11 / 12 / 14</td>
+<td>排除（双用途、载荷未公开）</td>
+<td>无法给出可信传感器参数，避免 Agent 编造</td>
+</tr>
+<tr>
+<td>退役星</td>
+<td>排除</td>
+<td>FY-1D、FY-3A/3B/3C、HJ-1A/1B、HY-1B、HY-2A、ZY-1 02C</td>
+</tr>
+<tr>
+<td>无 TLE</td>
+<td>排除</td>
+<td>齐鲁一号、巢湖一号、涪城一号、海南一号、南京一号、闽星等镜像无数据</td>
+</tr>
+<tr>
+<td>140–185 km 待再入</td>
+<td>排除</td>
+<td>7 个对象 7 天 0 过境，TLE 不可用于业务预报</td>
+</tr>
+<tr>
+<td>国外星</td>
+<td>排除</td>
+<td>Sentinel、Landsat、WorldView 等</td>
+</tr>
+<tr>
+<td>13 颗 <code>payload_public=false</code></td>
+<td><strong>保留但只给轨道</strong></td>
+<td>Tianyi、Xingshidai、Honghu、Dongpo、KX-09、LuTan-4；不展示分辨率/幅宽，不参与成像推荐</td>
+</tr>
+</tbody>
+</table></div>
+<h4>4.4.7 分层与前端性能</h4>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>层</th>
+<th>数量</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>重点保障集</td>
+<td><strong>30</strong></td>
+<td>默认推荐、Agent 优先查询；全部包含在 111 中</td>
+</tr>
+<tr>
+<td>默认展示集</td>
+<td><strong>111（102 LEO + 9 GEO）</strong></td>
+<td>左栏全量星历、过境查询</td>
+</tr>
+<tr>
+<td>全量目录</td>
+<td>约 174</td>
+<td>含军事/退役/待再入，仅高级查询，P2</td>
+</tr>
+<tr>
+<td>自定义集</td>
+<td>用户勾选</td>
+<td>落 <code>satellite_group</code> 表，P2</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>重点保障 30 颗</strong>（全部在 111 内）：GF-2、GF-7、吉林一号宽幅01、吉林一号高分02D、四维高景 Neo-1 01、北京三号B；GF-3、GF-3 02、GF-3 03、陆探一号 A/B、HJ-2E、PIESAT-1 A；GF-1 03、GF-6、ZY-3 03、ZY-1 02D、GF-5 02、HJ-2A；FY-3D/F/G、HY-1D、HY-2D、HY-3A；GEO：GF-4、GF-13 01、FY-4B、FY-4C、FY-2H。</p>
+<p><strong>前端性能（111 颗必须按此实现）</strong>：</p>
+<ol>
+<li><strong>当前位置层（111 颗）</strong>：每 5 s 传播一次（或前端插值），111 个点精灵；禁止 60 fps 重复传播。</li>
+<li><strong>轨迹层（仅选中星）</strong>：只算当前轨道 1 圈（约 90–100 min），10–20 s 步长 ≈ 300–600 点；最多同时 3 条，禁止全量。</li>
+<li><strong>TLE/对象缓存</strong>：服务端按 NORAD 缓存 TLE 与 <code>EarthSatellite</code>；前端只取 <code>norad/name/lat/lon/alt</code> 轻量数组（&lt;100 KB）。</li>
+<li><strong>过境预计算</strong>：7 天统计在服务端算好写 <code>pass_window</code>；前端点击某星再取 TCA 列表。</li>
+<li><strong>GEO 单独图层</strong>：9 颗常驻，不参与轨迹层与过境排名。</li>
+<li><strong>降级</strong>：TLE &gt;14 天标"低置信"，&gt;30 天不画轨迹；轨迹点 &gt;1000 时抽稀到 500。</li>
+</ol>
+<h4>4.4.8 旧 120 颗的来源（仅供对照，不再采用）</h4>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>来源</th>
+<th>数量</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>data/hangzhou_frequent_satellites.json</code></td>
+<td>105</td>
+<td>"杭州历史任务统计 + 国内公开在轨对地观测卫星补充池"，生成于 2026-06-23</td>
+</tr>
+<tr>
+<td>TLE 缓存额外补充</td>
+<td>15</td>
+<td>FY-3A/3B、HJ-1A/1B、Landsat 8/9、Sentinel-2A/2B/3A/3B、GF-6、YG-7/8/12 等</td>
+</tr>
+<tr>
+<td>合计</td>
+<td>120</td>
+<td>快照停在 2026-07-12</td>
+</tr>
+</tbody>
+</table></div>
+<p>构成：YAOGAN 77（YG-30/35/39/43 四个三星星座占 52 颗）、GF 17、HJ 6、Sentinel 4、JL 4、FY 3、ZY 3、SuperView 3、Landsat 2、Luojia 1。它是"历史上问过的 + 能公开拿到 TLE 的"并集，含退役星、错标星与军事星，不适合当默认展示集。</p>
+<h3 id="sec-4-5">4.5 计算能力</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>能力</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>C1</td>
+<td>SGP4 传播</td>
+<td><code>sgp4</code>，检查 error 码；TEME→ECEF 用 GMST（IAU-82）</td>
+</tr>
+<tr>
+<td>C2</td>
+<td>星下点轨迹</td>
+<td>30–60 s 步长；经度跨 ±180° 需 unwrap</td>
+</tr>
+<tr>
+<td>C3</td>
+<td>过境窗口</td>
+<td>60 s 粗扫 + 1 s 二分细化；AOS/LOS/TCA/最大仰角/方位角/时长</td>
+</tr>
+<tr>
+<td>C4</td>
+<td>足迹判定</td>
+<td>旋转矩形或 FOV 计算；记录 <code>algo_version</code></td>
+</tr>
+<tr>
+<td>C5</td>
+<td>区域覆盖</td>
+<td>AOI 网格 0.1°–0.2°，<code>(T, N)</code> 向量化；时间/面积/K 重覆盖</td>
+</tr>
+<tr>
+<td>C6</td>
+<td>重访间隔</td>
+<td>区间并集 + 补集；MRT/ART/分位数</td>
+</tr>
+<tr>
+<td>C7</td>
+<td>光照</td>
+<td><code>skyfield.almanac</code> 太阳高度角</td>
+</tr>
+<tr>
+<td>C8</td>
+<td>云量</td>
+<td>Open-Meteo（见 §4.8）</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="sec-4-6">4.6 精度与口径（<strong>强制章节，所有输出必须遵守</strong>）</h3>
+<div class="callout"><span class="callout-label">说明</span><p>本节是产品口径，不是可选建议。任何 API、MCP 工具、前端展示、报告文案都必须与本节一致。</p></div>
+<h4>4.6.1 轨道精度</h4>
+<ul>
+<li>TLE/SGP4 在 LEO 的沿轨误差约 <strong>1 km/天</strong>（历元时刻约 1 km）。</li>
+<li><strong>可用于</strong>：可视化、任务可行性初判、过境时间估算（<strong>±1 分钟</strong>）、覆盖趋势判断。</li>
+<li><strong>不可用于</strong>：0.5 m 级任务规划、精确侧摆角计算、碰撞规避、测绘级面积量算。</li>
+<li>所有对外结果必须带 <code>accuracy_note</code> 字段，至少包含：<code>"TLE/SGP4; along-track ~1 km/day; not for sub-meter planning"</code>，中文界面同步展示。</li>
+</ul>
+<h4>4.6.2 过境门限</h4>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>场景</th>
+<th>仰角门限</th>
+<th>附加条件</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>可视化 / 一般可见</td>
+<td><strong>5°</strong></td>
+<td>无</td>
+</tr>
+<tr>
+<td>成像可用</td>
+<td><strong>10°</strong></td>
+<td>光学另要求太阳高度角 <strong>&gt;10°</strong>（默认；可按任务覆盖）</td>
+</tr>
+<tr>
+<td>雷达/SAR</td>
+<td><strong>10°</strong></td>
+<td>不看太阳高度角</td>
+</tr>
+</tbody>
+</table></div>
+<p>门限不得硬编码在调用方，必须由配置或请求参数提供；默认值写入 <code>settings</code>。</p>
+<h4>4.6.3 足迹与覆盖误差</h4>
+<ul>
+<li>足迹多边形边缘误差按 <strong>±2–5 km</strong> 对待，不得展示为精确边界。</li>
+<li>覆盖率、重访间隔是<strong>估算值</strong>，界面与 API 必须标注 <code>estimate</code>；不得给出"精确面积""保证重访"等表述。</li>
+<li><code>coverage_snapshot</code> 必须记录 <code>grid_spacing_deg</code>、<code>algo_version</code>、<code>sat_set_hash</code>，便于复现。</li>
+</ul>
+<h4>4.6.4 数据新鲜度</h4>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>TLE 年龄</th>
+<th>行为</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>≤ 24h</td>
+<td>正常</td>
+</tr>
+<tr>
+<td>24–72h</td>
+<td>正常返回，附 <code>stale=true</code> 警告</td>
+</tr>
+<tr>
+<td>72h–7d</td>
+<td>返回但标记 <code>degraded=true</code>，过境结果加"精度下降"提示</td>
+</tr>
+<tr>
+<td>&gt; 7d</td>
+<td><strong>拒绝</strong>用于过境/覆盖计算，返回明确错误与最近成功同步时间</td>
+</tr>
+</tbody>
+</table></div>
+<h4>4.6.5 时间与坐标</h4>
+<ul>
+<li>时间：统一 UTC，ISO8601 <code>YYYY-MM-DDTHH:MM:SSZ</code>；禁止 <code>+00:00</code> 与本地时间混用。</li>
+<li>坐标：对外统一 <strong>WGS84</strong>；AOI 入库前必须完成 GCJ-02→WGS84 转换（见 §4.7）。</li>
+<li>高度：WGS84 椭球高；前端展示可注明"约值"。</li>
+</ul>
+<h3 id="sec-4-7">4.7 AOI 与坐标系</h3>
+<ul>
+<li>粒度：城市（adcode）+ 区县（adcode）+ 自定义多边形（WKT）。</li>
+<li>数据来源：复用 <code>SIRI-Agent/data/district_boundaries/</code>（高德 district API v3）。</li>
+<li><strong>已核验</strong>：13 个区县为 2021 年区划调整后版本（含临平区 330113、钱塘区 330114；无江干区/下城区）；20,696 个点；bbox <code>lat 29.19–30.56 / lon 118.34–120.72</code>。</li>
+<li><strong>准确性问题</strong>：高德坐标为 <strong>GCJ-02</strong>，直接当 WGS84 用有 <strong>300–600 m 偏移</strong>；边界为概化折线，非测绘级。</li>
+<li>入库要求：
+  1. GCJ-02 → WGS84 转换（使用成熟算法，写单测）；
+  2. 环闭合、自交、绕向校验；
+  3. 面积与官方公布值比对，相对误差阈值 ≤ 5%（超出则标 <code>accuracy=low</code> 并告警）；
+  4. 记录 <code>source=amap</code>、<code>datum=gcj02</code>、<code>accuracy=approx</code>。</li>
+<li>空间查询：bbox 预过滤 + 点在多边形；<strong>不引入 PostGIS/SpatiaLite</strong>。</li>
+</ul>
+<h3 id="sec-4-8">4.8 云量（Phase 2 就接）</h3>
+<ul>
+<li>源：<strong>Open-Meteo</strong>（免费、无需 key）：</li>
+<li>预报：<code>https://api.open-meteo.com/v1/forecast?...&amp;hourly=cloud_cover</code>（实测可通）；</li>
+<li>历史：<code>https://archive-api.open-meteo.com/v1/archive?...</code>（实测可通）。</li>
+<li>用法：计算过境窗口时，取 AOI 在 <strong>TCA 时刻</strong>的 <code>cloud_cover_pct</code> 写入 <code>pass_window</code>；预报结果缓存 1 小时；历史窗口走 archive。</li>
+<li>口径：这是<strong>数值天气预报</strong>，不是卫星云掩膜；界面标注"云量预报，仅供参考"。真实云图（Sentinel-2/葵花）留 Phase 3。</li>
+<li>现有 <code>_estimate_cloud_percent</code>（伪随机占位）<strong>必须删除</strong>，不得保留任何调用。</li>
+</ul>
+<h3 id="sec-4-9">4.9 保留、备份与迁移</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>表</th>
+<th>保留</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tle_record</code></td>
+<td>180 天全量；&gt;180 天按天抽样 1 条</td>
+</tr>
+<tr>
+<td><code>tle_current</code></td>
+<td>每星 1 行</td>
+</tr>
+<tr>
+<td><code>pass_window</code></td>
+<td>未来 10 天 + 过去 7 天；TLE 更新即失效重算</td>
+</tr>
+<tr>
+<td><code>coverage_snapshot</code></td>
+<td>90 天</td>
+</tr>
+<tr>
+<td><code>sync_run</code></td>
+<td>90 天；<code>sync_item_error</code> 30 天</td>
+</tr>
+<tr>
+<td><code>sync_state</code></td>
+<td>常驻（每源 1 行，不清理）</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>备份：每日 <code>VACUUM INTO</code> 到 <code>~/.local/share/rs-service/backups/</code>，保留 7 份。</li>
+<li>迁移 Postgres 的触发条件：<code>tle_record</code> &gt; 500 万行、需要多写入进程/多租户、需要 PostGIS、需要跨实例共享。届时只换仓储层与连接串。</li>
+</ul>
+<h3 id="sec-4-10">4.10 测试与验收</h3>
+<ul>
+<li>单测：OMM/TLE 解析、校验位、GCJ-02 转换、过境窗口回归（与 <code>skyfield</code> 对照，时间误差 ≤ 1 s、角度 ≤ 0.01°）。</li>
+<li>数据断言：NORAD↔名称映射（覆盖默认展示集全部 NORAD），防止再次出现 41335/43437/44312 类错配。</li>
+<li>集成：<code>rs-service sync --dry-run</code>、<code>GET /api/v1/health</code>、MCP <code>tools/list</code>。</li>
+<li>同步状态机测试：模拟首次失败 → 3 次重试 → <code>abandoned</code>；断言当天不再发起请求、次日恢复；<code>sync_state</code> 在进程重启后保持。</li>
+<li>验收：连续 7 天同步成功；<code>sync_status</code> 能显示最近一次尝试/成功时间、尝试次数、重试次数、成败与失败原因；过境结果带 <code>accuracy_note</code> 与 <code>cloud_cover_pct</code>。</li>
+</ul>
+<hr />
+<h2 id="sec-5">5. 工作流 C — MCP、CLI 与 Skill</h2>
+<h3 id="sec-5-1">5.1 接口分工</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>入口</th>
+<th>绑定</th>
+<th>调用方</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>REST <code>/api/v1/*</code></td>
+<td><code>127.0.0.1:8766</code></td>
+<td><code>SIRIAgent</code> 反代</td>
+<td>前端可视化、健康检查</td>
+</tr>
+<tr>
+<td>MCP（Streamable HTTP）</td>
+<td><code>127.0.0.1:8765</code></td>
+<td>DSH Agent</td>
+<td>工具调用</td>
+</tr>
+<tr>
+<td>CLI <code>rs-service</code></td>
+<td>本机</td>
+<td>同步任务、人工排障、skill 文档</td>
+<td>唯一实现</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>浏览器<strong>永不</strong>直连 <code>RS-Service</code>；<code>SIRIAgent</code> 做反代、缓存与 CORS 收敛。</li>
+<li>REST 与 MCP 共用同一 service 层，禁止两份业务逻辑。</li>
+</ul>
+<h3 id="sec-5-2">5.2 MCP 工具清单</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>工具</th>
+<th>入参</th>
+<th>出参</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>list_satellites</code></td>
+<td><code>category?</code>、<code>country?</code>、<code>status?</code></td>
+<td>卫星摘要列表</td>
+<td>默认展示集</td>
+</tr>
+<tr>
+<td><code>get_satellite</code></td>
+<td><code>sat_id</code> 或 <code>name</code></td>
+<td>目录 + 传感器 + 当前 TLE 元数据</td>
+<td></td>
+</tr>
+<tr>
+<td><code>get_tle</code></td>
+<td><code>sat_id</code>、<code>max_age_hours?</code></td>
+<td>TLE/OMM + <code>epoch</code> + <code>age_hours</code></td>
+<td>超龄按 §4.6.4 处理</td>
+</tr>
+<tr>
+<td><code>propagate</code></td>
+<td><code>sat_id</code>、<code>times[]</code> 或 <code>start/end/step</code></td>
+<td>位置（WGS84）+ <code>accuracy_note</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>ground_track</code></td>
+<td><code>sat_id</code>、<code>start/end</code>、<code>step_s</code></td>
+<td>星下点序列</td>
+<td>经度已 unwrap</td>
+</tr>
+<tr>
+<td><code>next_passes</code></td>
+<td><code>aoi</code>（code/adcode/WKT）、<code>start/end</code>、<code>min_elev_deg?</code></td>
+<td>过境列表（AOS/LOS/TCA/最大仰角/云量）</td>
+<td>默认 5°/10° 按 §4.6.2</td>
+</tr>
+<tr>
+<td><code>coverage_window</code></td>
+<td><code>aoi</code>、<code>start/end</code>、<code>grid_deg?</code>、<code>k_min?</code></td>
+<td>时间/面积覆盖率、MRT/ART</td>
+<td>标注 <code>estimate</code></td>
+</tr>
+<tr>
+<td><code>sync_status</code></td>
+<td>—</td>
+<td>最近同步、TLE 年龄、失败项</td>
+<td></td>
+</tr>
+<tr>
+<td><code>run_command</code></td>
+<td><code>command</code>（枚举）、<code>args</code>（schema）</td>
+<td>stdout/结构化结果 + 审计 id</td>
+<td>受控命令入口，见 §5.3</td>
+</tr>
+</tbody>
+</table></div>
+<p>所有工具出参统一包一层：</p>
+<pre><code class="language-json">{
+  &quot;ok&quot;: true,
+  &quot;data&quot;: {},
+  &quot;accuracy_note&quot;: &quot;TLE/SGP4; along-track ~1 km/day; not for sub-meter planning&quot;,
+  &quot;stale&quot;: false,
+  &quot;degraded&quot;: false,
+  &quot;generated_at&quot;: &quot;2026-10-19T03:00:00Z&quot;
+}
+</code></pre>
+<h3 id="sec-5-3">5.3 受控命令 <code>run_command</code></h3>
+<ul>
+<li>只接受注册过的子命令（如 <code>tle.sync</code>、<code>pass.next</code>、<code>coverage.window</code>），每个子命令有独立参数 schema；<strong>不执行任意 shell 字符串</strong>。</li>
+<li>服务端设置超时（默认 30 s）、并发上限、审计记录（<code>command_audit</code> 表：调用方、命令、参数、结果、耗时、<code>accuracy_note</code>）。</li>
+<li>Phase 2 <strong>不做权限拦截</strong>（决策见 §2.2），但结构保留，Phase 3 直接填白名单。</li>
+</ul>
+<h3 id="sec-5-4">5.4 Skill 契约（"命令式 + MCP"）</h3>
+<p>每个 skill 一个目录：</p>
+<pre><code class="language-text">SIRIAgent/skills/&lt;slug&gt;/
+├── SKILL.md        # 触发条件、能力、输入输出、首选 MCP 工具
+├── COMMANDS.md     # 命令清单：用途 / 风险 / 是否需要审批 / 示例 / 失败处理
+└── scripts/        # 可选：本地辅助脚本
+</code></pre>
+<p><code>SKILL.md</code> frontmatter 至少包含：</p>
+<pre><code class="language-yaml">---
+name: ephemeris-query
+description: 查询卫星星历、过境与覆盖信息
+when-to-use: 用户询问某地某时的卫星过境、可见性、覆盖能力时
+---
+</code></pre>
+<p><code>COMMANDS.md</code> 每条命令一行表格：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>命令</th>
+<th>用途</th>
+<th>风险</th>
+<th>需审批</th>
+<th>示例</th>
+<th>失败处理</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>rs-service pass next --aoi 330100 --hours 24</code></td>
+<td>查询杭州未来 24h 过境</td>
+<td>read</td>
+<td>否</td>
+<td>见下</td>
+<td>检查 <code>sync_status</code>，TLE 过期先同步</td>
+</tr>
+</tbody>
+</table></div>
+<p>风险等级：<code>read</code>（只读）、<code>write</code>（写本地库/文件）、<code>exec</code>（执行外部命令）、<code>network</code>（外网请求）。Phase 2 全部不拦截，但必须如实标注。</p>
+<p>首批 skill：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>slug</th>
+<th>能力</th>
+<th>首选 MCP 工具</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ephemeris-query</code></td>
+<td>查卫星、TLE、当前位置</td>
+<td><code>list_satellites</code>、<code>get_satellite</code>、<code>propagate</code></td>
+</tr>
+<tr>
+<td><code>pass-planning</code></td>
+<td>某 AOI 未来过境与可用性</td>
+<td><code>next_passes</code></td>
+</tr>
+<tr>
+<td><code>coverage-check</code></td>
+<td>区域覆盖/重访评估</td>
+<td><code>coverage_window</code></td>
+</tr>
+<tr>
+<td><code>tle-health</code></td>
+<td>数据新鲜度与同步诊断</td>
+<td><code>sync_status</code>、<code>run_command(tle.sync)</code></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="sec-5-5">5.5 注册到 DSH</h3>
+<ul>
+<li>MCP：在 <code>~/.dsh-siriagent/profiles/sdk/cordis.patch.yml</code> 增加 <code>@deepseek-ai/dsh-mcp-client</code> 条目，<code>serverName: rs-service</code>，transport 指向 <code>http://127.0.0.1:8765</code>。</li>
+<li>Skill：<code>SIRIAgent/.dsh/skills/</code> 或 <code>SIRIAgent/skills/</code> + <code>customSkillDirs</code> 配置；二选一，文档内统一。</li>
+<li>工具名会带前缀：<code>mcp__rs-service__next_passes</code>；<code>COMMANDS.md</code> 中同时写 MCP 名与 CLI，避免歧义。</li>
+</ul>
+<hr />
+<h2 id="sec-6">6. 工作流 D — 前端改版</h2>
+<h3 id="sec-6-1">6.1 技术栈</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>层</th>
+<th>选型</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>框架</td>
+<td>React 19 + Vite + TypeScript</td>
+</tr>
+<tr>
+<td>样式</td>
+<td>CSS Modules + CSS 变量（不引 Tailwind/组件库；借鉴 DSH 的语义分层）</td>
+</tr>
+<tr>
+<td>地球</td>
+<td><strong>CesiumJS</strong>（本地 NaturalEarth 影像，不用 Cesium Ion，不需要 token）</td>
+</tr>
+<tr>
+<td>卫星推演</td>
+<td><code>satellite.js</code>（前端本地 SGP4，负责平滑动画；服务端负责过境/覆盖）</td>
+</tr>
+<tr>
+<td>Markdown</td>
+<td><code>@deepseek-ai/dsh-client-ui-primitives@0.2.1-rc.2</code>（直接依赖，不 vendor）</td>
+</tr>
+<tr>
+<td>状态</td>
+<td>React Query（服务端数据）+ Zustand（UI 状态）</td>
+</tr>
+<tr>
+<td>流式</td>
+<td>SSE（优先）或 WebSocket</td>
+</tr>
+<tr>
+<td>测试</td>
+<td>Vitest + Playwright（视觉与响应式）</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="sec-6-2">6.2 DSH 调用与流式</h3>
+<ul>
+<li>后端使用 <strong>Python SDK</strong>（<code>deepseek_harness</code>），常驻 <code>dsh --profile sdk</code> 进程，通过 <code>session.event</code> 通知拿到 <code>text-delta / reasoning-delta / tool-call-delta</code>。</li>
+<li>独立 <code>DSH_HOME=~/.dsh-siriagent</code>：复制 <code>~/.dsh/.credentials.yaml</code>，加 <code>sdk.patch.yml</code>（凭据启用、<code>approval: never</code>、MCP 与 skill 目录）。</li>
+<li>每个浏览器会话映射一个 DSH session；后端把通知归一化为 SSE 事件：<code>session</code>、<code>text</code>、<code>reasoning</code>、<code>tool_call</code>、<code>tool_result</code>、<code>status</code>、<code>error</code>、<code>done</code>。</li>
+<li>降级：SDK 装配失败时回退 <code>dsh --profile headless --json</code>（块级事件 + SSE），功能不减，只是没有 token 级打字机。</li>
+<li>端点：<code>POST /api/chat</code>（发送）、<code>GET /api/stream/&lt;session&gt;</code>（SSE）、<code>POST /api/session/reset</code>、<code>GET /api/health</code>。</li>
+<li>审批：Phase 2 不做；<code>approval: never</code>。</li>
+</ul>
+<h3 id="sec-6-3">6.3 布局与信息架构</h3>
+<pre><code class="language-text">┌──────────────────────────────────────────────────────────────┐
+│ Header：品牌 / 同步状态 / 会话 / 连接状态 / 设置              │
+├──────────────────┬───────────────────────────────────────────┤
+│ 左 1/3           │ 右 2/3                                    │
+│ 卫星筛选列表     │ 消息流（思考块、工具卡、产物卡）          │
+│ 3D 地球          │                                           │
+│ 选中星轨迹/足迹  │                                           │
+│ 时间轴 ±24h      │                                           │
+│ 过境表           │                                           │
+│ 数据源/同步状态  │ 输入区（附件、斜杠命令、发送/停止）        │
+└──────────────────┴───────────────────────────────────────────┘
+</code></pre>
+<ul>
+<li>左栏可折叠（窄屏默认折叠为图标条）。</li>
+<li>右栏不限制话题：欢迎语只做示例，不写"只能问星历"。</li>
+<li>时间轴拖动时，地球、轨迹、过境表联动；"回到现在"按钮。</li>
+<li>卫星列表支持按类别（商业/民用/气象海洋）/类型（光学/SAR/高光谱）/分辨率/低置信筛选，默认 111 颗展示集；列表用虚拟滚动，111 颗也能流畅。</li>
+</ul>
+<h3 id="sec-6-4">6.4 视觉系统</h3>
+<ul>
+<li>基调：深空（近黑蓝 <code>#050B14</code> 系）+ 青绿/青色强调（<code>#22D3EE</code> / <code>#2DD4BF</code>）+ 等宽数字。</li>
+<li>克制的网格/扫描线/发光，不做大面积霓虹；信息密度优先。</li>
+<li>字体：界面用系统无衬线 + <code>JetBrains Mono</code>（数字/坐标/时间）。</li>
+<li>对比度：正文 ≥ 4.5:1；状态色不只靠颜色区分（加图标/文字）。</li>
+<li>动效：<code>prefers-reduced-motion</code> 下关闭位移动画；地球自转可暂停。</li>
+</ul>
+<h3 id="sec-6-5">6.5 响应式与浏览器适配（硬要求）</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>断点</th>
+<th>行为</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>≥ 1920</td>
+<td>左 1/3、右 2/3；左栏完整</td>
+</tr>
+<tr>
+<td>1440–1919</td>
+<td>左 32%、右 68%；过境表压缩列</td>
+</tr>
+<tr>
+<td>1280–1439</td>
+<td>左 30%、右 70%；时间轴简化</td>
+</tr>
+<tr>
+<td>1024–1279</td>
+<td>左栏可折叠；右栏全宽</td>
+</tr>
+<tr>
+<td>&lt; 1024</td>
+<td>上下堆叠；地球高度 40vh；输入区固定底部</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>浏览器矩阵：Chrome / Edge / Firefox / Safari 最近两个大版本；WebGL 不可用时显示降级提示与 2D 轨迹列表。</li>
+<li>高分屏：<code>devicePixelRatio</code> 适配，Cesium <code>resolutionScale</code> 可调；2560/4K 下不模糊。</li>
+<li>无横向滚动；长文本/长卫星名省略号 + tooltip；触控目标 ≥ 44px。</li>
+<li>验收：Playwright 在 1280×800、1920×1080、2560×1440 三档截图对比，无溢出、无遮挡。</li>
+</ul>
+<h3 id="sec-6-6">6.6 性能预算</h3>
+<ul>
+<li>首屏（不含 Cesium 影像）：&lt; 2.5 s（本地/香港出口，20 Mbps）。</li>
+<li>Cesium 与影像按需加载；首屏先出骨架与卫星列表。</li>
+<li><strong>111 颗只画当前位置</strong>（点/图标，Cesium 实体或 PointPrimitive），不为每颗星预生成 1s 轨迹；轨迹仅对选中星按需计算并按 stride 降采样。</li>
+<li>卫星位置动画 ≥ 30 FPS（111 颗当前位置；轨迹模式 ≥ 30 FPS）。</li>
+<li>卫星列表用虚拟滚动（只渲染可视行）；筛选/搜索在前端完成。</li>
+<li>过境窗口按日预计算并缓存（<code>pass_window</code>），前端不再逐次全量算。</li>
+<li>单次过境查询 P95 &lt; 3 s（111 颗、24h 窗口，命中缓存）。</li>
+</ul>
+<h3 id="sec-6-7">6.7 前端待办</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>待办</th>
+<th>优先级</th>
+<th>验收</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>D1</td>
+<td>搭建 React+Vite+TS 工程与构建管线，<code>dist/</code> 由 Flask/FastAPI 托管</td>
+<td><span class="tag warn">P0</span></td>
+<td><code>npm run build</code> 后站点可用</td>
+</tr>
+<tr>
+<td>D2</td>
+<td>DSH SDK 常驻运行时 + SSE 事件桥</td>
+<td><span class="tag warn">P0</span></td>
+<td>浏览器看到 token 级流式</td>
+</tr>
+<tr>
+<td>D3</td>
+<td>双栏布局 + Header + 输入区</td>
+<td><span class="tag warn">P0</span></td>
+<td>三档分辨率不破</td>
+</tr>
+<tr>
+<td>D4</td>
+<td>Cesium 地球 + 卫星实时位置</td>
+<td><span class="tag warn">P0</span></td>
+<td>111 颗位置正确、可交互</td>
+</tr>
+<tr>
+<td>D5</td>
+<td>选中星轨迹、足迹、时间轴、过境表</td>
+<td><span class="tag warn">P0</span></td>
+<td>与 MCP 结果一致</td>
+</tr>
+<tr>
+<td>D6</td>
+<td>消息流：思考块、工具卡、错误态</td>
+<td><span class="tag warn">P0</span></td>
+<td>工具调用实时出现</td>
+</tr>
+<tr>
+<td>D7</td>
+<td>会话恢复（刷新后续聊）</td>
+<td><span class="tag">P1</span></td>
+<td>同 session 续聊</td>
+</tr>
+<tr>
+<td>D8</td>
+<td>视觉 token 与深空主题</td>
+<td><span class="tag">P1</span></td>
+<td>对比度达标</td>
+</tr>
+<tr>
+<td>D9</td>
+<td>响应式与浏览器矩阵</td>
+<td><span class="tag">P1</span></td>
+<td>Playwright 三档通过</td>
+</tr>
+<tr>
+<td>D10</td>
+<td>性能优化（Cesium 懒加载、降采样）</td>
+<td><span class="tag plain">P2</span></td>
+<td>首屏 &lt; 2.5 s</td>
+</tr>
+<tr>
+<td>D11</td>
+<td>无障碍（键盘、aria、reduced motion）</td>
+<td><span class="tag plain">P2</span></td>
+<td>axe 无严重项</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="sec-7">7. 工作流 E — 门禁（Phase 2 不做）</h2>
+<h3 id="sec-7-1">7.1 本轮决策</h3>
+<ul>
+<li><strong>完全不做门禁</strong>：不设权限档位、不做命令白名单、不做审批弹窗。</li>
+<li>Agent 拥有 <strong>bash 全放行</strong>；白名单只保留数据结构与文档位置，Phase 3 再填内容。</li>
+<li>站点访问继续由 Cloudflare Access 兜底。</li>
+</ul>
+<h3 id="sec-7-2">7.2 已知风险与缓解</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>风险</th>
+<th>缓解</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>公网用户可让 Agent 执行任意命令</td>
+<td>Access 仅放行本人邮箱；RS-Service 只绑 localhost；日志留痕</td>
+</tr>
+<tr>
+<td>Agent 误改工作区/系统文件</td>
+<td>会话工作区固定；每日备份；Phase 3 优先补沙箱</td>
+</tr>
+<tr>
+<td>密钥泄露</td>
+<td>DSH 凭据只在 <code>~/.dsh-siriagent/.credentials.yaml</code>；不进仓库</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="sec-7-3">7.3 Phase 3 第一项（占位）</h3>
+<ul>
+<li>工具面最小化 + 命令白名单 + 高风险审批 + 审计查询页。</li>
+<li>依据：Phase 2 的 <code>COMMANDS.md</code> 风险标注与 <code>command_audit</code> 表。</li>
+</ul>
+<hr />
+<h2 id="sec-8">8. 优先级总表</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>工作流</th>
+<th>待办</th>
+<th>优先级</th>
+<th>依赖</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A1</td>
+<td>仓库</td>
+<td>SIRIAgent git + 公开仓库</td>
+<td><span class="tag warn">P0</span></td>
+<td>A3</td>
+</tr>
+<tr>
+<td>A2</td>
+<td>仓库</td>
+<td>RS-Service 骨架</td>
+<td><span class="tag warn">P0</span></td>
+<td>A4</td>
+</tr>
+<tr>
+<td>A3</td>
+<td>仓库</td>
+<td>gh 登录</td>
+<td><span class="tag warn">P0</span></td>
+<td>—</td>
+</tr>
+<tr>
+<td>A4</td>
+<td>仓库</td>
+<td>LICENSE / THIRD_PARTY_NOTICES</td>
+<td><span class="tag warn">P0</span></td>
+<td>A1、A2</td>
+</tr>
+<tr>
+<td>A5</td>
+<td>仓库</td>
+<td>品牌约束</td>
+<td><span class="tag warn">P0</span></td>
+<td>A1</td>
+</tr>
+<tr>
+<td>A6</td>
+<td>仓库</td>
+<td>.gitignore</td>
+<td><span class="tag warn">P0</span></td>
+<td>A1、A2</td>
+</tr>
+<tr>
+<td>B1</td>
+<td>数据</td>
+<td>Alembic 初始迁移（10 表）</td>
+<td><span class="tag warn">P0</span></td>
+<td>A2</td>
+</tr>
+<tr>
+<td>B2</td>
+<td>数据</td>
+<td>抓取/解析（OMM + TLE）</td>
+<td><span class="tag warn">P0</span></td>
+<td>B1</td>
+</tr>
+<tr>
+<td>B3</td>
+<td>数据</td>
+<td>同步 CLI + systemd timer（每日 03:00、3 次重试、失败当天停止）</td>
+<td><span class="tag warn">P0</span></td>
+<td>B2</td>
+</tr>
+<tr>
+<td>B4</td>
+<td>数据</td>
+<td>卫星目录与 111 颗展示集入库</td>
+<td><span class="tag warn">P0</span></td>
+<td>B2</td>
+</tr>
+<tr>
+<td>B5</td>
+<td>数据</td>
+<td>SGP4 传播 + 轨迹</td>
+<td><span class="tag warn">P0</span></td>
+<td>B4</td>
+</tr>
+<tr>
+<td>B6</td>
+<td>数据</td>
+<td>过境窗口（门限/太阳角）</td>
+<td><span class="tag warn">P0</span></td>
+<td>B5</td>
+</tr>
+<tr>
+<td>B7</td>
+<td>数据</td>
+<td>AOI 导入 + GCJ-02 转换 + 校验</td>
+<td><span class="tag warn">P0</span></td>
+<td>B1</td>
+</tr>
+<tr>
+<td>B8</td>
+<td>数据</td>
+<td>足迹与覆盖估算</td>
+<td><span class="tag">P1</span></td>
+<td>B6、B7</td>
+</tr>
+<tr>
+<td>B9</td>
+<td>数据</td>
+<td>云量接入（Open-Meteo）</td>
+<td><span class="tag">P1</span></td>
+<td>B6</td>
+</tr>
+<tr>
+<td>B10</td>
+<td>数据</td>
+<td>保留、备份、<code>VACUUM INTO</code></td>
+<td><span class="tag">P1</span></td>
+<td>B3</td>
+</tr>
+<tr>
+<td>B11</td>
+<td>数据</td>
+<td>精度口径落到所有出参</td>
+<td><span class="tag warn">P0</span></td>
+<td>B5、B6</td>
+</tr>
+<tr>
+<td>C1</td>
+<td>MCP</td>
+<td>REST <code>/api/v1</code></td>
+<td><span class="tag warn">P0</span></td>
+<td>B5</td>
+</tr>
+<tr>
+<td>C2</td>
+<td>MCP</td>
+<td>MCP server + 9 工具</td>
+<td><span class="tag warn">P0</span></td>
+<td>C1</td>
+</tr>
+<tr>
+<td>C3</td>
+<td>MCP</td>
+<td><code>run_command</code> + 审计</td>
+<td><span class="tag">P1</span></td>
+<td>C2</td>
+</tr>
+<tr>
+<td>C4</td>
+<td>Skill</td>
+<td>4 个 skill + COMMANDS.md</td>
+<td><span class="tag warn">P0</span></td>
+<td>C2</td>
+</tr>
+<tr>
+<td>C5</td>
+<td>Skill</td>
+<td>注册到 DSH（MCP + 目录）</td>
+<td><span class="tag warn">P0</span></td>
+<td>C2、D2</td>
+</tr>
+<tr>
+<td>D1</td>
+<td>前端</td>
+<td>React 工程</td>
+<td><span class="tag warn">P0</span></td>
+<td>A1</td>
+</tr>
+<tr>
+<td>D2</td>
+<td>前端</td>
+<td>SDK 流式桥</td>
+<td><span class="tag warn">P0</span></td>
+<td>A1</td>
+</tr>
+<tr>
+<td>D3</td>
+<td>前端</td>
+<td>双栏布局</td>
+<td><span class="tag warn">P0</span></td>
+<td>D1</td>
+</tr>
+<tr>
+<td>D4</td>
+<td>前端</td>
+<td>Cesium 地球 + 实时位置</td>
+<td><span class="tag warn">P0</span></td>
+<td>D1、C1</td>
+</tr>
+<tr>
+<td>D5</td>
+<td>前端</td>
+<td>轨迹/足迹/时间轴/过境表</td>
+<td><span class="tag warn">P0</span></td>
+<td>D4、C2</td>
+</tr>
+<tr>
+<td>D6</td>
+<td>前端</td>
+<td>消息流与工具卡</td>
+<td><span class="tag warn">P0</span></td>
+<td>D2、D3</td>
+</tr>
+<tr>
+<td>D7</td>
+<td>前端</td>
+<td>会话恢复</td>
+<td><span class="tag">P1</span></td>
+<td>D2</td>
+</tr>
+<tr>
+<td>D8</td>
+<td>前端</td>
+<td>视觉 token</td>
+<td><span class="tag">P1</span></td>
+<td>D3</td>
+</tr>
+<tr>
+<td>D9</td>
+<td>前端</td>
+<td>响应式/浏览器矩阵</td>
+<td><span class="tag">P1</span></td>
+<td>D3</td>
+</tr>
+<tr>
+<td>D10</td>
+<td>前端</td>
+<td>性能优化</td>
+<td><span class="tag plain">P2</span></td>
+<td>D4</td>
+</tr>
+<tr>
+<td>D11</td>
+<td>前端</td>
+<td>无障碍</td>
+<td><span class="tag plain">P2</span></td>
+<td>D3</td>
+</tr>
+<tr>
+<td>E1</td>
+<td>门禁</td>
+<td>Phase 3 占位</td>
+<td><span class="tag plain">P2</span></td>
+<td>—</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="sec-9">9. 依赖与里程碑</h2>
+<pre><code class="language-text">M1 数据可用（约 1 周）
+  A2/A4 → B1 → B2 → B3 → B4 → B5 → B6 → B7
+M2 Agent 可查（约 0.5 周）
+  B5/B6 → C1 → C2 → C4 → C5
+M3 前端骨架（约 1 周）
+  A1 → D1 → D2 → D3 → D6
+M4 可视化（约 1 周）
+  C1 → D4 → D5
+M5 联调上线（约 0.5 周）
+  D7/D8/D9 + 验收演示
+</code></pre>
+<p>关键路径：<strong>A3（gh 登录）→ A1/A2 → B2（数据源）→ B4（卫星集）→ B6（过境）→ C2（MCP）→ D5（可视化联调）</strong>。</p>
+<hr />
+<h2 id="sec-10">10. 风险与回滚</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>级别</th>
+<th>风险</th>
+<th>触发条件</th>
+<th>缓解/回滚</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="tag warn">P0</span></td>
+<td>CelesTrak 偶发不可达（2026-10-19 曾整段 TLS EOF，同日恢复）</td>
+<td>3 次重试用尽 → <code>abandoned</code></td>
+<td>当天停止；保留上一版数据；次日 03:00 自动恢复；<code>sync_status</code> 告警</td>
+</tr>
+<tr>
+<td><span class="tag warn">P0</span></td>
+<td>gh 未登录阻塞建仓</td>
+<td><code>gh auth status</code> 失败</td>
+<td>用户手动登录；或先用本地 git，远端后补</td>
+</tr>
+<tr>
+<td><span class="tag warn">P0</span></td>
+<td>SDK 装配失败</td>
+<td><code>dsh --profile sdk</code> 起不来</td>
+<td>回退 headless + SSE（功能降级，不阻塞前端）</td>
+</tr>
+<tr>
+<td><span class="tag">P1</span></td>
+<td>Cesium 资产过大，隧道慢</td>
+<td>首屏 &gt; 5 s</td>
+<td>本地低分辨率影像 + 懒加载；必要时降级 2D</td>
+</tr>
+<tr>
+<td><span class="tag">P1</span></td>
+<td>npm 包与本地 React 版本冲突</td>
+<td>构建失败</td>
+<td>锁版本；必要时 vendor 该包源码</td>
+</tr>
+<tr>
+<td><span class="tag">P1</span></td>
+<td>区县边界 GCJ-02 偏移</td>
+<td>覆盖判定偏差 &gt; 1 km</td>
+<td>转换 + 面积校验；不合格则只用城市级</td>
+</tr>
+<tr>
+<td><span class="tag">P1</span></td>
+<td>无门禁 + bash 全放行</td>
+<td>公网滥用</td>
+<td>Access 收紧；审计；Phase 3 补门禁</td>
+</tr>
+<tr>
+<td><span class="tag plain">P2</span></td>
+<td>云量预报偏差</td>
+<td>与实况差异大</td>
+<td>标注"预报"；Phase 3 接卫星云图</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="sec-11">11. 决策记录（已关闭）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>问题</th>
+<th>结论</th>
+<th>日期</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Q1</td>
+<td>默认展示集</td>
+<td>111 颗全部中国（102 LEO + 9 GEO，公开载荷优先），按杭州 7 天过境频次选定，见 §4.4</td>
+<td>2026-10-19</td>
+</tr>
+<tr>
+<td>Q2</td>
+<td>星历数据源</td>
+<td>CelesTrak GP 直连为主；Space-Track 仅内部核对；镜像仅研究/兜底</td>
+<td>2026-10-19</td>
+</tr>
+<tr>
+<td>Q3</td>
+<td>云量与 AOI</td>
+<td>Open-Meteo 接入；AOI 做 GCJ-02→WGS84 与面积校验，见 §4.7/§4.8</td>
+<td>2026-10-19</td>
+</tr>
+<tr>
+<td>Q4</td>
+<td><code>gh</code> 登录</td>
+<td>已完成（<code>Me106y</code>，keyring，scopes 含 repo/workflow）</td>
+<td>2026-10-19</td>
+</tr>
+</tbody>
+</table></div>
+<div class="callout"><span class="callout-label">说明</span><p>当前无阻塞项。下一步按 §9 的 M1 开工。</p></div>
+<hr />
+<h2 id="sec-12">12. 附录</h2>
+<h3 id="sec-12-1">12.1 术语</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>术语</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>TLE</td>
+<td>两行轨道根数；5 位 NORAD 号已耗尽，新对象用 OMM</td>
+</tr>
+<tr>
+<td>OMM</td>
+<td>Orbit Mean-Elements Message，结构化轨道根数</td>
+</tr>
+<tr>
+<td>SGP4</td>
+<td>简化通用摄动模型，TLE 的标准传播算法</td>
+</tr>
+<tr>
+<td>AOI</td>
+<td>Area of Interest，关注区域</td>
+</tr>
+<tr>
+<td>MCP</td>
+<td>Model Context Protocol，Agent 调用外部工具的协议</td>
+</tr>
+<tr>
+<td>AOS/LOS/TCA</td>
+<td>过境开始/结束/最高点时刻</td>
+</tr>
+<tr>
+<td>MRT/ART</td>
+<td>最大/平均重访间隔</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="sec-12-2">12.2 关键事实来源</h3>
+<ul>
+<li>CelesTrak GP 格式与限流：<a href="https://celestrak.org/NORAD/documentation/gp-data-formats.php">https://celestrak.org/NORAD/documentation/gp-data-formats.php</a>（经 Wayback 2026-10-13 快照核实）</li>
+<li>CelesTrak 使用政策：<a href="https://celestrak.org/usage-policy.php">https://celestrak.org/usage-policy.php</a></li>
+<li>Space-Track API 与限流：<a href="https://www.space-track.org/documentation#/api">https://www.space-track.org/documentation#/api</a></li>
+<li>Space-Track 用户协议（禁止转发）：<a href="https://www.space-track.org/auth/createAccount">https://www.space-track.org/auth/createAccount</a></li>
+<li>DSH 文档：<code>docs/subsystems/mcp.zh.md</code>、<code>docs/subsystems/skills.zh.md</code>、<code>docs/api-gateway.zh.md</code>、<code>packages/bundle/headless/src/json-stream.ts</code></li>
+<li>本仓库旧实现：<code>src/sat_ephemeris/*</code>、<code>data/tle_cache.sqlite</code>、<code>data/district_boundaries/*</code></li>
+</ul>
+<h3 id="sec-12-3">12.3 变更记录</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>日期</th>
+<th>版本</th>
+<th>变更</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2026-10-19</td>
+<td>v1.4</td>
+<td>展示集扩到 <strong>111 颗</strong>（102 LEO + 9 GEO，全部国内公开轨道；商业 64/民用 29/气象海洋 18；军事 0）；新增 13 颗 payload_public=false 仅轨道条目、低轨异常提示、111 颗前端性能口径</td>
+</tr>
+<tr>
+<td>2026-10-19</td>
+<td>v1.3</td>
+<td>展示集初版：30 颗全部中国（25 LEO + 5 GEO）；补充 44312=捕风一号A、40143=Yaogan-21、GF-12=SAR 等数据质量结论</td>
+</tr>
+<tr>
+<td>2026-10-19</td>
+<td>v1.2</td>
+<td>同步改为每日 1 次（03:00）+ 最多 3 次重试，失败当天停止；新增 <code>sync_state</code> 表，<code>sync_run</code>/<code>sync_item_error</code> 增加尝试次数、重试与错误字段</td>
+</tr>
+</tbody>
+</table></div>
+
+    <div class="document-control">
+      <span>SIRIAgent Phase 2 需求文档 · v1.4 · 2026-10-19</span>
+      <span>SIRIAgent / docs/PHASE2-REQUIREMENTS.md</span>
+    </div>
+  </main>
+</div>
+
+<button type="button" class="back-to-top" id="back-to-top" aria-label="回到顶部">↑</button>
+
+<script>
+(function () {
+  var printBtn = document.getElementById('print-document');
+  if (printBtn) printBtn.addEventListener('click', function () { window.print(); });
+
+  var links = Array.prototype.slice.call(document.querySelectorAll('#toc a'));
+  var targets = links.map(function (a) {
+    var id = a.getAttribute('href').slice(1);
+    return document.getElementById(id);
+  }).filter(Boolean);
+
+  function setActive() {
+    var y = window.scrollY + 120;
+    var current = targets[0] || null;
+    targets.forEach(function (el) { if (el.offsetTop <= y) current = el; });
+    links.forEach(function (a) {
+      var on = current && a.getAttribute('href') === '#' + current.id;
+      a.classList.toggle('active', !!on);
+    });
+    var top = document.getElementById('back-to-top');
+    if (top) top.classList.toggle('visible', window.scrollY > 600);
+  }
+  window.addEventListener('scroll', setActive, { passive: true });
+  window.addEventListener('resize', setActive);
+  setActive();
+
+  var topBtn = document.getElementById('back-to-top');
+  if (topBtn) topBtn.addEventListener('click', function () { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+})();
+</script>
+</body>
+</html>
