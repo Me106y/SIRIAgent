@@ -159,7 +159,7 @@ export default function App() {
       setMessages((current) => [
         ...current,
         { id: crypto.randomUUID(), role: "user", text },
-        { id: assistantId, role: "assistant", text: "", blocks: [] },
+        { id: assistantId, role: "assistant", text: "", blocks: [], phase: "streaming" },
       ]);
       setBusy(true);
       setError(null);
@@ -295,12 +295,12 @@ export default function App() {
                   });
                 });
               }
-              update({ elapsed_ms: event.elapsed_ms });
+              update({ elapsed_ms: event.elapsed_ms, phase: "done" });
               if (event.session_id) setSessionId(event.session_id);
               break;
             case "error":
               pushNotice(event.message);
-              update({ error: true });
+              update({ error: true, phase: "error" });
               break;
             default:
               break;
@@ -343,15 +343,17 @@ export default function App() {
               text: response.text || "（没有文本）",
               usage: response.usage || null,
               elapsed_ms: response.elapsed_ms,
+              phase: "done",
             });
           } catch (fallbackError) {
             const message =
               fallbackError instanceof Error ? fallbackError.message : "请求失败";
             pushNotice(`请求失败：${reason}；回退失败：${message}`);
-            update({ error: true });
+            update({ error: true, phase: "error" });
           }
         } else {
           pushNotice(`连接中断：${reason}。已保留已收到的内容；可以直接重试。`);
+          update({ phase: "error" });
         }
       } finally {
         setBusy(false);

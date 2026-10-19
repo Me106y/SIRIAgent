@@ -115,6 +115,7 @@ export interface ChatMessage {
   role: "user" | "assistant";
   text: string;
   blocks?: MessageBlock[];
+  phase?: "streaming" | "done" | "error";
   thinking?: string;
   tools?: ToolCall[];
   usage?: ChatUsage | null;

@@ -764,6 +764,101 @@ button {
   line-height: 1.55;
 }
 
+.work-steps {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(8, 20, 38, 0.62);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.work-steps > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.work-steps > summary::-webkit-details-marker {
+  display: none;
+}
+
+.work-check svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: var(--accent-2);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.work-title {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.work-count,
+.work-time {
+  font-family: var(--mono);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.work-current {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+.work-steps[open] .tool-chevron {
+  transform: rotate(90deg);
+}
+
+.work-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 7px 7px;
+}
+
+.thinking-row summary {
+  gap: 7px;
+}
+
+.thinking-row .tool-chevron {
+  margin-left: auto;
+}
+
+.thinking-row[open] .tool-chevron {
+  transform: rotate(90deg);
+}
+
+.thinking-title {
+  flex: 0 0 auto;
+  color: #b9dced;
+}
+
+.thinking-preview {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #8fb4c9;
+  font-size: 10.5px;
+}
+
 .tool-list {
   display: flex;
   flex-direction: column;

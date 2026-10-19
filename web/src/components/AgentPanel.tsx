@@ -55,6 +55,7 @@ function inputSummary(input: unknown): string {
   if (typeof input === "string") return input.replace(/\s+/g, " ").trim();
   if (typeof input !== "object") return String(input);
   const record = input as Record<string, unknown>;
+  if (Object.keys(record).length === 0) return "";
   const command = record.command ?? record.cmd;
   if (typeof command === "string" && command.trim()) {
     return `$ ${command.replace(/\s+/g, " ").trim()}`;
@@ -108,6 +109,88 @@ function ToolRow({ block }: { block: ToolBlock }) {
             <pre>{pretty(block.result)}</pre>
           </>
         )}
+      </div>
+    </details>
+  );
+}
+
+function ThinkingRow({ block }: { block: Extract<MessageBlock, { kind: "thinking" }> }) {
+  const flat = block.text.replace(/\s+/g, " ").trim();
+  const preview = flat.length > 96 ? `${flat.slice(0, 93)}…` : flat;
+  return (
+    <details className="thinking thinking-row">
+      <summary>
+        <span className="thinking-mark" aria-hidden="true" />
+        <span className="thinking-title">思考</span>
+        <span className="thinking-preview" title={flat}>
+          {preview}
+        </span>
+        <ChevronIcon />
+      </summary>
+      <pre>{block.text}</pre>
+    </details>
+  );
+}
+
+function WorkSteps({
+  blocks,
+  phase,
+  elapsedMs,
+}: {
+  blocks: MessageBlock[];
+  phase: "streaming" | "done" | "error";
+  elapsedMs?: number;
+}) {
+  const finished = phase !== "streaming";
+  const [open, setOpen] = useState(!finished);
+  const [pinned, setPinned] = useState(false);
+  const tools = blocks.filter((block): block is ToolBlock => block.kind === "tool");
+  const current = tools[tools.length - 1];
+
+  useEffect(() => {
+    if (phase === "error") {
+      setOpen(true);
+      return;
+    }
+    if (finished && !pinned) setOpen(false);
+  }, [phase, finished, pinned]);
+
+  return (
+    <details
+      className="work-steps"
+      open={open}
+      onToggle={(event) => {
+        const next = event.currentTarget.open;
+        setOpen(next);
+        if (finished) setPinned(next);
+      }}
+    >
+      <summary>
+        {phase === "streaming" ? (
+          <span className="tool-spinner" aria-hidden="true" />
+        ) : (
+          <span className="work-check" aria-hidden="true">
+            <CheckIcon />
+          </span>
+        )}
+        <span className="work-title">工作步骤</span>
+        <span className="work-count">
+          {blocks.length} 步{tools.length > 0 ? ` · ${tools.length} 个工具` : ""}
+        </span>
+        {phase === "streaming" && current && (
+          <span className="work-current">{toolLabel(current.tool)}</span>
+        )}
+        {finished && elapsedMs != null && (
+          <span className="work-time">{(elapsedMs / 1000).toFixed(1)} s</span>
+        )}
+        <ChevronIcon />
+      </summary>
+      <div className="work-body">
+        {blocks.map((block) => {
+          if (block.kind === "tool") return <ToolRow key={block.id} block={block} />;
+          if (block.kind === "thinking") return <ThinkingRow key={block.id} block={block} />;
+          return null;
+        })}
       </div>
     </details>
   );
@@ -262,8 +345,37 @@ export function AgentPanel({ messages, busy, sessionId, onSend, onReset }: Props
 
         {messages.map((message) => {
           const blocks = message.blocks ?? [];
-          const hasText = blocks.some((block) => block.kind === "text");
-          const loading = message.role === "assistant" && busy && !hasText;
+          const phase = message.phase ?? "done";
+          const work = blocks.filter(
+            (block) => block.kind === "thinking" || block.kind === "tool",
+          );
+          const texts = blocks.filter((block) => block.kind === "text");
+          const notices = blocks.filter((block) => block.kind === "notice");
+          const loading =
+            message.role === "assistant" && phase === "streaming" && texts.length === 0;
+
+          const renderLive = (block: MessageBlock) => {
+            if (block.kind === "tool") return <ToolRow key={block.id} block={block} />;
+            if (block.kind === "thinking") {
+              return <ThinkingRow key={block.id} block={block} />;
+            }
+            if (block.kind === "notice") {
+              return (
+                <div className="stream-notice" key={block.id}>
+                  {block.text}
+                </div>
+              );
+            }
+            return (
+              <div
+                className={message.error ? "bubble error" : "bubble markdown-bubble"}
+                key={block.id}
+              >
+                <Markdown text={block.text} />
+              </div>
+            );
+          };
+
           return (
             <article key={message.id} className={`message ${message.role}`}>
               <div className="who">{message.role === "user" ? "你" : "SIRIAgent"}</div>
@@ -271,51 +383,50 @@ export function AgentPanel({ messages, busy, sessionId, onSend, onReset }: Props
                 <div className="bubble">{message.text}</div>
               ) : (
                 <div className="timeline">
-                  {blocks.map((block) => {
-                    if (block.kind === "tool") {
-                      return <ToolRow key={block.id} block={block} />;
-                    }
-                    if (block.kind === "thinking") {
-                      return (
-                        <details className="thinking" key={block.id}>
-                          <summary>
-                            <span className="thinking-mark" aria-hidden="true" />
-                            {busy && !hasText ? "思考中" : "思考过程"}
-                          </summary>
-                          <pre>{block.text}</pre>
-                        </details>
-                      );
-                    }
-                    if (block.kind === "notice") {
-                      return (
+                  {phase === "streaming" ? (
+                    <>
+                      {blocks.map(renderLive)}
+                      {loading && (
+                        <div className="assistant-loading" aria-live="polite">
+                          <span className="thinking-dots" aria-hidden="true">
+                            <i />
+                            <i />
+                            <i />
+                          </span>
+                          {blocks.length > 0 ? "正在整理结果" : "正在思考"}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {work.length > 0 && (
+                        <WorkSteps
+                          blocks={work}
+                          phase={phase}
+                          elapsedMs={message.elapsed_ms}
+                        />
+                      )}
+                      {texts.map((block) => (
+                        <div
+                          className={
+                            message.error ? "bubble error" : "bubble markdown-bubble"
+                          }
+                          key={block.id}
+                        >
+                          <Markdown text={block.text} />
+                        </div>
+                      ))}
+                      {notices.map((block) => (
                         <div className="stream-notice" key={block.id}>
                           {block.text}
                         </div>
-                      );
-                    }
-                    return (
-                      <div
-                        className={message.error ? "bubble error" : "bubble markdown-bubble"}
-                        key={block.id}
-                      >
-                        <Markdown text={block.text} />
-                      </div>
-                    );
-                  })}
-                  {loading && (
-                    <div className="assistant-loading" aria-live="polite">
-                      <span className="thinking-dots" aria-hidden="true">
-                        <i />
-                        <i />
-                        <i />
-                      </span>
-                      {blocks.length > 0 ? "正在整理结果" : "正在思考"}
-                    </div>
-                  )}
-                  {!loading && blocks.length === 0 && (
-                    <div className={message.error ? "bubble error" : "bubble markdown-bubble"}>
-                      {message.text ? <Markdown text={message.text} /> : "…"}
-                    </div>
+                      ))}
+                      {blocks.length === 0 && (
+                        <div className="bubble markdown-bubble">
+                          {message.text ? <Markdown text={message.text} /> : "…"}
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               )}

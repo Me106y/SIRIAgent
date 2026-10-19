@@ -90,7 +90,10 @@ class HarnessManager:
                 return
             event = (notification.payload or {}).get("event") or {}
             mapped = _map_event(event)
-            if mapped:
+            if isinstance(mapped, list):
+                for item in mapped:
+                    push(item)
+            elif mapped:
                 push(mapped)
 
         def worker() -> None:
@@ -126,7 +129,7 @@ class HarnessManager:
             yield item
 
 
-def _map_event(event: dict[str, Any]) -> dict[str, Any] | None:
+def _map_event(event: dict[str, Any]) -> dict[str, Any] | list[dict[str, Any]] | None:
     kind = event.get("type")
     data = event.get("data") or {}
     if kind == "tool/call":
@@ -147,17 +150,17 @@ def _map_event(event: dict[str, Any]) -> dict[str, Any] | None:
     if kind == "assistant/message":
         message = data.get("message") or {}
         blocks = message.get("content") or []
-        text = "\n".join(
-            str(block.get("text") or "") for block in blocks if block.get("type") == "text"
-        ).strip()
-        reasoning = "\n".join(
-            str(block.get("text") or "") for block in blocks if block.get("type") == "reasoning"
-        ).strip()
-        if text:
-            return {"type": "text", "text": text, "replace": True}
-        if reasoning:
-            return {"type": "reasoning", "text": reasoning}
-        return None
+        mapped: list[dict[str, Any]] = []
+        for block in blocks:
+            block_type = block.get("type")
+            text = str(block.get("text") or "").strip()
+            if not text:
+                continue
+            if block_type == "reasoning":
+                mapped.append({"type": "reasoning", "text": text})
+            elif block_type == "text":
+                mapped.append({"type": "text", "text": text, "replace": True})
+        return mapped or None
     if kind == "turn/end":
         reason = (data.get("reason") or {}).get("kind")
         if reason and reason != "completed":
