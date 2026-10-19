@@ -110,7 +110,7 @@ Phase 2 **没有应用层门禁**，且 Agent 拥有 bash 全放行权限。公�
 ```text
 SIRIAgent/
 ├── app.py                    # Flask/FastAPI 入口（保留文件名，内部重构）
-├── dsh_runtime/              # Python SDK 调用、事件桥、会话管理
+├── sdk_runtime.py            # Python SDK 常驻 runtime + SSE 事件桥
 ├── skills/                   # <slug>/SKILL.md + COMMANDS.md
 ├── web/                      # React + Vite + TS 源码
 │   ├── src/
@@ -653,7 +653,7 @@ when-to-use: 用户询问某地某时的卫星过境、可见性、覆盖能力�
 - 后端使用 **Python SDK**（`deepseek_harness`），常驻 `dsh --profile sdk` 进程，通过 `session.event` 通知拿到 `text-delta / reasoning-delta / tool-call-delta`。
 - 独立 `DSH_HOME=~/.dsh-siriagent`：复制 `~/.dsh/.credentials.yaml`，加 `sdk.patch.yml`（凭据启用、`approval: never`、MCP 与 skill 目录）。
 - 每个浏览器会话映射一个 DSH session；后端把通知归一化为 SSE 事件：`session`、`text`、`reasoning`、`tool_call`、`tool_result`、`status`、`error`、`done`。
-- 降级：SDK 装配失败时回退 `dsh --profile headless --json`（块级事件 + SSE），功能不减，只是没有 token 级打字机。
+- 降级：SDK 装配失败时前端回退 `/api/chat`（headless 一次性返回），工具卡不再实时。
 - 端点：`POST /api/chat`（发送）、`GET /api/stream/<session>`（SSE）、`POST /api/session/reset`、`GET /api/health`。
 - 审批：Phase 2 不做；`approval: never`。
 
@@ -675,7 +675,7 @@ when-to-use: 用户询问某地某时的卫星过境、可见性、覆盖能力�
 
 - 左栏可折叠（窄屏默认折叠为图标条）。
 - 右栏不限制话题：欢迎语只做示例，不写"只能问星历"。
-- 时间轴拖动时，地球、轨迹、过境表联动；"回到现在"按钮。
+- 时间轴 ±24h：拖动后 111 颗位置、选中星轨迹、足迹联动；"现在 / 全球"按钮。
 - 卫星列表支持按类别（商业/民用/气象海洋）/类型（光学/SAR/高光谱）/分辨率/低置信筛选，默认 111 颗展示集；列表用虚拟滚动，111 颗也能流畅。
 
 ### 6.4 视觉系统
@@ -816,9 +816,9 @@ M5 联调上线（约 0.5 周）
 | --- | --- | --- |
 | M1 数据服务 | **进行中** | 两仓库已公开（[SIRIAgent](https://github.com/Me106y/SIRIAgent)、[RS-Service](https://github.com/Me106y/RS-Service)）；12 表迁移 `73866dc4fe27`；111 颗 seed；首次同步 111 条 TLE；REST/MCP 可用；12 个测试通过。待补：AOI/GCJ-02 入库、覆盖/重访、云量写入 `pass_window` |
 | M2 Agent 可查 | **进行中** | MCP 已接入 `headless.patch.yml`（Streamable HTTP）；6 个工具可用，前端已显示工具卡；待补 `get_tle`、`propagate`、`coverage_window`、`run_command` 与 4 个 skill |
-| M3 前端骨架 | **已完成骨架** | `web/` React 19 + Vite + TS + Cesium；1/3 + 2/3 布局；111 颗位置 5 s 刷新；选中星轨迹与过境表；`/api/chat` 可用；1440/900/488 宽度无横向溢出 |
-| M4 可视化 | **部分完成** | 地球、实时位置、轨迹、过境表已接；时间轴、足迹、覆盖图层待补 |
-| 流式 | 待补 | 当前前端复用 `/api/chat`（headless 一次性返回）；D2 的 SDK 流式桥未接 |
+| M3 前端骨架 | **已完成骨架** | `web/` React 19 + Vite + TS + Cesium；1/3 + 2/3；111 颗位置 5 s 刷新；选中星轨迹与过境表；SDK SSE 事件流（工具卡实时）+ Markdown；1440/900/488 无横向溢出 |
+| M4 可视化 | **部分完成** | 地球、实时位置、轨迹、过境表、时间轴 ±24h、足迹圆已接；覆盖/重访图层待补 |
+| 流式 | **已完成（事件级）** | `/api/chat/stream` 用 SDK 通知：`tool_call`/`tool_result` 实时，文本回合末整块；token delta 当前 SDK 不提供 |
 | M5 联调上线 | 未开始 | 待 D7–D9 与验收演示 |
 
 ---

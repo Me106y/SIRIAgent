@@ -9,13 +9,15 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from flask import Flask, Response, jsonify, request, send_from_directory
+from flask import Flask, Response, jsonify, request, send_from_directory, stream_with_context
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 STATIC_DIR = PROJECT_ROOT / "static"
 WEB_DIST = PROJECT_ROOT / "web" / "dist"
 PATCH_FILE = PROJECT_ROOT / "headless.patch.yml"
 RS_SERVICE_BASE = os.environ.get("RS_SERVICE_BASE", "http://127.0.0.1:8766/api/v1")
+
+from sdk_runtime import manager  # noqa: E402  (项目根模块)
 _RS_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
 DSH_ROOT = Path(
@@ -171,6 +173,41 @@ def health():
             "rs_service": RS_SERVICE_BASE,
             "timeout_seconds": DSH_TIMEOUT,
         }
+    )
+
+
+@app.post("/api/chat/stream")
+def chat_stream():
+    """SDK 事件流：tool_call / tool_result / text / done，直接以 SSE 返回。"""
+    body = request.get_json(silent=True) or {}
+    message = str(body.get("message", "")).strip()
+    session_id = str(body.get("session_id") or "").strip() or None
+
+    if not message:
+        return jsonify({"ok": False, "error": "消息不能为空。"}), 400
+    if len(message) > MAX_MESSAGE_CHARS:
+        return (
+            jsonify(
+                {
+                    "ok": False,
+                    "error": f"消息太长（{len(message)} 字符），上限 {MAX_MESSAGE_CHARS}。",
+                }
+            ),
+            413,
+        )
+
+    def generate():
+        for event in manager.stream(message, session_id):
+            yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+
+    return Response(
+        stream_with_context(generate()),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
     )
 
 

@@ -15,6 +15,7 @@ interface Props {
   passes: PassItem[];
   tleAge: number | null;
   onSelect: (norad: number) => void;
+  onFocus: () => void;
 }
 
 export function SatellitePanel({
@@ -24,6 +25,7 @@ export function SatellitePanel({
   passes,
   tleAge,
   onSelect,
+  onFocus,
 }: Props) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string>("all");
@@ -118,7 +120,12 @@ export function SatellitePanel({
                 NORAD {current.norad} · {current.operator || "—"}
               </p>
             </div>
-            {!current.payload_public && <span className="tag warn">仅轨道</span>}
+            <div className="detail-actions">
+              {!current.payload_public && <span className="tag warn">仅轨道</span>}
+              <button type="button" className="ghost" onClick={onFocus}>
+                聚焦
+              </button>
+            </div>
           </div>
           <div className="detail-grid">
             <span>类别</span>

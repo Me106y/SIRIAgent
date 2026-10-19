@@ -16,14 +16,32 @@ interface GlobeProps {
   selected: number | null;
   track: TrackPoint[];
   onSelect: (norad: number) => void;
+  footprintLat: number | null;
+  footprintLon: number | null;
+  footprintRadiusKm: number | null;
+  focusToken: number;
+  globalToken: number;
 }
 
-export function Globe({ positions, selected, track, onSelect }: GlobeProps) {
+export function Globe({
+  positions,
+  selected,
+  track,
+  onSelect,
+  footprintLat,
+  footprintLon,
+  footprintRadiusKm,
+  focusToken,
+  globalToken,
+}: GlobeProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<Cesium.Viewer | null>(null);
   const entitiesRef = useRef(new Map<number, Cesium.Entity>());
   const colorsRef = useRef(new Map<number, string>());
   const trackRef = useRef<Cesium.Entity[]>([]);
+  const footprintRef = useRef<Cesium.Entity | null>(null);
+  const focusRef = useRef({ lat: footprintLat, lon: footprintLon, radius: footprintRadiusKm });
+  focusRef.current = { lat: footprintLat, lon: footprintLon, radius: footprintRadiusKm };
   const onSelectRef = useRef(onSelect);
   onSelectRef.current = onSelect;
 
@@ -84,6 +102,7 @@ export function Globe({ positions, selected, track, onSelect }: GlobeProps) {
       entitiesRef.current.clear();
       colorsRef.current.clear();
       trackRef.current = [];
+      footprintRef.current = null;
     };
   }, []);
 
@@ -161,6 +180,71 @@ export function Globe({ positions, selected, track, onSelect }: GlobeProps) {
       }),
     );
   }, [track]);
+
+  useEffect(() => {
+    if (globalToken === 0) return;
+    const viewer = viewerRef.current;
+    if (!viewer) return;
+    viewer.camera.flyTo({
+      destination: Cesium.Cartesian3.fromDegrees(112, 27, 20_000_000),
+      duration: 1.1,
+    });
+  }, [globalToken]);
+
+  useEffect(() => {
+    if (focusToken === 0) return;
+    const viewer = viewerRef.current;
+    const target = focusRef.current;
+    if (!viewer || target.lat == null || target.lon == null) return;
+    const radius = target.radius ?? 100;
+    const height = Math.min(6_000_000, Math.max(400_000, radius * 1000 * 8));
+    viewer.camera.flyTo({
+      destination: Cesium.Cartesian3.fromDegrees(target.lon, target.lat, height),
+      duration: 1.1,
+    });
+  }, [focusToken]);
+
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer) return;
+    if (footprintRef.current) {
+      viewer.entities.remove(footprintRef.current);
+      footprintRef.current = null;
+    }
+    if (
+      footprintLat == null ||
+      footprintLon == null ||
+      footprintRadiusKm == null ||
+      footprintRadiusKm <= 0
+    ) {
+      return;
+    }
+    footprintRef.current = viewer.entities.add({
+      position: Cesium.Cartesian3.fromDegrees(footprintLon, footprintLat, 0),
+      point: {
+        pixelSize: 5,
+        color: Cesium.Color.fromCssColorString("#F8FAFC"),
+        outlineColor: Cesium.Color.fromCssColorString("#22D3EE"),
+        outlineWidth: 2,
+      },
+      label: {
+        text: `足迹 ${(footprintRadiusKm * 2).toFixed(0)} km`,
+        font: "11px monospace",
+        fillColor: Cesium.Color.fromCssColorString("#A5F3FC"),
+        showBackground: true,
+        backgroundColor: Cesium.Color.fromCssColorString("#04121F").withAlpha(0.8),
+        pixelOffset: new Cesium.Cartesian2(0, -18),
+      },
+      ellipse: {
+        semiMajorAxis: footprintRadiusKm * 1000,
+        semiMinorAxis: footprintRadiusKm * 1000,
+        height: 0,
+        material: Cesium.Color.fromCssColorString("#22D3EE").withAlpha(0.22),
+        outline: true,
+        outlineColor: Cesium.Color.fromCssColorString("#22D3EE").withAlpha(0.85),
+      },
+    });
+  }, [footprintLat, footprintLon, footprintRadiusKm]);
 
   return <div className="globe" ref={containerRef} />;
 }

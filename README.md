@@ -39,12 +39,28 @@ pnpm dev          # 开发服务器 5173，/api 代理到 8000
 pnpm build        # 产物写入 web/dist，Flask 自动托管
 ```
 
-前端依赖 RS-Service 的 REST（`127.0.0.1:8766`）。启动顺序：
+前端依赖 RS-Service 的 REST（`127.0.0.1:8766`）。时间轴支持 ±24h，拖动后 111 颗位置、选中星轨迹与足迹一起切换；「聚焦 / 全球」控制相机。启动顺序：
 
 ```bash
 systemctl --user start rs-service-api.service   # 星历服务
 systemctl --user restart siriagent-demo          # 前端 + DSH
 ```
+
+## SDK 流式
+
+`/api/chat/stream` 用 DSH Python SDK 的事件流：`tool_call` / `tool_result` 实时出现，文本在回合结束时整块返回（当前 SDK 版本不吐 token delta）。SDK 缺省时前端会回退到 `/api/chat`。
+
+本机安装（SDK 不在仓库内）：
+
+```bash
+~/.local/bin/uv pip install --python .venv/bin/python pydantic
+~/.local/bin/uv pip install --python .venv/bin/python --no-deps -e \
+  /home/siri/Documents/Qoder/2026-10-18/146d1f32/deepseek-harness/python/sdk
+```
+
+- `SDK_DSH_HOME` 默认 `~/.dsh-siriagent`，首次运行会从 `~/.dsh/.credentials.yaml` 复制凭据。
+- 模型默认 `deepseek-official / deepseek-flash`，可用 `DSH_PROVIDER` / `DSH_MODEL` 覆盖。
+- 同一时刻只跑一轮（进程内锁）；多人并发要等 Phase 3 的会话池。
 
 ## 运行
 

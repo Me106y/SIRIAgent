@@ -24,6 +24,20 @@ export interface PositionItem {
   tle_age_hours: number;
 }
 
+export interface SensorInfo {
+  sensor_type?: string | null;
+  confidence?: string | null;
+  raw_spec?: string | null;
+  swath_km?: number | null;
+  payload_public?: boolean;
+}
+
+export interface SatelliteDetail {
+  satellite: Satellite;
+  sensor: SensorInfo | null;
+  tle: { epoch_utc: string; age_hours: number } | null;
+}
+
 export interface TrackPoint {
   time_utc: string;
   lat_deg: number;
@@ -92,3 +106,19 @@ export interface ChatMessage {
   elapsed_ms?: number;
   error?: boolean;
 }
+
+export type StreamEvent =
+  | { type: "session"; session_id: string }
+  | { type: "tool_call"; callId: string; tool: string; input?: unknown }
+  | { type: "tool_result"; callId: string; status?: string; result?: unknown }
+  | { type: "text"; text: string; replace?: boolean }
+  | { type: "reasoning"; text: string }
+  | { type: "notice"; message: string }
+  | {
+      type: "done";
+      session_id: string;
+      text: string;
+      finish_reason?: string | null;
+      elapsed_ms?: number;
+    }
+  | { type: "error"; message: string };

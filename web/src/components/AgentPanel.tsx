@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import type { ChatMessage } from "../types";
+import { Markdown } from "./Markdown";
 
 interface Props {
   messages: ChatMessage[];
@@ -74,9 +75,6 @@ export function AgentPanel({ messages, busy, sessionId, onSend, onReset }: Props
         {messages.map((message) => (
           <article key={message.id} className={`message ${message.role}`}>
             <div className="who">{message.role === "user" ? "你" : "SIRIAgent"}</div>
-            <div className={message.error ? "bubble error" : "bubble"}>
-              {message.text || (message.role === "assistant" ? "…" : "")}
-            </div>
             {message.tools && message.tools.length > 0 && (
               <div className="tool-list">
                 {message.tools.map((tool) => (
@@ -105,6 +103,34 @@ export function AgentPanel({ messages, busy, sessionId, onSend, onReset }: Props
                 ))}
               </div>
             )}
+            <div
+              className={
+                message.error
+                  ? "bubble error"
+                  : message.role === "assistant"
+                    ? "bubble markdown-bubble"
+                    : "bubble"
+              }
+            >
+              {message.text ? (
+                message.role === "assistant" && !message.error ? (
+                  <Markdown text={message.text} />
+                ) : (
+                  message.text
+                )
+              ) : message.role === "assistant" ? (
+                busy ? (
+                  <>
+                    <span className="spinner" />
+                    正在调用 DSH…
+                  </>
+                ) : (
+                  "…"
+                )
+              ) : (
+                ""
+              )}
+            </div>
             {message.thinking && (
               <details className="thinking">
                 <summary>思考过程</summary>
@@ -124,15 +150,6 @@ export function AgentPanel({ messages, busy, sessionId, onSend, onReset }: Props
           </article>
         ))}
 
-        {busy && (
-          <article className="message assistant">
-            <div className="who">SIRIAgent</div>
-            <div className="bubble pending">
-              <span className="spinner" />
-              正在调用 DSH…
-            </div>
-          </article>
-        )}
       </div>
 
       <form

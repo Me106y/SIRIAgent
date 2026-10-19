@@ -17,6 +17,8 @@
 | [satellite.js](https://github.com/shashwatak/satellite-js) | MIT | 前端 SGP4 推演 |
 | [React](https://github.com/facebook/react) | MIT | 前端框架 |
 | [Vite](https://github.com/vitejs/vite) | MIT | 构建工具 |
+| [marked](https://github.com/markedjs/marked) | MIT | 前端 Markdown 渲染 |
+| [DOMPurify](https://github.com/cure53/DOMPurify) | Apache-2.0 / MPL-2.0 | 前端 HTML 消毒 |
 
 ## 计划依赖（字体/资产）
 

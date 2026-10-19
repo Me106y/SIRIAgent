@@ -1,2 +1,5 @@
 flask>=3.0,<4
 gunicorn>=23
+
+# SDK 流式（本机）：deepseek-harness-sdk 从 $DSH_ROOT/python/sdk 本地安装
+# 见 README「SDK 流式」一节
