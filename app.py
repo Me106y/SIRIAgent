@@ -134,21 +134,29 @@ def rs_proxy(subpath: str):
     query = request.query_string.decode()
     url = f"{RS_SERVICE_BASE}/{subpath}" + (f"?{query}" if query else "")
     req = urllib.request.Request(url, headers={"Accept": "application/json"})
-    try:
-        with _RS_OPENER.open(req, timeout=30) as resp:
+    for attempt in range(2):
+        try:
+            with _RS_OPENER.open(req, timeout=30) as resp:
+                return Response(
+                    resp.read(),
+                    status=resp.status,
+                    content_type=resp.headers.get("Content-Type", "application/json"),
+                )
+        except urllib.error.HTTPError as exc:
+            if exc.code >= 500 and attempt == 0:
+                time.sleep(0.15)
+                continue
             return Response(
-                resp.read(),
-                status=resp.status,
-                content_type=resp.headers.get("Content-Type", "application/json"),
+                exc.read(),
+                status=exc.code,
+                content_type=exc.headers.get("Content-Type", "application/json"),
             )
-    except urllib.error.HTTPError as exc:
-        return Response(
-            exc.read(),
-            status=exc.code,
-            content_type=exc.headers.get("Content-Type", "application/json"),
-        )
-    except (urllib.error.URLError, TimeoutError) as exc:
-        return jsonify({"ok": False, "error": f"RS-Service 不可达：{exc}"}), 502
+        except (urllib.error.URLError, TimeoutError) as exc:
+            if attempt == 0:
+                time.sleep(0.15)
+                continue
+            app.logger.warning("RS-Service proxy failed for %s: %s", subpath, exc)
+            return jsonify({"ok": False, "error": f"RS-Service 不可达：{exc}"}), 502
 
 
 @app.get("/<path:filename>")

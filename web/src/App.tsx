@@ -23,7 +23,6 @@ export default function App() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sessionId, setSessionId] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [swathKm, setSwathKm] = useState<number | null>(null);
   const [focusToken, setFocusToken] = useState(0);
   const [hangzhouToken, setHangzhouToken] = useState(0);
@@ -32,16 +31,29 @@ export default function App() {
 
   useEffect(() => {
     let alive = true;
-    api
-      .satellites()
-      .then((payload) => {
-        if (!alive) return;
-        setSatellites(payload.items);
-        const preferred =
-          payload.items.find((item) => item.norad === 40118) || payload.items[0];
-        if (preferred) setSelected((current) => current ?? preferred.norad);
-      })
-      .catch((exc: Error) => alive && setError(`卫星目录加载失败：${exc.message}`));
+
+    const load = async () => {
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        try {
+          const payload = await api.satellites();
+          if (!alive) return;
+          setSatellites(payload.items);
+          const preferred =
+            payload.items.find((item) => item.norad === 40118) || payload.items[0];
+          if (preferred) setSelected((current) => current ?? preferred.norad);
+          return;
+        } catch (exc) {
+          if (!alive) return;
+          if (attempt === 0) {
+            await new Promise((resolve) => window.setTimeout(resolve, 900));
+            continue;
+          }
+          console.warn("satellite catalog unavailable", exc);
+        }
+      }
+    };
+
+    void load();
     return () => {
       alive = false;
     };
@@ -81,24 +93,39 @@ export default function App() {
 
   useEffect(() => {
     let alive = true;
-    const tick = () => {
-      api
-        .positions()
-        .then((payload) => {
-          if (!alive) return;
-          const next: Record<number, PositionItem> = {};
-          payload.items.forEach((item) => {
-            next[item.norad] = item;
-          });
-          setPositions(next);
-          setError(null);
-        })
-        .catch((exc: Error) => {
-          if (alive) setError(`星历服务不可达：${exc.message}`);
-        });
+    let inFlight = false;
+
+    const load = async () => {
+      if (inFlight) return;
+      inFlight = true;
+      try {
+        for (let attempt = 0; attempt < 2; attempt += 1) {
+          try {
+            const payload = await api.positions();
+            if (!alive) return;
+            const next: Record<number, PositionItem> = {};
+            payload.items.forEach((item) => {
+              next[item.norad] = item;
+            });
+            setPositions(next);
+            return;
+          } catch (exc) {
+            if (!alive) return;
+            if (attempt === 0) {
+              await new Promise((resolve) => window.setTimeout(resolve, 350));
+              continue;
+            }
+            // 后台轮询失败保持上一帧星历，不打断界面。
+            console.warn("positions poll unavailable", exc);
+          }
+        }
+      } finally {
+        inFlight = false;
+      }
     };
-    tick();
-    const timer = window.setInterval(tick, 5000);
+
+    void load();
+    const timer = window.setInterval(() => void load(), 5000);
     return () => {
       alive = false;
       window.clearInterval(timer);
@@ -162,7 +189,6 @@ export default function App() {
         { id: assistantId, role: "assistant", text: "", blocks: [], phase: "streaming" },
       ]);
       setBusy(true);
-      setError(null);
 
       const update = (patch: Partial<ChatMessage>) => {
         setMessages((current) =>
@@ -365,7 +391,6 @@ export default function App() {
   const reset = useCallback(() => {
     setMessages([]);
     setSessionId(undefined);
-    setError(null);
   }, []);
 
   const balanceValue = Number(balance?.total);
@@ -413,8 +438,6 @@ export default function App() {
           </button>
         </div>
       </header>
-
-      {error && <div className="banner error">{error}</div>}
 
       <main className="layout">
         <div className="left-col">

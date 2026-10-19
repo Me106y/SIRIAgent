@@ -13,12 +13,21 @@ import type {
   TrackPoint,
 } from "./types";
 
-async function getJson<T>(path: string): Promise<T> {
-  const response = await fetch(path, { headers: { Accept: "application/json" } });
-  if (!response.ok) {
-    throw new Error(`${path} -> HTTP ${response.status}`);
+async function getJson<T>(path: string, timeoutMs = 15_000): Promise<T> {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(path, {
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      throw new Error(`${path} -> HTTP ${response.status}`);
+    }
+    return (await response.json()) as T;
+  } finally {
+    window.clearTimeout(timer);
   }
-  return (await response.json()) as T;
 }
 
 export const api = {
