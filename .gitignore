@@ -25,3 +25,6 @@ data/*.sqlite3
 # 本地草稿
 .scratch/
 .tmp-hzplan/
+
+# 运行期生成的成像报告
+reports/
