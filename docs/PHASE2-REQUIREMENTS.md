@@ -814,7 +814,7 @@ M5 联调上线（约 0.5 周）
 | 里程碑 | 状态 | 证据 |
 | --- | --- | --- |
 | M1 数据服务 | **进行中** | 两仓库已公开；12 表迁移；111 颗 seed；111 条 TLE；REST/MCP 可用；杭州 AOI 已写入 `aoi` 表（330100，16819 km²）；12 个测试通过。待补：覆盖/重访、云量写入 `pass_window` |
-| M2 Agent 可查 | **进行中** | MCP 已接入 `headless.patch.yml`（Streamable HTTP）；7 个工具可用，前端已显示工具卡；`ephemeris-query`、`pass-planning`、`tle-health` 三个 skill 已建，`/` 菜单可直接调用；待补 `get_tle`、`propagate`、`run_command` |
+| M2 Agent 可查 | **进行中** | MCP 已接入 `headless.patch.yml`（Streamable HTTP）；7 个工具可用，前端已显示工具卡；`ephemeris-query`、`pass-planning`、`tle-health` 三个 skill 已配 `SKILL.md` + `COMMANDS.md`（用途/风险/审批/示例/失败处理），`/` 菜单可直接调用；待补 `get_tle`、`propagate`、`run_command`；DSH 侧 skill 目录尚未注册；第 4 个 skill 与 §2.1/§5.4 口径不一致，待决策 |
 | M3 前端骨架 | **已完成骨架** | `web/` React 19 + Vite + TS + Cesium；1/3 + 2/3；111 颗位置 5 s 刷新；选中星轨迹与过境表；SDK SSE 事件流 + 10 s 心跳 + 运行中逐条/完成后工作步骤自动折叠 + 思考预览/工具行内联命令；星历轮询单飞/超时/静默重试；生产化顶栏（API 余额）、`/` 技能菜单、DSH 式工具卡/思考态、卡片阴影；1440/900/488 无横向溢出 |
 | M4 可视化 | **部分完成** | 地球、实时位置、轨迹、过境表、足迹圆、杭州边界闪烁定位已接；时间轴与覆盖图层按反馈移除；重访/时间覆盖率未做 |
 | 流式 | **已完成（事件级）** | `/api/chat/stream` 用 SDK 通知：`tool_call`/`tool_result` 实时，文本回合末整块；token delta 当前 SDK 不提供 |
@@ -877,6 +877,8 @@ M5 联调上线（约 0.5 周）
 
 | 日期 | 版本 | 变更 |
 | --- | --- | --- |
+| 2026-10-19 | v2.6 | 三个 skill 补齐 `COMMANDS.md`（命令/风险/审批/示例/失败处理） |
+| 2026-10-19 | v2.5 | 首屏性能：Cesium 懒加载、`/api/bootstrap` 聚合、目录 localStorage、静态长缓存 + Service Worker |
 | 2026-10-19 | v2.4 | 星历轮询加 15 s 超时、单飞与一次重试；后台轮询错误不再显示横幅；Flask 反代失败重试并写日志 |
 | 2026-10-19 | v2.3 | 保留 assistant/message 内 reasoning + text + tool-call 全部 block；思考行加一行预览；运行中逐条、完成后自动折叠工作步骤 |
 | 2026-10-19 | v2.2 | 工具行摘要直接显示 `bash` 命令或其他工具关键参数，完整参数/输出仍可展开 |
