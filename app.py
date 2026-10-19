@@ -201,6 +201,15 @@ def _rs_json(subpath: str) -> dict:
         return json.loads(resp.read().decode("utf-8"))
 
 
+@app.get("/sw")
+def service_worker():
+    """无扩展名路径：Cloudflare 不按静态资源缓存，SW 更新能立即生效。"""
+    response = send_from_directory(WEB_DIST, "sw.js")
+    response.headers["Cache-Control"] = "no-cache, max-age=0"
+    response.headers["Service-Worker-Allowed"] = "/"
+    return response
+
+
 @app.get("/<path:filename>")
 def frontend_files(filename: str):
     if (WEB_DIST / filename).is_file():
