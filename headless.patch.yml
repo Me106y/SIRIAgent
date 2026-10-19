@@ -31,3 +31,9 @@
         transport: streamable-http
         url: http://127.0.0.1:8765/mcp
 
+
+# 技能目录：让 DSH Agent 发现本仓库 skills/（相对 cwd，SDK 以项目根为 cwd）
+- id: skill-filesystem
+  config:
+    customSkillDirs:
+      - skills
