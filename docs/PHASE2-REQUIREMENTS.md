@@ -165,7 +165,7 @@ RS-Service/
 
 | 表 | 关键字段 | 说明 |
 | --- | --- | --- |
-| `satellite` | `sat_id` INTEGER PK（NORAD）、`norad_alpha5`、`intl_designator`、`name`、`name_zh`、`operator`、`country`、`category`、`object_type`、`status`、`orbit_regime`、`launch_date`、`is_domestic`、`metadata_source`、`updated_at` | 卫星目录；`is_domestic` 由 `operator/country` 派生，不再手填 |
+| `satellite` | `sat_id` INTEGER PK（NORAD）、`norad_alpha5`、`intl_designator`、`name`、`name_zh`、`operator`、`country`、`category`、`object_type`、`status`、`orbit_regime`、`launch_date`、`is_domestic`、**`payload_public`**、`metadata_source`、`updated_at` | 卫星目录；`is_domestic` 由 `operator/country` 派生；`payload_public=false` 的 13 颗不展示载荷参数 |
 | `satellite_alias` | `sat_id`、`alias`、`alias_norm`、`source`、`kind` | 解决 `JL-1` ↔ `JILIN-1 GAOFEN 03D52`、中文名 |
 | `tle_record` | `sat_id`、`epoch_utc`、`line1`、`line2`、`omm_json`、`checksum_ok`、`mean_motion`、`inclination_deg`、`eccentricity`、`raan_deg`、`argp_deg`、`mean_anomaly_deg`、`bstar`、`mean_motion_dot`、`mean_motion_ddot`、`ephemeris_type`、`element_set_no`、`rev_at_epoch`、`source_id`、`fetched_at_utc`；`UNIQUE(sat_id, epoch_utc, source_id)` | append-only；`omm_json` 是 6 位号时代的唯一载体 |
 | `tle_current` | `sat_id` PK、`tle_id`、`epoch_utc`、`age_hours`、`updated_at` | 按 `data_source.priority` 择优 |

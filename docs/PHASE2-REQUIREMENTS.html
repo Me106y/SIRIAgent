@@ -717,8 +717,8 @@ RS-Service/
 <tbody>
 <tr>
 <td><code>satellite</code></td>
-<td><code>sat_id</code> INTEGER PK（NORAD）、<code>norad_alpha5</code>、<code>intl_designator</code>、<code>name</code>、<code>name_zh</code>、<code>operator</code>、<code>country</code>、<code>category</code>、<code>object_type</code>、<code>status</code>、<code>orbit_regime</code>、<code>launch_date</code>、<code>is_domestic</code>、<code>metadata_source</code>、<code>updated_at</code></td>
-<td>卫星目录；<code>is_domestic</code> 由 <code>operator/country</code> 派生，不再手填</td>
+<td><code>sat_id</code> INTEGER PK（NORAD）、<code>norad_alpha5</code>、<code>intl_designator</code>、<code>name</code>、<code>name_zh</code>、<code>operator</code>、<code>country</code>、<code>category</code>、<code>object_type</code>、<code>status</code>、<code>orbit_regime</code>、<code>launch_date</code>、<code>is_domestic</code>、<strong><code>payload_public</code></strong>、<code>metadata_source</code>、<code>updated_at</code></td>
+<td>卫星目录；<code>is_domestic</code> 由 <code>operator/country</code> 派生；<code>payload_public=false</code> 的 13 颗不展示载荷参数</td>
 </tr>
 <tr>
 <td><code>satellite_alias</code></td>
