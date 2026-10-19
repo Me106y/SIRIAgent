@@ -362,7 +362,7 @@ main ul li::marker { color: var(--brand); }
 <tbody>
 <tr>
 <td>版本</td>
-<td>v1.5（草案，待评审）</td>
+<td>v1.7（草案，待评审）</td>
 </tr>
 <tr>
 <td>日期</td>
@@ -621,7 +621,7 @@ main ul li::marker { color: var(--brand); }
 ├── web/                      # React + Vite + TS 源码
 │   ├── src/
 │   │   ├── layout/           # 1/3 + 2/3 框架
-│   │   ├── ephemeris/        # Cesium 地球、轨迹、足迹、时间轴
+│   │   ├── ephemeris/        # Cesium 地球、轨迹、足迹、覆盖图层
 │   │   ├── agent/            # 消息流、工具卡、思考块、输入区
 │   │   ├── components/       # 自研通用组件
 │   │   ├── theme/            # 深空青绿 token
@@ -2891,7 +2891,7 @@ CREATE INDEX idx_sensor_sat     ON sensor(sat_id);
 </tr>
 </tbody>
 </table></div>
-<div class="callout"><span class="callout-label">说明</span><p>2026-10-19 已实现：<code>list_satellites</code>、<code>get_satellite</code>、<code>next_passes</code>、<code>ground_track</code>、<code>current_position</code>、<code>sync_status</code>；其余待补。</p></div>
+<div class="callout"><span class="callout-label">说明</span><p>2026-10-19 已实现：<code>list_satellites</code>、<code>get_satellite</code>、<code>next_passes</code>、<code>ground_track</code>、<code>current_position</code>、<code>list_positions</code>、<code>coverage_window</code>、<code>sync_status</code>；其余待补。</p></div>
 <p>所有工具出参统一包一层：</p>
 <pre><code class="language-json">{
   &quot;ok&quot;: true,
@@ -3046,7 +3046,7 @@ when-to-use: 用户询问某地某时的卫星过境、可见性、覆盖能力�
 │ 卫星筛选列表     │ 消息流（思考块、工具卡、产物卡）          │
 │ 3D 地球          │                                           │
 │ 选中星轨迹/足迹  │                                           │
-│ 时间轴 ±24h      │                                           │
+│ 覆盖图例         │                                           │
 │ 过境表           │                                           │
 │ 数据源/同步状态  │ 输入区（附件、斜杠命令、发送/停止）        │
 └──────────────────┴───────────────────────────────────────────┘
@@ -3054,7 +3054,7 @@ when-to-use: 用户询问某地某时的卫星过境、可见性、覆盖能力�
 <ul>
 <li>左栏可折叠（窄屏默认折叠为图标条）。</li>
 <li>右栏不限制话题：欢迎语只做示例，不写"只能问星历"。</li>
-<li>时间轴 ±24h：拖动后 111 颗位置、选中星轨迹、足迹联动；"现在 / 全球"按钮。</li>
+<li>相机："聚焦"飞到选中星足迹；"杭州"飞到杭州 AOI 并打开覆盖热力图。时间轴 UI 暂不启用，后端 <code>at</code> 参数保留。</li>
 <li>卫星列表支持按类别（商业/民用/气象海洋）/类型（光学/SAR/高光谱）/分辨率/低置信筛选，默认 111 颗展示集；列表用虚拟滚动，111 颗也能流畅。</li>
 </ul>
 <h3 id="sec-6-4">6.4 视觉系统</h3>
@@ -3084,7 +3084,7 @@ when-to-use: 用户询问某地某时的卫星过境、可见性、覆盖能力�
 </tr>
 <tr>
 <td>1280–1439</td>
-<td>左 30%、右 70%；时间轴简化</td>
+<td>左 30%、右 70%；过境表简化</td>
 </tr>
 <tr>
 <td>1024–1279</td>
@@ -3149,7 +3149,7 @@ when-to-use: 用户询问某地某时的卫星过境、可见性、覆盖能力�
 </tr>
 <tr>
 <td>D5</td>
-<td>选中星轨迹、足迹、时间轴、过境表</td>
+<td>选中星轨迹、足迹、覆盖图层、过境表</td>
 <td><span class="tag warn">P0</span></td>
 <td>与 MCP 结果一致</td>
 </tr>
@@ -3425,7 +3425,7 @@ when-to-use: 用户询问某地某时的卫星过境、可见性、覆盖能力�
 <tr>
 <td>D5</td>
 <td>前端</td>
-<td>轨迹/足迹/时间轴/过境表</td>
+<td>轨迹/足迹/覆盖图层/过境表</td>
 <td><span class="tag warn">P0</span></td>
 <td>D4、C2</td>
 </tr>
@@ -3522,7 +3522,7 @@ M5 联调上线（约 0.5 周）
 <tr>
 <td>M4 可视化</td>
 <td><strong>部分完成</strong></td>
-<td>地球、实时位置、轨迹、过境表、时间轴 ±24h、足迹圆已接；覆盖/重访图层待补</td>
+<td>地球、实时位置、轨迹、过境表、足迹圆、24h 覆盖热力图（19 星、过境次数/格）已接；时间轴 UI 暂不启用；重访/时间覆盖率待补</td>
 </tr>
 <tr>
 <td>流式</td>
@@ -3697,6 +3697,16 @@ M5 联调上线（约 0.5 周）
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>2026-10-19</td>
+<td>v1.7</td>
+<td>按反馈移除时间轴 UI 与"全球/回到现在"；"杭州"按钮改为飞到 AOI 并打开覆盖图层</td>
+</tr>
+<tr>
+<td>2026-10-19</td>
+<td>v1.6</td>
+<td>SDK SSE 事件流 + Markdown 工具卡；时间轴 ±24h、足迹圆、覆盖热力图（19 星/24h）；MCP 增加 <code>list_positions</code>、<code>coverage_window</code></td>
+</tr>
 <tr>
 <td>2026-10-19</td>
 <td>v1.5</td>

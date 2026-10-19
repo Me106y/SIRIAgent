@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import * as Cesium from "cesium";
 
-import type { PositionItem, TrackPoint } from "../types";
+import type { CoverageGrid, PositionItem, TrackPoint } from "../types";
 
 const CATEGORY_COLORS: Record<string, string> = {
   commercial: "#22D3EE",
@@ -20,7 +20,9 @@ interface GlobeProps {
   footprintLon: number | null;
   footprintRadiusKm: number | null;
   focusToken: number;
-  globalToken: number;
+  hangzhouToken: number;
+  coverage: CoverageGrid | null;
+  coverageToken: number;
 }
 
 export function Globe({
@@ -32,7 +34,9 @@ export function Globe({
   footprintLon,
   footprintRadiusKm,
   focusToken,
-  globalToken,
+  hangzhouToken,
+  coverage,
+  coverageToken,
 }: GlobeProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<Cesium.Viewer | null>(null);
@@ -40,6 +44,7 @@ export function Globe({
   const colorsRef = useRef(new Map<number, string>());
   const trackRef = useRef<Cesium.Entity[]>([]);
   const footprintRef = useRef<Cesium.Entity | null>(null);
+  const coverageRef = useRef<Cesium.Entity[]>([]);
   const focusRef = useRef({ lat: footprintLat, lon: footprintLon, radius: footprintRadiusKm });
   focusRef.current = { lat: footprintLat, lon: footprintLon, radius: footprintRadiusKm };
   const onSelectRef = useRef(onSelect);
@@ -95,6 +100,7 @@ export function Globe({
     );
 
     viewerRef.current = viewer;
+    (window as unknown as { __viewer?: Cesium.Viewer }).__viewer = viewer;
     return () => {
       handler.destroy();
       viewer.destroy();
@@ -103,6 +109,7 @@ export function Globe({
       colorsRef.current.clear();
       trackRef.current = [];
       footprintRef.current = null;
+      coverageRef.current = [];
     };
   }, []);
 
@@ -182,14 +189,69 @@ export function Globe({
   }, [track]);
 
   useEffect(() => {
-    if (globalToken === 0) return;
+    if (coverageToken === 0) return;
     const viewer = viewerRef.current;
     if (!viewer) return;
     viewer.camera.flyTo({
-      destination: Cesium.Cartesian3.fromDegrees(112, 27, 20_000_000),
+      destination: Cesium.Cartesian3.fromDegrees(120.16, 30.27, 900_000),
+      orientation: {
+        heading: 0,
+        pitch: Cesium.Math.toRadians(-90),
+        roll: 0,
+      },
       duration: 1.1,
     });
-  }, [globalToken]);
+  }, [coverageToken]);
+
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer) return;
+    coverageRef.current.forEach((entity) => viewer.entities.remove(entity));
+    coverageRef.current = [];
+    if (!coverage || coverage.cells.length === 0) return;
+    const maxCount = Math.max(1, coverage.max_count);
+    const minCount = coverage.min_count ?? 0;
+    const span = Math.max(1, maxCount - minCount);
+    const halfLat = coverage.grid_deg / 2;
+    const halfLon = (coverage.lon_step_deg || coverage.grid_deg) / 2;
+    coverageRef.current = coverage.cells.map((cell) => {
+      const ratio = Math.max(0, Math.min(1, (cell.count - minCount) / span));
+      const hue = 0.5 - 0.42 * ratio;
+      return viewer.entities.add({
+        rectangle: {
+          coordinates: Cesium.Rectangle.fromDegrees(
+            cell.lon - halfLon,
+            cell.lat - halfLat,
+            cell.lon + halfLon,
+            cell.lat + halfLat,
+          ),
+          height: 30,
+          material: Cesium.Color.fromHsl(hue, 0.85, 0.55, 0.25 + 0.2 * ratio),
+        },
+      });
+    });
+    return () => {
+      coverageRef.current.forEach((entity) => {
+        if (!viewer.isDestroyed()) viewer.entities.remove(entity);
+      });
+      coverageRef.current = [];
+    };
+  }, [coverage]);
+
+  useEffect(() => {
+    if (hangzhouToken === 0) return;
+    const viewer = viewerRef.current;
+    if (!viewer) return;
+    viewer.camera.flyTo({
+      destination: Cesium.Cartesian3.fromDegrees(120.16, 30.27, 900_000),
+      orientation: {
+        heading: 0,
+        pitch: Cesium.Math.toRadians(-90),
+        roll: 0,
+      },
+      duration: 1.1,
+    });
+  }, [hangzhouToken]);
 
   useEffect(() => {
     if (focusToken === 0) return;

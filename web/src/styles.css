@@ -179,7 +179,7 @@ button {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 44px;
+  bottom: 0;
   display: flex;
   justify-content: space-between;
   gap: 8px;
@@ -190,36 +190,28 @@ button {
   pointer-events: none;
 }
 
-.time-axis {
+.coverage-legend {
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 44px;
+  top: 8px;
+  right: 8px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 0 10px;
-  background: rgba(4, 10, 18, 0.9);
-  border-top: 1px solid var(--line-soft);
-  backdrop-filter: blur(8px);
-}
-
-.time-axis input[type="range"] {
-  flex: 1;
-  min-width: 80px;
-  accent-color: var(--accent);
-  height: 3px;
-  cursor: pointer;
-}
-
-.time-label {
-  min-width: 78px;
-  text-align: right;
+  gap: 6px;
+  padding: 3px 7px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: rgba(4, 10, 18, 0.82);
+  backdrop-filter: blur(6px);
   font-family: var(--mono);
-  font-size: 10.5px;
+  font-size: 10px;
   color: var(--muted);
-  white-space: nowrap;
+}
+
+.coverage-legend i {
+  width: 46px;
+  height: 5px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #22d3ee, #fbbf24, #f87171);
 }
 
 .panel-head {
@@ -241,6 +233,12 @@ button {
   margin: 2px 0 0;
   font-size: 11.5px;
   color: var(--muted);
+}
+
+.panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
 }
 
 .live-dot {

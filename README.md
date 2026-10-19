@@ -8,6 +8,10 @@ Phase 2 的双栏平台：左 1/3 星历可视化，右 2/3 Agent。它**不修�
 
 ![Phase 2 前端：左 1/3 星历、右 2/3 Agent](docs/assets/frontend.png)
 
+覆盖图层：点「杭州」直接飞到杭州 AOI 并打开 24h 覆盖热力图（150 km、19 颗高分辨率星，20–22 次/格）。
+
+![覆盖图层](docs/assets/coverage.png)
+
 ## 它是什么
 
 ```text
@@ -39,7 +43,7 @@ pnpm dev          # 开发服务器 5173，/api 代理到 8000
 pnpm build        # 产物写入 web/dist，Flask 自动托管
 ```
 
-前端依赖 RS-Service 的 REST（`127.0.0.1:8766`）。时间轴支持 ±24h，拖动后 111 颗位置、选中星轨迹与足迹一起切换；「聚焦 / 全球」控制相机。启动顺序：
+前端依赖 RS-Service 的 REST（`127.0.0.1:8766`）。相机控制：「聚焦」飞到选中星足迹，「杭州」飞到杭州 AOI 并打开覆盖图层。时间轴 UI 暂不启用，后端 `at` 参数保留。启动顺序：
 
 ```bash
 systemctl --user start rs-service-api.service   # 星历服务

@@ -6,6 +6,7 @@ import { Globe } from "./components/Globe";
 import { SatellitePanel } from "./components/SatellitePanel";
 import type {
   ChatMessage,
+  CoverageGrid,
   PassItem,
   PositionItem,
   Satellite,
@@ -24,10 +25,13 @@ export default function App() {
   const [sessionId, setSessionId] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [offsetHours, setOffsetHours] = useState(0);
   const [swathKm, setSwathKm] = useState<number | null>(null);
   const [focusToken, setFocusToken] = useState(0);
-  const [globalToken, setGlobalToken] = useState(0);
+  const [hangzhouToken, setHangzhouToken] = useState(0);
+  const [coverageOn, setCoverageOn] = useState(false);
+  const [coverage, setCoverage] = useState<CoverageGrid | null>(null);
+  const [coverageLoading, setCoverageLoading] = useState(false);
+  const [coverageToken, setCoverageToken] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -50,19 +54,11 @@ export default function App() {
     };
   }, []);
 
-  const atIso = useMemo(
-    () =>
-      offsetHours === 0
-        ? undefined
-        : new Date(Date.now() + offsetHours * 3600_000).toISOString(),
-    [offsetHours],
-  );
-
   useEffect(() => {
     let alive = true;
     const tick = () => {
       api
-        .positions(atIso)
+        .positions()
         .then((payload) => {
           if (!alive) return;
           const next: Record<number, PositionItem> = {};
@@ -77,17 +73,12 @@ export default function App() {
         });
     };
     tick();
-    if (offsetHours !== 0) {
-      return () => {
-        alive = false;
-      };
-    }
     const timer = window.setInterval(tick, 5000);
     return () => {
       alive = false;
       window.clearInterval(timer);
     };
-  }, [atIso, offsetHours]);
+  }, []);
 
   useEffect(() => {
     if (selected == null) {
@@ -96,7 +87,7 @@ export default function App() {
       return;
     }
     let alive = true;
-    Promise.all([api.track(selected, atIso), api.passes(selected)])
+    Promise.all([api.track(selected), api.passes(selected)])
       .then(([trackPayload, passPayload]) => {
         if (!alive) return;
         setTrack(trackPayload.points);
@@ -110,7 +101,7 @@ export default function App() {
     return () => {
       alive = false;
     };
-  }, [selected, atIso]);
+  }, [selected]);
 
   useEffect(() => {
     if (selected == null) {
@@ -131,22 +122,37 @@ export default function App() {
     };
   }, [selected]);
 
+  useEffect(() => {
+    if (!coverageOn) {
+      setCoverage(null);
+      return;
+    }
+    let alive = true;
+    setCoverageLoading(true);
+    api
+      .coverage()
+      .then((payload) => {
+        if (!alive) return;
+        setCoverage(payload);
+        setCoverageToken((value) => value + 1);
+      })
+      .catch(() => {
+        if (alive) setCoverage(null);
+      })
+      .finally(() => {
+        if (alive) setCoverageLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [coverageOn]);
+
   const selectedAge = useMemo(() => {
     if (selected == null) return sync?.tle_max_age_hours ?? null;
     return positions[selected]?.tle_age_hours ?? null;
   }, [selected, positions, sync]);
 
   const selectedPosition = selected != null ? positions[selected] : undefined;
-  const timeLabel =
-    offsetHours === 0
-      ? "现在"
-      : new Date(atIso || Date.now()).toLocaleString("zh-CN", {
-          month: "2-digit",
-          day: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
-        });
-
   const send = useCallback(
     async (text: string) => {
       const assistantId = crypto.randomUUID();
@@ -329,41 +335,27 @@ export default function App() {
               footprintLon={selectedPosition?.lon ?? null}
               footprintRadiusKm={swathKm != null ? swathKm / 2 : null}
               focusToken={focusToken}
-              globalToken={globalToken}
+              hangzhouToken={hangzhouToken}
+              coverage={coverage}
+              coverageToken={coverageToken}
             />
             <div className="globe-caption">
               <span>
-                111 颗国产卫星 · {offsetHours === 0 ? "5 s 刷新" : "时间轴"}
+                111 颗国产卫星 · 5 s 刷新
                 {swathKm != null ? ` · 足迹 ${swathKm.toFixed(0)} km` : ""}
+                {coverage
+                  ? ` · 覆盖 ${coverage.min_count}–${coverage.max_count} 次 / ${coverage.satellites_used} 星`
+                  : ""}
               </span>
               <span>{track.length > 0 ? "轨迹：选中星 2h" : "点击卫星查看轨迹"}</span>
             </div>
-            <div className="time-axis">
-              <button
-                type="button"
-                className={offsetHours === 0 ? "chip active" : "chip"}
-                onClick={() => setOffsetHours(0)}
-              >
-                现在
-              </button>
-              <input
-                type="range"
-                min={-24}
-                max={24}
-                step={0.25}
-                value={offsetHours}
-                onChange={(event) => setOffsetHours(Number(event.target.value))}
-                aria-label="时间轴"
-              />
-              <span className="time-label">{timeLabel}</span>
-              <button
-                type="button"
-                className="chip"
-                onClick={() => setGlobalToken((value) => value + 1)}
-              >
-                全球
-              </button>
-            </div>
+            {coverage && (
+              <div className="coverage-legend">
+                <span>{coverage.min_count}</span>
+                <i />
+                <span>{coverage.max_count} 次</span>
+              </div>
+            )}
           </div>
           <SatellitePanel
             satellites={satellites}
@@ -373,6 +365,13 @@ export default function App() {
             tleAge={selectedAge}
             onSelect={setSelected}
             onFocus={() => setFocusToken((value) => value + 1)}
+            onHangzhou={() => {
+              setCoverageOn(true);
+              setHangzhouToken((value) => value + 1);
+            }}
+            coverageOn={coverageOn}
+            coverageLoading={coverageLoading}
+            onToggleCoverage={() => setCoverageOn((value) => !value)}
           />
         </div>
         <AgentPanel

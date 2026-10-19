@@ -1,5 +1,6 @@
 import type {
   ChatUsage,
+  CoverageGrid,
   PassItem,
   PositionItem,
   Satellite,
@@ -38,6 +39,12 @@ export const api = {
       `/api/rs/satellites/${norad}/passes?hours=24&min_elev=5`,
     ),
   sync: () => getJson<SyncStatus>("/api/rs/sync/status"),
+  coverage: (at?: string) =>
+    getJson<CoverageGrid>(
+      `/api/rs/coverage?lat=30.27&lon=120.16&radius_km=150&hours=24&grid=0.15${
+        at ? `&at=${encodeURIComponent(at)}` : ""
+      }`,
+    ),
 };
 
 export interface ChatResponse {
