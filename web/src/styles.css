@@ -190,30 +190,6 @@ button {
   pointer-events: none;
 }
 
-.coverage-legend {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 7px;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  background: rgba(4, 10, 18, 0.82);
-  backdrop-filter: blur(6px);
-  font-family: var(--mono);
-  font-size: 10px;
-  color: var(--muted);
-}
-
-.coverage-legend i {
-  width: 46px;
-  height: 5px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #22d3ee, #fbbf24, #f87171);
-}
-
 .panel-head {
   display: flex;
   align-items: flex-start;

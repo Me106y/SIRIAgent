@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import * as Cesium from "cesium";
 
-import type { CoverageGrid, PositionItem, TrackPoint } from "../types";
+import type { PositionItem, TrackPoint } from "../types";
 
 const CATEGORY_COLORS: Record<string, string> = {
   commercial: "#22D3EE",
@@ -21,8 +21,6 @@ interface GlobeProps {
   footprintRadiusKm: number | null;
   focusToken: number;
   hangzhouToken: number;
-  coverage: CoverageGrid | null;
-  coverageToken: number;
 }
 
 export function Globe({
@@ -35,8 +33,6 @@ export function Globe({
   footprintRadiusKm,
   focusToken,
   hangzhouToken,
-  coverage,
-  coverageToken,
 }: GlobeProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<Cesium.Viewer | null>(null);
@@ -44,7 +40,8 @@ export function Globe({
   const colorsRef = useRef(new Map<number, string>());
   const trackRef = useRef<Cesium.Entity[]>([]);
   const footprintRef = useRef<Cesium.Entity | null>(null);
-  const coverageRef = useRef<Cesium.Entity[]>([]);
+  const pulseRef = useRef<Cesium.Entity | null>(null);
+  const pulseTimer = useRef<number | null>(null);
   const focusRef = useRef({ lat: footprintLat, lon: footprintLon, radius: footprintRadiusKm });
   focusRef.current = { lat: footprintLat, lon: footprintLon, radius: footprintRadiusKm };
   const onSelectRef = useRef(onSelect);
@@ -109,7 +106,9 @@ export function Globe({
       colorsRef.current.clear();
       trackRef.current = [];
       footprintRef.current = null;
-      coverageRef.current = [];
+      if (pulseTimer.current != null) window.clearTimeout(pulseTimer.current);
+      if (pulseRef.current && !viewer.isDestroyed()) viewer.entities.remove(pulseRef.current);
+      pulseRef.current = null;
     };
   }, []);
 
@@ -189,61 +188,11 @@ export function Globe({
   }, [track]);
 
   useEffect(() => {
-    if (coverageToken === 0) return;
-    const viewer = viewerRef.current;
-    if (!viewer) return;
-    viewer.camera.flyTo({
-      destination: Cesium.Cartesian3.fromDegrees(120.16, 30.27, 900_000),
-      orientation: {
-        heading: 0,
-        pitch: Cesium.Math.toRadians(-90),
-        roll: 0,
-      },
-      duration: 1.1,
-    });
-  }, [coverageToken]);
-
-  useEffect(() => {
-    const viewer = viewerRef.current;
-    if (!viewer) return;
-    coverageRef.current.forEach((entity) => viewer.entities.remove(entity));
-    coverageRef.current = [];
-    if (!coverage || coverage.cells.length === 0) return;
-    const maxCount = Math.max(1, coverage.max_count);
-    const minCount = coverage.min_count ?? 0;
-    const span = Math.max(1, maxCount - minCount);
-    const halfLat = coverage.grid_deg / 2;
-    const halfLon = (coverage.lon_step_deg || coverage.grid_deg) / 2;
-    coverageRef.current = coverage.cells.map((cell) => {
-      const ratio = Math.max(0, Math.min(1, (cell.count - minCount) / span));
-      const hue = 0.5 - 0.42 * ratio;
-      return viewer.entities.add({
-        rectangle: {
-          coordinates: Cesium.Rectangle.fromDegrees(
-            cell.lon - halfLon,
-            cell.lat - halfLat,
-            cell.lon + halfLon,
-            cell.lat + halfLat,
-          ),
-          height: 30,
-          material: Cesium.Color.fromHsl(hue, 0.85, 0.55, 0.25 + 0.2 * ratio),
-        },
-      });
-    });
-    return () => {
-      coverageRef.current.forEach((entity) => {
-        if (!viewer.isDestroyed()) viewer.entities.remove(entity);
-      });
-      coverageRef.current = [];
-    };
-  }, [coverage]);
-
-  useEffect(() => {
     if (hangzhouToken === 0) return;
     const viewer = viewerRef.current;
     if (!viewer) return;
     viewer.camera.flyTo({
-      destination: Cesium.Cartesian3.fromDegrees(120.16, 30.27, 900_000),
+      destination: Cesium.Cartesian3.fromDegrees(120.16, 30.27, 650_000),
       orientation: {
         heading: 0,
         pitch: Cesium.Math.toRadians(-90),
@@ -251,6 +200,54 @@ export function Globe({
       },
       duration: 1.1,
     });
+
+    if (pulseRef.current) {
+      viewer.entities.remove(pulseRef.current);
+      pulseRef.current = null;
+    }
+    if (pulseTimer.current != null) {
+      window.clearTimeout(pulseTimer.current);
+      pulseTimer.current = null;
+    }
+    const started = performance.now();
+    const alpha = () => {
+      const seconds = (performance.now() - started) / 1000;
+      return 0.5 + 0.5 * Math.sin(seconds * Math.PI * 2 * 1.4);
+    };
+    const fill = new Cesium.CallbackProperty(
+      () => Cesium.Color.fromCssColorString("#22D3EE").withAlpha(0.1 + 0.45 * alpha()),
+      false,
+    );
+    const outline = new Cesium.CallbackProperty(
+      () =>
+        Cesium.Color.fromCssColorString("#A5F3FC").withAlpha(0.35 + 0.55 * alpha()),
+      false,
+    );
+    pulseRef.current = viewer.entities.add({
+      position: Cesium.Cartesian3.fromDegrees(120.16, 30.27, 60),
+      label: {
+        text: "杭州",
+        font: "12px sans-serif",
+        fillColor: Cesium.Color.fromCssColorString("#E0F7FF"),
+        showBackground: true,
+        backgroundColor: Cesium.Color.fromCssColorString("#04121F").withAlpha(0.75),
+        pixelOffset: new Cesium.Cartesian2(0, -18),
+      },
+      ellipse: {
+        semiMajorAxis: 80_000,
+        semiMinorAxis: 80_000,
+        height: 50,
+        material: new Cesium.ColorMaterialProperty(fill),
+        outline: true,
+        outlineColor: outline,
+      },
+    });
+    pulseTimer.current = window.setTimeout(() => {
+      if (!viewer.isDestroyed() && pulseRef.current) {
+        viewer.entities.remove(pulseRef.current);
+        pulseRef.current = null;
+      }
+    }, 6000);
   }, [hangzhouToken]);
 
   useEffect(() => {

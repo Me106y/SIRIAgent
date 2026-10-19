@@ -24,25 +24,6 @@ export interface PositionItem {
   tle_age_hours: number;
 }
 
-export interface CoverageCell {
-  lat: number;
-  lon: number;
-  count: number;
-}
-
-export interface CoverageGrid {
-  aoi: { lat: number; lon: number; radius_km: number };
-  cells: CoverageCell[];
-  min_count: number;
-  max_count: number;
-  grid_deg: number;
-  lon_step_deg: number;
-  satellites_used: number;
-  passes_used: number;
-  coverage_note: string;
-  accuracy_note: string;
-}
-
 export interface SensorInfo {
   sensor_type?: string | null;
   confidence?: string | null;

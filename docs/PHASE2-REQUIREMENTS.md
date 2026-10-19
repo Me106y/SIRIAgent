@@ -2,7 +2,7 @@
 
 | 项目 | 内容 |
 | --- | --- |
-| 版本 | v1.7（草案，待评审） |
+| 版本 | v1.8（草案，待评审） |
 | 日期 | 2026-10-19 |
 | 状态 | 范围与决策已确认；M3 前端骨架已落地 |
 | 归属 | `SIRIAgent` 仓库（本文档为 Phase 2 唯一事实源） |
@@ -115,7 +115,7 @@ SIRIAgent/
 ├── web/                      # React + Vite + TS 源码
 │   ├── src/
 │   │   ├── layout/           # 1/3 + 2/3 框架
-│   │   ├── ephemeris/        # Cesium 地球、轨迹、足迹、覆盖图层
+│   │   ├── ephemeris/        # Cesium 地球、轨迹、足迹、杭州定位
 │   │   ├── agent/            # 消息流、工具卡、思考块、输入区
 │   │   ├── components/       # 自研通用组件
 │   │   ├── theme/            # 深空青绿 token
@@ -562,11 +562,10 @@ CREATE INDEX idx_sensor_sat     ON sensor(sat_id);
 | `propagate` | `sat_id`、`times[]` 或 `start/end/step` | 位置（WGS84）+ `accuracy_note` | |
 | `ground_track` | `sat_id`、`start/end`、`step_s` | 星下点序列 | 经度已 unwrap |
 | `next_passes` | `aoi`（code/adcode/WKT）、`start/end`、`min_elev_deg?` | 过境列表（AOS/LOS/TCA/最大仰角/云量） | 默认 5°/10° 按 §4.6.2 |
-| `coverage_window` | `aoi`、`start/end`、`grid_deg?`、`k_min?` | 时间/面积覆盖率、MRT/ART | 标注 `estimate` |
 | `sync_status` | — | 最近同步、TLE 年龄、失败项 | |
 | `run_command` | `command`（枚举）、`args`（schema） | stdout/结构化结果 + 审计 id | 受控命令入口，见 §5.3 |
 
-> 2026-10-19 已实现：`list_satellites`、`get_satellite`、`next_passes`、`ground_track`、`current_position`、`list_positions`、`coverage_window`、`sync_status`；其余待补。
+> 2026-10-19 已实现：`list_satellites`、`get_satellite`、`next_passes`、`ground_track`、`current_position`、`list_positions`、`sync_status`；其余待补。
 
 所有工具出参统一包一层：
 
@@ -583,7 +582,7 @@ CREATE INDEX idx_sensor_sat     ON sensor(sat_id);
 
 ### 5.3 受控命令 `run_command`
 
-- 只接受注册过的子命令（如 `tle.sync`、`pass.next`、`coverage.window`），每个子命令有独立参数 schema；**不执行任意 shell 字符串**。
+- 只接受注册过的子命令（如 `tle.sync`、`pass.next`），每个子命令有独立参数 schema；**不执行任意 shell 字符串**。
 - 服务端设置超时（默认 30 s）、并发上限、审计记录（`command_audit` 表：调用方、命令、参数、结果、耗时、`accuracy_note`）。
 - Phase 2 **不做权限拦截**（决策见 §2.2），但结构保留，Phase 3 直接填白名单。
 
@@ -622,7 +621,6 @@ when-to-use: 用户询问某地某时的卫星过境、可见性、覆盖能力�
 | --- | --- | --- |
 | `ephemeris-query` | 查卫星、TLE、当前位置 | `list_satellites`、`get_satellite`、`propagate` |
 | `pass-planning` | 某 AOI 未来过境与可用性 | `next_passes` |
-| `coverage-check` | 区域覆盖/重访评估 | `coverage_window` |
 | `tle-health` | 数据新鲜度与同步诊断 | `sync_status`、`run_command(tle.sync)` |
 
 ### 5.5 注册到 DSH
@@ -667,7 +665,7 @@ when-to-use: 用户询问某地某时的卫星过境、可见性、覆盖能力�
 │ 卫星筛选列表     │ 消息流（思考块、工具卡、产物卡）          │
 │ 3D 地球          │                                           │
 │ 选中星轨迹/足迹  │                                           │
-│ 覆盖图例         │                                           │
+│ 杭州定位         │                                           │
 │ 过境表           │                                           │
 │ 数据源/同步状态  │ 输入区（附件、斜杠命令、发送/停止）        │
 └──────────────────┴───────────────────────────────────────────┘
@@ -675,7 +673,7 @@ when-to-use: 用户询问某地某时的卫星过境、可见性、覆盖能力�
 
 - 左栏可折叠（窄屏默认折叠为图标条）。
 - 右栏不限制话题：欢迎语只做示例，不写"只能问星历"。
-- 相机："聚焦"飞到选中星足迹；"杭州"飞到杭州 AOI 并打开覆盖热力图。时间轴 UI 暂不启用，后端 `at` 参数保留。
+- 相机："聚焦"飞到选中星足迹；"杭州"飞到杭州并让 80 km 区域闪烁约 6 秒。时间轴 UI 暂不启用，后端 `at` 参数保留。
 - 卫星列表支持按类别（商业/民用/气象海洋）/类型（光学/SAR/高光谱）/分辨率/低置信筛选，默认 111 颗展示集；列表用虚拟滚动，111 颗也能流畅。
 
 ### 6.4 视觉系统
@@ -719,7 +717,7 @@ when-to-use: 用户询问某地某时的卫星过境、可见性、覆盖能力�
 | D2 | DSH SDK 常驻运行时 + SSE 事件桥 | P0 | 浏览器看到 token 级流式 |
 | D3 | 双栏布局 + Header + 输入区 | P0 | 三档分辨率不破 |
 | D4 | Cesium 地球 + 卫星实时位置 | P0 | 111 颗位置正确、可交互 |
-| D5 | 选中星轨迹、足迹、覆盖图层、过境表 | P0 | 与 MCP 结果一致 |
+| D5 | 选中星轨迹、足迹、杭州闪烁定位、过境表 | P0 | 与 MCP 结果一致 |
 | D6 | 消息流：思考块、工具卡、错误态 | P0 | 工具调用实时出现 |
 | D7 | 会话恢复（刷新后续聊） | P1 | 同 session 续聊 |
 | D8 | 视觉 token 与深空主题 | P1 | 对比度达标 |
@@ -782,7 +780,7 @@ when-to-use: 用户询问某地某时的卫星过境、可见性、覆盖能力�
 | D2 | 前端 | SDK 流式桥 | P0 | A1 |
 | D3 | 前端 | 双栏布局 | P0 | D1 |
 | D4 | 前端 | Cesium 地球 + 实时位置 | P0 | D1、C1 |
-| D5 | 前端 | 轨迹/足迹/覆盖图层/过境表 | P0 | D4、C2 |
+| D5 | 前端 | 轨迹/足迹/杭州闪烁定位/过境表 | P0 | D4、C2 |
 | D6 | 前端 | 消息流与工具卡 | P0 | D2、D3 |
 | D7 | 前端 | 会话恢复 | P1 | D2 |
 | D8 | 前端 | 视觉 token | P1 | D3 |
@@ -815,9 +813,9 @@ M5 联调上线（约 0.5 周）
 | 里程碑 | 状态 | 证据 |
 | --- | --- | --- |
 | M1 数据服务 | **进行中** | 两仓库已公开（[SIRIAgent](https://github.com/Me106y/SIRIAgent)、[RS-Service](https://github.com/Me106y/RS-Service)）；12 表迁移 `73866dc4fe27`；111 颗 seed；首次同步 111 条 TLE；REST/MCP 可用；12 个测试通过。待补：AOI/GCJ-02 入库、覆盖/重访、云量写入 `pass_window` |
-| M2 Agent 可查 | **进行中** | MCP 已接入 `headless.patch.yml`（Streamable HTTP）；6 个工具可用，前端已显示工具卡；待补 `get_tle`、`propagate`、`coverage_window`、`run_command` 与 4 个 skill |
+| M2 Agent 可查 | **进行中** | MCP 已接入 `headless.patch.yml`（Streamable HTTP）；7 个工具可用，前端已显示工具卡；待补 `get_tle`、`propagate`、`run_command` 与 3 个 skill |
 | M3 前端骨架 | **已完成骨架** | `web/` React 19 + Vite + TS + Cesium；1/3 + 2/3；111 颗位置 5 s 刷新；选中星轨迹与过境表；SDK SSE 事件流（工具卡实时）+ Markdown；1440/900/488 无横向溢出 |
-| M4 可视化 | **部分完成** | 地球、实时位置、轨迹、过境表、足迹圆、24h 覆盖热力图（19 星、过境次数/格）已接；时间轴 UI 暂不启用；重访/时间覆盖率待补 |
+| M4 可视化 | **部分完成** | 地球、实时位置、轨迹、过境表、足迹圆、杭州区域闪烁定位已接；时间轴与覆盖图层按反馈移除；重访/时间覆盖率未做 |
 | 流式 | **已完成（事件级）** | `/api/chat/stream` 用 SDK 通知：`tool_call`/`tool_result` 实时，文本回合末整块；token delta 当前 SDK 不提供 |
 | M5 联调上线 | 未开始 | 待 D7–D9 与验收演示 |
 
@@ -878,6 +876,7 @@ M5 联调上线（约 0.5 周）
 
 | 日期 | 版本 | 变更 |
 | --- | --- | --- |
+| 2026-10-19 | v1.8 | 移除覆盖图层（前端与后端接口）；"杭州"按钮改为飞到杭州并让 80 km 区域闪烁约 6 秒 |
 | 2026-10-19 | v1.7 | 按反馈移除时间轴 UI 与"全球/回到现在"；"杭州"按钮改为飞到 AOI 并打开覆盖图层 |
 | 2026-10-19 | v1.6 | SDK SSE 事件流 + Markdown 工具卡；时间轴 ±24h、足迹圆、覆盖热力图（19 星/24h）；MCP 增加 `list_positions`、`coverage_window` |
 | 2026-10-19 | v1.5 | M3 前端骨架落地：`web/` React+Vite+TS+Cesium、1/3+2/3、111 颗实时位置、选中星轨迹/过境、`/api/chat`；补充 `payload_public` 列 |

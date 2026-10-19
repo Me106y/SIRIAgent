@@ -6,7 +6,6 @@ import { Globe } from "./components/Globe";
 import { SatellitePanel } from "./components/SatellitePanel";
 import type {
   ChatMessage,
-  CoverageGrid,
   PassItem,
   PositionItem,
   Satellite,
@@ -28,10 +27,6 @@ export default function App() {
   const [swathKm, setSwathKm] = useState<number | null>(null);
   const [focusToken, setFocusToken] = useState(0);
   const [hangzhouToken, setHangzhouToken] = useState(0);
-  const [coverageOn, setCoverageOn] = useState(false);
-  const [coverage, setCoverage] = useState<CoverageGrid | null>(null);
-  const [coverageLoading, setCoverageLoading] = useState(false);
-  const [coverageToken, setCoverageToken] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -121,31 +116,6 @@ export default function App() {
       alive = false;
     };
   }, [selected]);
-
-  useEffect(() => {
-    if (!coverageOn) {
-      setCoverage(null);
-      return;
-    }
-    let alive = true;
-    setCoverageLoading(true);
-    api
-      .coverage()
-      .then((payload) => {
-        if (!alive) return;
-        setCoverage(payload);
-        setCoverageToken((value) => value + 1);
-      })
-      .catch(() => {
-        if (alive) setCoverage(null);
-      })
-      .finally(() => {
-        if (alive) setCoverageLoading(false);
-      });
-    return () => {
-      alive = false;
-    };
-  }, [coverageOn]);
 
   const selectedAge = useMemo(() => {
     if (selected == null) return sync?.tle_max_age_hours ?? null;
@@ -336,26 +306,14 @@ export default function App() {
               footprintRadiusKm={swathKm != null ? swathKm / 2 : null}
               focusToken={focusToken}
               hangzhouToken={hangzhouToken}
-              coverage={coverage}
-              coverageToken={coverageToken}
             />
             <div className="globe-caption">
               <span>
                 111 颗国产卫星 · 5 s 刷新
                 {swathKm != null ? ` · 足迹 ${swathKm.toFixed(0)} km` : ""}
-                {coverage
-                  ? ` · 覆盖 ${coverage.min_count}–${coverage.max_count} 次 / ${coverage.satellites_used} 星`
-                  : ""}
               </span>
               <span>{track.length > 0 ? "轨迹：选中星 2h" : "点击卫星查看轨迹"}</span>
             </div>
-            {coverage && (
-              <div className="coverage-legend">
-                <span>{coverage.min_count}</span>
-                <i />
-                <span>{coverage.max_count} 次</span>
-              </div>
-            )}
           </div>
           <SatellitePanel
             satellites={satellites}
@@ -365,13 +323,7 @@ export default function App() {
             tleAge={selectedAge}
             onSelect={setSelected}
             onFocus={() => setFocusToken((value) => value + 1)}
-            onHangzhou={() => {
-              setCoverageOn(true);
-              setHangzhouToken((value) => value + 1);
-            }}
-            coverageOn={coverageOn}
-            coverageLoading={coverageLoading}
-            onToggleCoverage={() => setCoverageOn((value) => !value)}
+            onHangzhou={() => setHangzhouToken((value) => value + 1)}
           />
         </div>
         <AgentPanel

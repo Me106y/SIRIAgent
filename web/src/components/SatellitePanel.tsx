@@ -17,9 +17,6 @@ interface Props {
   onSelect: (norad: number) => void;
   onFocus: () => void;
   onHangzhou: () => void;
-  coverageOn: boolean;
-  coverageLoading: boolean;
-  onToggleCoverage: () => void;
 }
 
 export function SatellitePanel({
@@ -31,9 +28,6 @@ export function SatellitePanel({
   onSelect,
   onFocus,
   onHangzhou,
-  coverageOn,
-  coverageLoading,
-  onToggleCoverage,
 }: Props) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string>("all");
@@ -61,17 +55,7 @@ export function SatellitePanel({
           <h2>卫星目录</h2>
           <p>{filtered.length} / {satellites.length} 颗</p>
         </div>
-        <div className="panel-actions">
-          <button
-            type="button"
-            className={coverageOn ? "chip active" : "chip"}
-            onClick={onToggleCoverage}
-            title="显示/隐藏 24h 覆盖热力图"
-          >
-            {coverageLoading ? "覆盖中…" : "覆盖图层"}
-          </button>
-          <span className="live-dot" title="每 5 秒刷新位置" />
-        </div>
+        <span className="live-dot" title="每 5 秒刷新位置" />
       </div>
 
       <div className="sat-tools">
