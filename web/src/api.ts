@@ -4,6 +4,7 @@ import type {
   HangzhouBoundary,
   PassItem,
   PositionItem,
+  QuestionAnswer,
   Satellite,
   SatelliteDetail,
   Skill,
@@ -136,4 +137,18 @@ export async function streamChat(
       separator = buffer.indexOf("\n\n");
     }
   }
+}
+
+export async function answerQuestion(
+  callId: string,
+  answers: QuestionAnswer[],
+): Promise<boolean> {
+  const response = await fetch("/api/question/answer", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ callId, answers }),
+  });
+  if (!response.ok) return false;
+  const payload = (await response.json().catch(() => null)) as { ok?: boolean } | null;
+  return Boolean(payload?.ok);
 }

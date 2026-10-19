@@ -41,6 +41,7 @@ DSH agent（DeepSeek Harness） + RS-Service（星历/MCP）
 - 历史页面：`static/index.html`，仅在 `web/dist` 不存在时兜底。
 - 后端：`app.py`，Flask；`/api/rs/*` 反代到本机 RS-Service，浏览器不直连 8766。
 - 首屏：Cesium 运行时按需加载；目录先读 localStorage 再后台刷新；`/api/bootstrap` 合并目录/星历/余额。目录类接口带 `ETag` 与 `Cache-Control`，位置/过境保持 `no-store`。
+- 问答组件：`ask_user_question` 走 DSH SDK 问答通道，前端渲染单选/多选卡片并回传 `/api/question/answer`；DSH 侧补丁见 `deploy/dsh-sdk-questions.patch`。
 - 静态资源：`/assets/*` 一年 `immutable`，`/cesium/*` 7 天；首次访问后浏览器不再重复下载 Cesium。
 - Service Worker（`web/public/sw.js`）：`/cesium/*`、`/assets/*` 进 Cache Storage，首访后离线也能开；升级 Cesium 时改 `VERSION`。
 - DSH：`dsh --profile headless`，每次消息一次运行；用 `--session-id` 续聊。

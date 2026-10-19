@@ -38,6 +38,10 @@ class HarnessManager:
     def __init__(self) -> None:
         self._harness: DeepSeekHarness | None = None
         self._lock = threading.Lock()
+        self._events: queue.Queue[dict[str, Any] | None] | None = None
+        self._questions: dict[str, tuple[threading.Event, dict[str, Any]]] = {}
+        self._questions_lock = threading.Lock()
+        self._pump: threading.Thread | None = None
 
     def _ensure_home(self) -> None:
         DSH_HOME.mkdir(parents=True, exist_ok=True)
@@ -70,7 +74,85 @@ class HarnessManager:
             model=MODEL,
             env=env,
         )
+        self._start_pump()
         return self._harness
+
+    def _start_pump(self) -> None:
+        if self._pump is not None or self._harness is None:
+            return
+        self._pump = threading.Thread(
+            target=self._pump_requests, name="dsh-sdk-requests", daemon=True
+        )
+        self._pump.start()
+
+    def _pump_requests(self) -> None:
+        """消费运行时发来的 JSON-RPC 请求：目前只有 userQuestion/ask。"""
+        harness = self._harness
+        if harness is None:
+            return
+        client = harness.client
+        while True:
+            try:
+                request = client.next_request()
+            except Exception:  # noqa: BLE001 - 运行时关闭
+                return
+            if request.method == "userQuestion/ask":
+                self._answer_question(client, request)
+            else:
+                try:
+                    client.respond_error(
+                        request.id, code=-32601, message=f"unsupported method: {request.method}"
+                    )
+                except Exception:  # noqa: BLE001
+                    return
+
+    def _answer_question(self, client: Any, request: Any) -> None:
+        payload = request.payload or {}
+        call_id = str(payload.get("callId") or uuid.uuid4())
+        waiter = threading.Event()
+        box: dict[str, Any] = {}
+        with self._questions_lock:
+            self._questions[call_id] = (waiter, box)
+        stream = self._events
+        if stream is not None:
+            stream.put(
+                {
+                    "type": "question",
+                    "callId": call_id,
+                    "questions": payload.get("questions") or [],
+                }
+            )
+        answered = waiter.wait(timeout=180)
+        with self._questions_lock:
+            self._questions.pop(call_id, None)
+        try:
+            answers = box.get("answers")
+            if answered and isinstance(answers, list):
+                client.respond(request.id, {"answers": answers})
+            else:
+                client.respond_error(
+                    request.id, code=-32000, message="user did not answer the question"
+                )
+        except Exception:  # noqa: BLE001 - 运行时已关闭
+            return
+
+    def cancel_questions(self) -> None:
+        """SSE 断开或用户取消时，让等待中的问题立即返回错误，避免占住单飞锁。"""
+        with self._questions_lock:
+            entries = list(self._questions.values())
+        for waiter, box in entries:
+            box.pop("answers", None)
+            waiter.set()
+
+    def answer(self, call_id: str, answers: list[dict[str, Any]]) -> bool:
+        with self._questions_lock:
+            entry = self._questions.get(call_id)
+        if entry is None:
+            return False
+        waiter, box = entry
+        box["answers"] = answers
+        waiter.set()
+        return True
 
     def close(self) -> None:
         with self._lock:
@@ -118,8 +200,11 @@ class HarnessManager:
             except Exception as exc:  # noqa: BLE001 - 交给前端显示
                 push({"type": "error", "message": f"{type(exc).__name__}: {exc}"})
             finally:
+                if self._events is events:
+                    self._events = None
                 events.put(None)
 
+        self._events = events
         push({"type": "session", "session_id": session})
         threading.Thread(target=worker, name="dsh-sdk-stream", daemon=True).start()
         while True:

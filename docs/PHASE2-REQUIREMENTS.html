@@ -3502,7 +3502,7 @@ M5 联调上线（约 0.5 周）
 <tr>
 <td>M2 Agent 可查</td>
 <td><strong>进行中</strong></td>
-<td>MCP 已接入 <code>headless.patch.yml</code>（Streamable HTTP）；7 个工具可用，前端已显示工具卡；<code>ephemeris-query</code>、<code>pass-planning</code>、<code>tle-health</code> 三个 skill 已配 <code>SKILL.md</code> + <code>COMMANDS.md</code>（用途/风险/审批/示例/失败处理），<code>/</code> 菜单可直接调用；待补 <code>get_tle</code>、<code>propagate</code>、<code>run_command</code>；DSH 侧已通过 <code>headless.patch.yml</code> 的 <code>skill-filesystem.customSkillDirs</code> 注册 <code>skills/</code>（实测 Agent 能加载 <code>ephemeris-query</code> 并继续调用 MCP）；第 4 个 skill 与 §2.1/§5.4 口径不一致，待决策</td>
+<td>MCP 已接入 <code>headless.patch.yml</code>（Streamable HTTP）；7 个工具可用，前端已显示工具卡；<code>ephemeris-query</code>、<code>pass-planning</code>、<code>tle-health</code> 三个 skill 已配 <code>SKILL.md</code> + <code>COMMANDS.md</code>（用途/风险/审批/示例/失败处理），<code>/</code> 菜单可直接调用；待补 <code>get_tle</code>、<code>propagate</code>、<code>run_command</code>；DSH 侧已通过 <code>headless.patch.yml</code> 的 <code>skill-filesystem.customSkillDirs</code> 注册 <code>skills/</code>（实测 Agent 能加载 <code>ephemeris-query</code> 并继续调用 MCP）；<code>ask_user_question</code> 已走 DSH 问答通道（SDK server answerer → SSE <code>question</code> → 前端卡片 → <code>/api/question/answer</code>）；第 4 个 skill 与 §2.1/§5.4 口径不一致，待决策</td>
 </tr>
 <tr>
 <td>M3 前端骨架</td>
@@ -3687,6 +3687,11 @@ M5 联调上线（约 0.5 周）
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>2026-10-19</td>
+<td>v2.8</td>
+<td>接入 DSH 问答通道：SDK server 增加 <code>userQuestion/ask</code> answerer；<code>sdk_runtime</code> 消费请求并经 SSE <code>question</code> 推送；新增 <code>/api/question/answer</code>；前端 <code>QuestionCard</code> 支持单选/多选/自定义并回传</td>
+</tr>
 <tr>
 <td>2026-10-19</td>
 <td>v2.7</td>

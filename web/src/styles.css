@@ -1374,3 +1374,117 @@ button {
     scroll-behavior: auto !important;
   }
 }
+
+.question-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(34, 211, 238, 0.28);
+  border-radius: var(--radius);
+  background: rgba(8, 20, 38, 0.82);
+  box-shadow: var(--shadow-card);
+}
+
+.question-card.answered,
+.question-card.expired {
+  border-color: var(--line);
+  background: rgba(8, 20, 38, 0.55);
+}
+
+.question-head {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+
+.question-header {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.question-text {
+  font-size: 14px;
+  color: var(--text);
+}
+
+.question-detail {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: pre-wrap;
+}
+
+.question-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.question-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 140px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(2, 10, 20, 0.5);
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.question-option:hover {
+  border-color: rgba(34, 211, 238, 0.5);
+}
+
+.question-option.active {
+  border-color: var(--accent);
+  background: rgba(34, 211, 238, 0.12);
+}
+
+.question-option-desc {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.question-custom {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(2, 10, 20, 0.5);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+
+.question-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.question-submit {
+  align-self: flex-start;
+  padding: 8px 16px;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  background: rgba(34, 211, 238, 0.14);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.question-submit:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.question-error {
+  font-size: 12px;
+  color: #FCA5A5;
+}

@@ -354,6 +354,17 @@ def skills() -> Response:
     return _with_cache(jsonify(payload), "public, max-age=3600", body)
 
 
+@app.post("/api/question/answer")
+def question_answer() -> Response:
+    """前端答复 ask_user_question：{callId, answers:[{id, selected, custom?}]}。"""
+    body = request.get_json(silent=True) or {}
+    call_id = str(body.get("callId") or "").strip()
+    answers = body.get("answers")
+    if not call_id or not isinstance(answers, list):
+        return jsonify({"ok": False, "error": "callId 与 answers 必填"}), 400
+    return jsonify({"ok": manager.answer(call_id, answers)})
+
+
 @app.get("/api/health")
 def health():
     ready = DSH_CLI.is_file() and PATCH_FILE.is_file() and Path(NODE_BIN).is_file()
@@ -408,15 +419,19 @@ def chat_stream():
 
         threading.Thread(target=pump, name="sse-pump", daemon=True).start()
         yield "retry: 3000\n\n"
-        while True:
-            try:
-                event = events.get(timeout=10)
-            except queue.Empty:
-                yield ": keep-alive\n\n"
-                continue
-            if event is None:
-                break
-            yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+        try:
+            while True:
+                try:
+                    event = events.get(timeout=10)
+                except queue.Empty:
+                    yield ": keep-alive\n\n"
+                    continue
+                if event is None:
+                    break
+                yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+        finally:
+            # 浏览器断开时取消未回答问题，释放下一轮对话。
+            manager.cancel_questions()
 
     return Response(
         stream_with_context(generate()),

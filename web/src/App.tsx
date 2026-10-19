@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { api, chat, streamChat } from "./api";
+import { answerQuestion, api, chat, streamChat } from "./api";
 import { readCatalogCache, writeCatalogCache } from "./lib/catalogCache";
 import { AgentPanel } from "./components/AgentPanel";
 import { Globe } from "./components/Globe";
@@ -11,6 +11,7 @@ import type {
   MessageBlock,
   PassItem,
   PositionItem,
+  QuestionAnswer,
   Satellite,
   TrackPoint,
 } from "./types";
@@ -335,6 +336,24 @@ export default function App() {
                 }
               });
               break;
+            case "question":
+              mutate((blocks) => {
+                if (
+                  blocks.some(
+                    (block) =>
+                      block.kind === "question" && block.callId === event.callId,
+                  )
+                ) {
+                  return;
+                }
+                blocks.push({
+                  id: crypto.randomUUID(),
+                  kind: "question",
+                  callId: event.callId,
+                  questions: event.questions,
+                });
+              });
+              break;
             case "notice":
               pushNotice(event.message);
               break;
@@ -426,6 +445,25 @@ export default function App() {
     setSessionId(undefined);
   }, []);
 
+  const handleAnswer = useCallback(
+    async (blockId: string, callId: string, answers: QuestionAnswer[]) => {
+      const ok = await answerQuestion(callId, answers);
+      if (!ok) return false;
+      setMessages((current) =>
+        current.map((message) => ({
+          ...message,
+          blocks: (message.blocks ?? []).map((block) =>
+            block.id === blockId && block.kind === "question"
+              ? { ...block, answers }
+              : block,
+          ),
+        })),
+      );
+      return true;
+    },
+    [],
+  );
+
   const balanceValue = Number(balance?.total);
   const balanceLabel = balance?.ok
     ? `${balance.currency === "USD" ? "$" : "¥"}${
@@ -511,7 +549,7 @@ export default function App() {
           messages={messages}
           busy={busy}
           sessionId={sessionId}
-          onSend={send}
+          onSend={send} onAnswer={handleAnswer}
           onReset={reset}
         />
       </main>

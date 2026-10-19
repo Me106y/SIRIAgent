@@ -96,6 +96,27 @@ export interface ToolCall {
   result?: unknown;
 }
 
+export interface QuestionOption {
+  label: string;
+  description?: string;
+}
+
+export interface QuestionItem {
+  id: string;
+  question: string;
+  header?: string;
+  detail?: string;
+  options?: QuestionOption[];
+  multiSelect?: boolean;
+  multi_select?: boolean;
+}
+
+export interface QuestionAnswer {
+  id: string;
+  selected: string[];
+  custom?: string;
+}
+
 export type MessageBlock =
   | { id: string; kind: "thinking"; text: string }
   | {
@@ -108,7 +129,14 @@ export type MessageBlock =
       result?: unknown;
     }
   | { id: string; kind: "text"; text: string }
-  | { id: string; kind: "notice"; text: string };
+  | { id: string; kind: "notice"; text: string }
+  | {
+      id: string;
+      kind: "question";
+      callId: string;
+      questions: QuestionItem[];
+      answers?: QuestionAnswer[];
+    };
 
 export interface ChatMessage {
   id: string;
@@ -129,6 +157,7 @@ export type StreamEvent =
   | { type: "tool_result"; callId: string; status?: string; result?: unknown }
   | { type: "text"; text: string; replace?: boolean }
   | { type: "reasoning"; text: string }
+  | { type: "question"; callId: string; questions: QuestionItem[] }
   | { type: "notice"; message: string }
   | {
       type: "done";
