@@ -1488,3 +1488,35 @@ button {
   font-size: 12px;
   color: #FCA5A5;
 }
+
+.question-card .question-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.question-progress {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.question-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.question-back {
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.question-back:hover {
+  color: var(--text);
+  border-color: rgba(34, 211, 238, 0.4);
+}
