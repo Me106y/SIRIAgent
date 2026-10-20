@@ -249,6 +249,7 @@ export function QuestionCard({ block, interactive = true, onAnswer, onRevise }: 
       <MapDrawModal
         open={drawOpen}
         onClose={() => setDrawOpen(false)}
+        initialWkt={custom[question.id] ?? ""}
         onComplete={(wkt) => {
           setCustom((current) => ({ ...current, [question.id]: wkt }));
           if (!multi) {

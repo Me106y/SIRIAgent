@@ -365,6 +365,19 @@ def question_answer() -> Response:
     return jsonify({"ok": manager.answer(call_id, answers)})
 
 
+@app.get("/api/config")
+def public_config() -> Response:
+    """前端可用的公开配置（高德 key 是客户端 key，不落仓库）。"""
+    response = jsonify(
+        {
+            "amap_js_key": os.environ.get("AMAP_JS_KEY", ""),
+            "amap_security_code": os.environ.get("AMAP_SECURITY_CODE", ""),
+        }
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
 @app.get("/api/health")
 def health():
     ready = DSH_CLI.is_file() and PATCH_FILE.is_file() and Path(NODE_BIN).is_file()

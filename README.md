@@ -188,6 +188,8 @@ pg_dump -Fc "postgresql://rs_service:...@127.0.0.1:5432/rs_service" \
 | `DSH_TIMEOUT` | `240` | 单次 DSH 运行超时（秒） |
 | `DSH_PROXY` | 无 | 可选，覆盖 HTTPS_PROXY/HTTP_PROXY |
 | `MAX_MESSAGE_CHARS` | `12000` | 单条消息长度上限 |
+| `AMAP_JS_KEY` | — | 高德 JS API key（AOI 地图绘制）；放 `.env`，经 `/api/config` 下发 |
+| `AMAP_SECURITY_CODE` | — | 可选，高德 2.0 安全密钥 |
 
 `headless.patch.yml` 做了两件事：
 
@@ -208,6 +210,7 @@ Wants=network-online.target
 [Service]
 WorkingDirectory=/home/siri/桌面/SIRIAgent
 Environment=NODE_BIN=/home/siri/local/node-v22.20.0-linux-x64/bin/node
+EnvironmentFile=-/home/siri/桌面/SIRIAgent/.env
 Environment=HTTPS_PROXY=http://127.0.0.1:7890
 Environment=HTTP_PROXY=http://127.0.0.1:7890
 ExecStart=/home/siri/桌面/SIRIAgent/.venv/bin/gunicorn -w 1 --threads 4 --timeout 0 -b 127.0.0.1:8000 app:app

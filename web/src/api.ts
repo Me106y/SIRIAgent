@@ -39,6 +39,7 @@ export interface BootstrapPayload {
 }
 
 export const api = {
+  config: () => getJson<{ amap_js_key: string; amap_security_code?: string }>("/api/config"),
   bootstrap: () => getJson<BootstrapPayload>("/api/bootstrap", 20_000),
   satellites: () =>
     getJson<{ total: number; items: Satellite[] }>("/api/rs/satellites?limit=200"),
