@@ -133,6 +133,42 @@ node --import tsx/esm apps/cli/src/bin.ts web
 # 打开终端打印的带 token 的 URL（默认 http://127.0.0.1:3080）
 ```
 
+## 数据库
+
+运行库是 RS-Service 的 SQLite（SIRIAgent 自己不存业务数据）：
+
+```text
+~/.local/share/rs-service/rs.db      # WAL 模式；-wal / -shm 不能单独删
+```
+
+零安装查看（Python 3.12 自带 CLI，本机没装 sqlite3 命令）：
+
+```bash
+DB=~/.local/share/rs-service/rs.db
+python3 -m sqlite3 "$DB" "select count(*) from satellite;"
+python3 -m sqlite3 "$DB" "select code,name from aoi where level='city' order by code;"
+```
+
+只读连接（日常查看推荐，避免和同步写事务抢锁）：
+
+```bash
+python3 -m sqlite3 'file:/home/siri/.local/share/rs-service/rs.db?mode=ro' \
+  "select last_status,last_success_at,consecutive_failures from sync_state;"
+```
+
+需要 `.tables`/表格输出时再装 CLI 或 GUI：`sudo apt install sqlite3 sqlitebrowser`。
+
+程序访问优先走 REST（不碰库文件）：
+
+```bash
+curl http://127.0.0.1:8766/api/v1/health
+curl http://127.0.0.1:8766/docs          # Swagger
+rs-service status                        # TLE 年龄与最近同步
+```
+
+改库路径：`RS_DB_PATH=/path/rs.db`、`RS_DATABASE_URL=sqlite+pysqlite:////path`，
+或 CLI 加 `--db /path`。在线备份：`python3 -m sqlite3 "$DB" "VACUUM INTO '/tmp/rs.db'"`。
+
 ## 配置
 
 | 环境变量 | 默认值 | 说明 |
