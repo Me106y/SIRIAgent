@@ -77,7 +77,7 @@ skills/imaging-plan/scripts/render.sh --in plan.json --out /tmp/report.html
 | `aoi_not_found` | 范围不在库里 | 让用户给 adcode 或 WKT；本版本只有杭州市级边界 |
 | `aoi_invalid` | WKT 不合法 / 未闭合 | 要求 `POLYGON((lon lat, …))`，首尾闭合 |
 | `no_candidate_satellites` | 筛选后无星 | 放宽 `max_resolution_m` 或加传感器类型 |
-| `aoi_out_of_zhejiang` | 质心不在浙江省界内 | 只支持浙江；让用户换 AOI |
+| `aoi_out_of_zhejiang` | 自定义 AOI 与浙江任一地市均不相交 | 只支持浙江；让用户换 AOI |
 | `target_unreachable` | 扩到上限仍不达标 | 报 `best_coverage_pct` / `best_p95_hours`，给建议 |
 | `unsupported_mode` | 模式不在枚举 | 回 `allowed` |
 
