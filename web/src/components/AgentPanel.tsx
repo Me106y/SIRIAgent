@@ -13,6 +13,7 @@ interface Props {
   onReset: () => void;
   onAnswer: (blockId: string, callId: string, answers: QuestionAnswer[]) => Promise<boolean>;
   onRevise: (text: string) => void;
+  onCancel: () => void;
 }
 
 const EXAMPLES = [
@@ -199,7 +200,7 @@ function WorkSteps({
   );
 }
 
-export function AgentPanel({ messages, busy, sessionId, onSend, onReset, onAnswer, onRevise }: Props) {
+export function AgentPanel({ messages, busy, sessionId, onSend, onReset, onAnswer, onRevise, onCancel }: Props) {
   const [input, setInput] = useState("");
   const [skills, setSkills] = useState<Skill[]>([]);
   const [slashOpen, setSlashOpen] = useState(false);
@@ -373,6 +374,7 @@ export function AgentPanel({ messages, busy, sessionId, onSend, onReset, onAnswe
                   block={block}
                   onAnswer={onAnswer}
                   onRevise={onRevise}
+                  onCancel={onCancel}
                 />
               );
             }
@@ -430,6 +432,7 @@ export function AgentPanel({ messages, busy, sessionId, onSend, onReset, onAnswe
                           interactive={false}
                           onAnswer={onAnswer}
                           onRevise={onRevise}
+                          onCancel={onCancel}
                         />
                       ))}
                       {texts.map((block) => (

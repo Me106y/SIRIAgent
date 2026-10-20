@@ -1623,3 +1623,13 @@ button {
   color: #FCA5A5;
   font-size: 12px;
 }
+
+.question-card-canceled {
+  opacity: 0.75;
+}
+
+.question-canceled-hint {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}

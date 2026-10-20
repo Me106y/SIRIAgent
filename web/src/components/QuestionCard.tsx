@@ -14,9 +14,10 @@ interface Props {
     answers: QuestionAnswer[],
   ) => Promise<boolean>;
   onRevise?: (text: string) => void;
+  onCancel?: () => void;
 }
 
-export function QuestionCard({ block, interactive = true, onAnswer, onRevise }: Props) {
+export function QuestionCard({ block, interactive = true, onAnswer, onRevise, onCancel }: Props) {
   const [selected, setSelected] = useState<Record<string, string[]>>({});
   const [custom, setCustom] = useState<Record<string, string>>({});
   const [step, setStep] = useState(0);
@@ -25,6 +26,7 @@ export function QuestionCard({ block, interactive = true, onAnswer, onRevise }: 
   const [revising, setRevising] = useState(false);
   const [drawOpen, setDrawOpen] = useState(false);
   const [revisedAnswers, setRevisedAnswers] = useState<QuestionAnswer[] | null>(null);
+  const [canceled, setCanceled] = useState(false);
 
   const answered = revisedAnswers ?? block.answers;
   const total = block.questions.length;
@@ -41,6 +43,19 @@ export function QuestionCard({ block, interactive = true, onAnswer, onRevise }: 
     setStep(0);
     setRevising(true);
   };
+
+  if (canceled && !block.answers) {
+    return (
+      <div className="question-card question-card-canceled">
+        <div className="question-head">
+          <span>已取消本轮</span>
+        </div>
+        <p className="question-canceled-hint">
+          这一轮已中止；直接输入新消息即可重新开始。
+        </p>
+      </div>
+    );
+  }
 
   if (answered && !revising) {
     return (
@@ -234,6 +249,18 @@ export function QuestionCard({ block, interactive = true, onAnswer, onRevise }: 
             disabled={sending}
           >
             上一步
+          </button>
+        )}
+        {onCancel && (
+          <button
+            type="button"
+            className="question-back"
+            onClick={() => {
+              setCanceled(true);
+              onCancel();
+            }}
+          >
+            取消本轮
           </button>
         )}
         <button

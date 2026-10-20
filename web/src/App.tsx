@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { answerQuestion, api, chat, streamChat } from "./api";
+import { answerQuestion, api, cancelChat, chat, streamChat } from "./api";
 import { readCatalogCache, writeCatalogCache } from "./lib/catalogCache";
 import { AgentPanel } from "./components/AgentPanel";
 import { Globe } from "./components/Globe";
@@ -216,6 +216,7 @@ export default function App() {
   const selectedPosition = selected != null ? positions[selected] : undefined;
   const send = useCallback(
     async (text: string) => {
+      if (busy) return;
       const assistantId = crypto.randomUUID();
       setMessages((current) => [
         ...current,
@@ -437,12 +438,18 @@ export default function App() {
         setBusy(false);
       }
     },
-    [sessionId],
+    [sessionId, busy],
   );
 
   const reset = useCallback(() => {
+    void cancelChat();
     setMessages([]);
     setSessionId(undefined);
+    setBusy(false);
+  }, []);
+
+  const handleCancel = useCallback(async () => {
+    await cancelChat();
   }, []);
 
   const handleAnswer = useCallback(
@@ -549,7 +556,7 @@ export default function App() {
           messages={messages}
           busy={busy}
           sessionId={sessionId}
-          onSend={send} onAnswer={handleAnswer} onRevise={(text) => void send(text)}
+          onSend={send} onAnswer={handleAnswer} onRevise={(text) => void send(text)} onCancel={handleCancel}
           onReset={reset}
         />
       </main>

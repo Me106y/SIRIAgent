@@ -95,6 +95,8 @@ class HarnessManager:
             try:
                 request = client.next_request()
             except Exception:  # noqa: BLE001 - 运行时关闭
+                if self._pump is threading.current_thread():
+                    self._pump = None
                 return
             if request.method == "userQuestion/ask":
                 self._answer_question(client, request)
@@ -146,6 +148,28 @@ class HarnessManager:
             box.pop("answers", None)
             waiter.set()
 
+    def abort(self) -> None:
+        """取消未答问题并关闭当前 runtime，释放单轮锁。
+
+        关闭走独立线程：worker 在 harness.run 期间持有 self._lock，
+        这里不能去抢锁，否则会和正在等待的 run 互相卡死。
+        """
+        self.cancel_questions()
+        harness = self._harness
+        self._harness = None
+        self._pump = None
+        if harness is None:
+            return
+
+
+        def close() -> None:
+            try:
+                harness.close()
+            except Exception:  # noqa: BLE001 - 关闭失败不影响下一轮重建
+                pass
+
+        threading.Thread(target=close, name="dsh-abort", daemon=True).start()
+
     def answer(self, call_id: str, answers: list[dict[str, Any]]) -> bool:
         with self._questions_lock:
             entry = self._questions.get(call_id)
@@ -163,7 +187,19 @@ class HarnessManager:
                 self._harness = None
 
     def stream(self, message: str, session_id: str | None = None) -> Iterator[dict[str, Any]]:
-        session = session_id or f"siriagent-{uuid.uuid4()}"
+        # 新一轮开始前清掉上一轮遗留的未答问题，避免新消息排在锁后面无限等待。
+        with self._questions_lock:
+            has_pending = bool(self._questions)
+        if has_pending:
+            self.abort()
+        # runtime 已被取消/重建时，旧 sessionId 在新进程里可能已持久化，
+        # 继续复用会报 "session already exists"；此时开新会话。
+        runtime_alive = self._harness is not None
+        session = (
+            session_id
+            if runtime_alive and session_id
+            else f"siriagent-{uuid.uuid4()}"
+        )
         events: queue.Queue[dict[str, Any] | None] = queue.Queue()
 
         def push(payload: dict[str, Any]) -> None:
@@ -200,7 +236,10 @@ class HarnessManager:
                     }
                 )
             except Exception as exc:  # noqa: BLE001 - 交给前端显示
-                push({"type": "error", "message": f"{type(exc).__name__}: {exc}"})
+                if type(exc).__name__ == "TransportClosedError":
+                    push({"type": "notice", "message": "已取消本轮"})
+                else:
+                    push({"type": "error", "message": f"{type(exc).__name__}: {exc}"})
             finally:
                 if self._events is events:
                     self._events = None

@@ -153,3 +153,7 @@ export async function answerQuestion(
   const payload = (await response.json().catch(() => null)) as { ok?: boolean } | null;
   return Boolean(payload?.ok);
 }
+
+export async function cancelChat(): Promise<void> {
+  await fetch("/api/chat/cancel", { method: "POST" }).catch(() => undefined);
+}

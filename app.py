@@ -365,6 +365,13 @@ def question_answer() -> Response:
     return jsonify({"ok": manager.answer(call_id, answers)})
 
 
+@app.post("/api/chat/cancel")
+def chat_cancel() -> Response:
+    """中止当前一轮：取消未答问题并重建 runtime，释放单轮锁。"""
+    manager.abort()
+    return jsonify({"ok": True})
+
+
 @app.get("/api/config")
 def public_config() -> Response:
     """前端可用的公开配置（高德 key 是客户端 key，不落仓库）。"""
