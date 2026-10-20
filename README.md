@@ -96,6 +96,43 @@ cd "/home/siri/桌面/SIRIAgent"
 
 打开 <http://127.0.0.1:8000>。
 
+### 日常启动 / 重启
+
+四个用户级单元都已 `enable`，且 `Linger=yes`（不登录也会起）：
+
+```bash
+systemctl --user restart rs-service-api rs-service-mcp siriagent-demo cloudflared
+
+# 只重启一个
+systemctl --user restart siriagent-demo
+```
+
+MCP 有长连接时 `restart` 可能卡在 `deactivating`，用：
+
+```bash
+systemctl --user kill -s SIGKILL rs-service-mcp && systemctl --user start rs-service-mcp
+```
+
+自检：
+
+```bash
+curl -sS http://127.0.0.1:8766/api/v1/health
+curl -sS -o /dev/null -w 'demo %{http_code}\n' http://127.0.0.1:8000/
+ss -tlnp | grep -E ':(8000|8765|8766) '   # REST / MCP / 演示台
+ss -tnp  | grep -c ':7844'                # 期望 4：Cloudflare 隧道连接
+curl -sS -o /dev/null -w 'domain %{http_code}\n' https://siriagent.dpdns.org/
+```
+
+域名返回 **302 是正常的**（跳 Cloudflare Access 登录页）；如果 530/1033 才是隧道异常。
+
+DSH Web（自己的 Agent GUI，可选）：
+
+```bash
+cd /home/siri/Documents/Qoder/2026-10-18/146d1f32/deepseek-harness
+node --import tsx/esm apps/cli/src/bin.ts web
+# 打开终端打印的带 token 的 URL（默认 http://127.0.0.1:3080）
+```
+
 ## 配置
 
 | 环境变量 | 默认值 | 说明 |
