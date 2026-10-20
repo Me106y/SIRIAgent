@@ -91,7 +91,7 @@ cd "/home/siri/桌面/SIRIAgent"
 ~/.local/bin/uv pip install --python .venv/bin/python -r requirements.txt
 
 # 前台启动
-.venv/bin/gunicorn -w 1 --threads 4 --timeout 300 -b 127.0.0.1:8000 app:app
+.venv/bin/gunicorn -w 1 --threads 4 --timeout 0 -b 127.0.0.1:8000 app:app
 ```
 
 打开 <http://127.0.0.1:8000>。
@@ -210,7 +210,7 @@ WorkingDirectory=/home/siri/桌面/SIRIAgent
 Environment=NODE_BIN=/home/siri/local/node-v22.20.0-linux-x64/bin/node
 Environment=HTTPS_PROXY=http://127.0.0.1:7890
 Environment=HTTP_PROXY=http://127.0.0.1:7890
-ExecStart=/home/siri/桌面/SIRIAgent/.venv/bin/gunicorn -w 1 --threads 4 --timeout 300 -b 127.0.0.1:8000 app:app
+ExecStart=/home/siri/桌面/SIRIAgent/.venv/bin/gunicorn -w 1 --threads 4 --timeout 0 -b 127.0.0.1:8000 app:app
 Restart=on-failure
 RestartSec=5
 

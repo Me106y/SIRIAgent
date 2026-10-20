@@ -122,7 +122,9 @@ class HarnessManager:
                     "questions": payload.get("questions") or [],
                 }
             )
-        answered = waiter.wait(timeout=180)
+        # 没有超时：用户不回答就一直等，只有 SSE 断开（cancel_questions）
+        # 或显式取消才释放这一轮。
+        answered = waiter.wait()
         with self._questions_lock:
             self._questions.pop(call_id, None)
         try:
