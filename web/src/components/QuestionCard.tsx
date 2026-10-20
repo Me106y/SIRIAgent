@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { MapDrawModal } from "./MapDrawModal";
 import type { MessageBlock, QuestionAnswer } from "../types";
 
 type QuestionBlock = Extract<MessageBlock, { kind: "question" }>;
@@ -12,19 +13,36 @@ interface Props {
     callId: string,
     answers: QuestionAnswer[],
   ) => Promise<boolean>;
+  onRevise?: (text: string) => void;
 }
 
-export function QuestionCard({ block, interactive = true, onAnswer }: Props) {
+export function QuestionCard({ block, interactive = true, onAnswer, onRevise }: Props) {
   const [selected, setSelected] = useState<Record<string, string[]>>({});
   const [custom, setCustom] = useState<Record<string, string>>({});
   const [step, setStep] = useState(0);
   const [sending, setSending] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [revising, setRevising] = useState(false);
+  const [drawOpen, setDrawOpen] = useState(false);
+  const [revisedAnswers, setRevisedAnswers] = useState<QuestionAnswer[] | null>(null);
 
-  const answered = block.answers;
+  const answered = revisedAnswers ?? block.answers;
   const total = block.questions.length;
 
-  if (answered) {
+  const startRevise = () => {
+    const nextSelected: Record<string, string[]> = {};
+    const nextCustom: Record<string, string> = {};
+    for (const answer of block.answers ?? []) {
+      nextSelected[answer.id] = answer.selected ?? [];
+      if (answer.custom) nextCustom[answer.id] = answer.custom;
+    }
+    setSelected(nextSelected);
+    setCustom(nextCustom);
+    setStep(0);
+    setRevising(true);
+  };
+
+  if (answered && !revising) {
     return (
       <div className="question-card answered">
         <div className="question-head">已提交选择</div>
@@ -41,6 +59,11 @@ export function QuestionCard({ block, interactive = true, onAnswer }: Props) {
             </div>
           );
         })}
+        {onRevise && !revising && (
+          <button type="button" className="question-back" onClick={startRevise}>
+            修改
+          </button>
+        )}
       </div>
     );
   }
@@ -68,6 +91,9 @@ export function QuestionCard({ block, interactive = true, onAnswer }: Props) {
   const text = custom[question.id] ?? "";
   const ready = picked.length > 0 || Boolean(text.trim());
   const isLast = index >= total - 1;
+  const areaQuestion = /aoi|范围|地区|城市|区域|覆盖哪里|目标范围/i.test(
+    `${question.id} ${question.header ?? ""} ${question.question}`,
+  );
 
   const toggle = (label: string) => {
     setSelected((current) => {
@@ -97,6 +123,22 @@ export function QuestionCard({ block, interactive = true, onAnswer }: Props) {
         ...(freeText ? { custom: freeText } : {}),
       };
     });
+    if (revising) {
+      const text =
+        "更正上一轮的选择：" +
+        block.questions
+          .map((item, index) => {
+            const answer = answers[index];
+            const value = [...answer.selected, ...(answer.custom ? [answer.custom] : [])].join("、");
+            return `${item.question} ${value || "—"}`;
+          })
+          .join("；") +
+        "。请据此重新计算。";
+      onRevise?.(text);
+      setRevisedAnswers(answers);
+      setRevising(false);
+      return;
+    }
     setSending(true);
     const ok = await onAnswer(block.id, block.callId, answers);
     setSending(false);
@@ -171,6 +213,16 @@ export function QuestionCard({ block, interactive = true, onAnswer }: Props) {
         placeholder={question.options?.length ? "其他（可选，直接输入）" : "请输入"}
       />
 
+      {areaQuestion && (
+        <button
+          type="button"
+          className="question-draw"
+          onClick={() => setDrawOpen(true)}
+        >
+          在地图上绘制
+        </button>
+      )}
+
       {failed && <div className="question-error">提交失败，请重试</div>}
 
       <div className="question-nav">
@@ -190,9 +242,21 @@ export function QuestionCard({ block, interactive = true, onAnswer }: Props) {
           onClick={advance}
           disabled={!ready || sending}
         >
-          {sending ? "提交中…" : isLast ? "提交" : "下一步"}
+          {sending ? "提交中…" : isLast ? (revising ? "重新提交" : "提交") : "下一步"}
         </button>
       </div>
+
+      <MapDrawModal
+        open={drawOpen}
+        onClose={() => setDrawOpen(false)}
+        onComplete={(wkt) => {
+          setCustom((current) => ({ ...current, [question.id]: wkt }));
+          if (!multi) {
+            setSelected((current) => ({ ...current, [question.id]: [] }));
+          }
+          setDrawOpen(false);
+        }}
+      />
     </div>
   );
 }

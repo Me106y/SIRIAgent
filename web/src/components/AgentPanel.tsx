@@ -12,6 +12,7 @@ interface Props {
   onSend: (text: string) => void;
   onReset: () => void;
   onAnswer: (blockId: string, callId: string, answers: QuestionAnswer[]) => Promise<boolean>;
+  onRevise: (text: string) => void;
 }
 
 const EXAMPLES = [
@@ -198,7 +199,7 @@ function WorkSteps({
   );
 }
 
-export function AgentPanel({ messages, busy, sessionId, onSend, onReset, onAnswer }: Props) {
+export function AgentPanel({ messages, busy, sessionId, onSend, onReset, onAnswer, onRevise }: Props) {
   const [input, setInput] = useState("");
   const [skills, setSkills] = useState<Skill[]>([]);
   const [slashOpen, setSlashOpen] = useState(false);
@@ -366,7 +367,14 @@ export function AgentPanel({ messages, busy, sessionId, onSend, onReset, onAnswe
               return <ThinkingRow key={block.id} block={block} />;
             }
             if (block.kind === "question") {
-              return <QuestionCard key={block.id} block={block} onAnswer={onAnswer} />;
+              return (
+                <QuestionCard
+                  key={block.id}
+                  block={block}
+                  onAnswer={onAnswer}
+                  onRevise={onRevise}
+                />
+              );
             }
             if (block.kind === "notice") {
               return (
@@ -421,6 +429,7 @@ export function AgentPanel({ messages, busy, sessionId, onSend, onReset, onAnswe
                           block={block}
                           interactive={false}
                           onAnswer={onAnswer}
+                          onRevise={onRevise}
                         />
                       ))}
                       {texts.map((block) => (

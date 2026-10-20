@@ -549,7 +549,7 @@ export default function App() {
           messages={messages}
           busy={busy}
           sessionId={sessionId}
-          onSend={send} onAnswer={handleAnswer}
+          onSend={send} onAnswer={handleAnswer} onRevise={(text) => void send(text)}
           onReset={reset}
         />
       </main>
