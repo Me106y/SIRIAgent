@@ -161,9 +161,19 @@ export function SatellitePanel({
                     <td>{item.max_elev_deg.toFixed(0)}°</td>
                     <td>
                       {item.optical_imaging_ok ? (
-                        <span className="tag ok">可用</span>
+                        <span
+                          className="tag ok"
+                          title={`太阳高度 ${item.sun_elev_deg.toFixed(0)}°（需 >10°），最高仰角 ${item.max_elev_deg.toFixed(0)}°（需 ≥10°）`}
+                        >
+                          可用
+                        </span>
                       ) : (
-                        <span className="tag plain">—</span>
+                        <span
+                          className="tag plain"
+                          title={`光学不可用：太阳高度 ${item.sun_elev_deg.toFixed(0)}°（需 >10°），最高仰角 ${item.max_elev_deg.toFixed(0)}°（需 ≥10°）`}
+                        >
+                          —
+                        </span>
                       )}
                     </td>
                   </tr>
