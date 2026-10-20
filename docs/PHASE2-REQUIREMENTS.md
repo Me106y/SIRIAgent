@@ -54,7 +54,7 @@
 ### 2.1 Phase 2 做
 
 - 两仓库建立、GitHub 公开托管、CI 最小集。
-- `RS-Service`：SQLite 星历库、每日同步、REST、MCP、CLI、4 个 skill。
+- `RS-Service`：PostgreSQL 星历库、每日同步、REST、MCP、CLI、4 个 skill。
 - `SIRIAgent`：Python SDK 常驻运行时调用、SSE/WS 流式、React 前端、Cesium 可视化、响应式。
 - 精度口径、坐标系、云量、保留与备份策略。
 
@@ -66,7 +66,7 @@
 | 登录 / 配额 / 多用户隔离 | 站点访问由 Cloudflare Access 兜底 | Phase 3 |
 | 成果库 / 影像切片 | 与星历主线无关 | Phase 3+ |
 | GPU 模型 / 地物分类 | 依赖显卡与模型资产 | Phase 3+ |
-| 对外 API / 多租户 | SQLite 只够单机；Space-Track 数据不可转发 | Phase 3 |
+| 对外 API / 多租户 | 多租户隔离未做；Space-Track 数据不可转发 | Phase 3 |
 | 历史 TLE >180 天回溯 | 存储与合规成本高 | 按需 |
 | 移动端专项适配 | 只保证可读降级 | Phase 3 |
 | 全量目录（含退役/军事）默认展示 | 见 §4.4 分层 | 视决策 |
@@ -152,7 +152,7 @@ RS-Service/
 | 语言/环境 | Python 3.12 + `uv` | 本机已有；`sgp4`/`skyfield` 成熟 |
 | Web | FastAPI + Pydantic v2 | 类型化、OpenAPI、async |
 | ORM/迁移 | SQLAlchemy 2 + Alembic | 仓储层可换 Postgres |
-| 数据库 | **SQLite（WAL）** | 单机、单写入、零运维；迁移阈值见 §4.9 |
+| 数据库 | **PostgreSQL 18 + psycopg3** | 本机 `127.0.0.1:5432/rs_service`；备份见 §4.9 |
 | 轨道 | `sgp4`（数值内核）+ `skyfield`（几何/验收基准） | 性能 + 可对照 |
 | 数值 | `numpy` | 覆盖计算向量化，禁止双重循环 |
 | HTTP | `httpx` | 超时、重试、代理 |
@@ -161,7 +161,7 @@ RS-Service/
 
 ### 4.2 数据库（12 张表）
 
-数据库文件：`~/.local/share/rs-service/rs.db`（**不在仓库内**）。连接参数：`journal_mode=WAL`、`synchronous=NORMAL`、`foreign_keys=ON`、`busy_timeout=5000`。时间统一 `TEXT ISO8601 'Z'`。
+数据库：PostgreSQL 18，DSN 放 `RS-Service/.env`（`RS_DATABASE_URL`，已 gitignore），systemd 通过 `EnvironmentFile` 注入；时间统一 `TEXT ISO8601 'Z'`。旧 SQLite 文件仅作迁移源与单测回退。
 
 | 表 | 关键字段 | 说明 |
 | --- | --- | --- |
@@ -527,8 +527,7 @@ CREATE INDEX idx_sensor_sat     ON sensor(sat_id);
 | `sync_run` | 90 天；`sync_item_error` 30 天 |
 | `sync_state` | 常驻（每源 1 行，不清理） |
 
-- 备份：每日 `VACUUM INTO` 到 `~/.local/share/rs-service/backups/`，保留 7 份。
-- 迁移 Postgres 的触发条件：`tle_record` > 500 万行、需要多写入进程/多租户、需要 PostGIS、需要跨实例共享。届时只换仓储层与连接串。
+- 备份：每日 `pg_dump -Fc` 到 `~/.local/share/rs-service/backups/`，保留 7 份。
 
 ### 4.10 测试与验收
 
@@ -770,7 +769,7 @@ when-to-use: 用户询问某地某时的卫星过境、可见性、覆盖能力�
 | B7 | 数据 | AOI 导入 + GCJ-02 转换 + 校验 | P0 | B1 |
 | B8 | 数据 | 足迹与覆盖估算 | P1 | B6、B7 |
 | B9 | 数据 | 云量接入（Open-Meteo） | P1 | B6 |
-| B10 | 数据 | 保留、备份、`VACUUM INTO` | P1 | B3 |
+| B10 | 数据 | 保留、备份、`pg_dump` | P1 | B3 |
 | B11 | 数据 | 精度口径落到所有出参 | P0 | B5、B6 |
 | C1 | MCP | REST `/api/v1` | P0 | B5 |
 | C2 | MCP | MCP server + 9 工具 | P0 | C1 |
@@ -877,6 +876,7 @@ M5 联调上线（约 0.5 周）
 
 | 日期 | 版本 | 变更 |
 | --- | --- | --- |
+| 2026-10-20 | v2.9 | 数据层从 SQLite 切到 PostgreSQL 18（psycopg3）；`.env` 提供 DSN，systemd 用 `EnvironmentFile`；新增 SQLite→PG 迁移脚本；备份改 `pg_dump` |
 | 2026-10-19 | v2.8 | 接入 DSH 问答通道：SDK server 增加 `userQuestion/ask` answerer；`sdk_runtime` 消费请求并经 SSE `question` 推送；新增 `/api/question/answer`；前端 `QuestionCard` 支持单选/多选/自定义并回传 |
 | 2026-10-19 | v2.7 | 通过 `headless.patch.yml` 注册 `skills/` 到 DSH（`skill-filesystem.customSkillDirs`），Agent 可直接加载 skill |
 | 2026-10-19 | v2.6 | 三个 skill 补齐 `COMMANDS.md`（命令/风险/审批/示例/失败处理） |

@@ -135,30 +135,28 @@ node --import tsx/esm apps/cli/src/bin.ts web
 
 ## 数据库
 
-运行库是 RS-Service 的 SQLite（SIRIAgent 自己不存业务数据）：
+运行库是 RS-Service 的 **PostgreSQL 18**（SIRIAgent 自己不存业务数据）：
 
 ```text
-~/.local/share/rs-service/rs.db      # WAL 模式；-wal / -shm 不能单独删
+postgresql://rs_service:***@127.0.0.1:5432/rs_service
 ```
 
-零安装查看（Python 3.12 自带 CLI，本机没装 sqlite3 命令）：
+连接串放在 `RS-Service/.env`（已 gitignore），systemd 通过 `EnvironmentFile` 读取：
 
 ```bash
-DB=~/.local/share/rs-service/rs.db
-python3 -m sqlite3 "$DB" "select count(*) from satellite;"
-python3 -m sqlite3 "$DB" "select code,name from aoi where level='city' order by code;"
+cat ~/桌面/RS-Service/.env
+# RS_DATABASE_URL=postgresql+psycopg://rs_service:...@127.0.0.1:5432/rs_service
 ```
 
-只读连接（日常查看推荐，避免和同步写事务抢锁）：
+命令行：
 
 ```bash
-python3 -m sqlite3 'file:/home/siri/.local/share/rs-service/rs.db?mode=ro' \
-  "select last_status,last_success_at,consecutive_failures from sync_state;"
+psql "postgresql://rs_service:rs_service_dev@127.0.0.1:5432/rs_service" -c "\dt"
+psql "postgresql://rs_service:rs_service_dev@127.0.0.1:5432/rs_service" \
+  -c "select code,name from aoi where level='city' order by code;"
 ```
 
-需要 `.tables`/表格输出时再装 CLI 或 GUI：`sudo apt install sqlite3 sqlitebrowser`。
-
-程序访问优先走 REST（不碰库文件）：
+程序访问优先走 REST（不碰库连接）：
 
 ```bash
 curl http://127.0.0.1:8766/api/v1/health
@@ -166,8 +164,19 @@ curl http://127.0.0.1:8766/docs          # Swagger
 rs-service status                        # TLE 年龄与最近同步
 ```
 
-改库路径：`RS_DB_PATH=/path/rs.db`、`RS_DATABASE_URL=sqlite+pysqlite:////path`，
-或 CLI 加 `--db /path`。在线备份：`python3 -m sqlite3 "$DB" "VACUUM INTO '/tmp/rs.db'"`。
+迁移与备份：
+
+```bash
+# SQLite → PostgreSQL（已执行；源文件保留作回退）
+cd ~/桌面/RS-Service
+RS_DATABASE_URL=... PYTHONPATH=src .venv/bin/python scripts/sqlite_to_pg.py
+
+# 在线备份
+pg_dump -Fc "postgresql://rs_service:...@127.0.0.1:5432/rs_service" \
+  -f ~/.local/share/rs-service/backups/rs-$(date +%F).dump
+```
+
+旧的 SQLite 文件 `~/.local/share/rs-service/rs.db` 只作迁移源和单测回退，不再写入。
 
 ## 配置
 

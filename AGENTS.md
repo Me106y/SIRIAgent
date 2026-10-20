@@ -26,7 +26,7 @@
 
 ## 2. 数据与运行
 
-- 运行数据留在数据库：`~/.local/share/rs-service/rs.db`；仓库只放 schema、迁移、测试夹具。
+- 运行数据留在数据库：PostgreSQL `rs_service`（`127.0.0.1:5432`）；仓库只放 schema、迁移、测试夹具。
 - RS-Service 的 REST/MCP 只绑 `127.0.0.1`；浏览器经 SIRIAgent 反代，永不直连。
 - 同步每天 1 次（03:00 Asia/Shanghai）、最多 3 次重试、失败当天停止；状态写 `sync_state`。
 - DSH 运行时用 Python SDK + `DSH_HOME=~/.dsh-siriagent`；装配失败回退 headless + SSE。
@@ -60,7 +60,7 @@
 
 ## 6. 代码与提交
 
-- Python 3.12 + uv；FastAPI + SQLAlchemy 2 + Alembic；SQLite WAL。
+- Python 3.12 + uv；FastAPI + SQLAlchemy 2 + Alembic；PostgreSQL 18（psycopg3）。
 - 新 Python 模块 ≤600 行；类型注解齐全；错误路径有结构化日志。
 - 前端用 pnpm；构建产物 `web/dist/` 由后端托管。
 - Commit：`feat(scope): ...` / `fix(scope): ...` / `docs: ...`；一次提交只做一件事，正文说明"为什么"。
