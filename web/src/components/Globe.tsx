@@ -75,7 +75,9 @@ export function Globe({
 
   useEffect(() => {
     if (!cesium || !containerRef.current) return;
-    const viewer = new cesium.Viewer(containerRef.current, {
+    let viewer: CesiumModule.Viewer;
+    try {
+      viewer = new cesium.Viewer(containerRef.current, {
       animation: false,
       timeline: false,
       baseLayerPicker: false,
@@ -87,7 +89,12 @@ export function Globe({
       infoBox: false,
       selectionIndicator: false,
       baseLayer: false,
-    });
+      });
+    } catch {
+      // WebGL 初始化失败：保留目录/过境，地球退化为占位。
+      setCesiumFailed(true);
+      return;
+    }
     viewer.scene.globe.baseColor = cesium.Color.fromCssColorString("#07182B");
     viewer.scene.backgroundColor = cesium.Color.fromCssColorString("#03080F");
     if (viewer.scene.skyAtmosphere) viewer.scene.skyAtmosphere.show = true;
