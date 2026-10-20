@@ -27,6 +27,12 @@ when-to-use: 用户问"覆盖杭州 90% 要几颗星""3 颗星能覆盖多少""�
 
 ## 流程
 
+> **提问规则：每次 `ask_user_question` 只放一个问题。** 拿到回答后再决定下一问，
+> 不要一次把所有缺失字段列出来。顺序固定为：
+> `mode → aoi → sensor_types → max_resolution_m → target_coverage_pct`。
+> 条件字段只在对应模式下问：`min_sats_for_revisit` 才问 `target_max_gap_hours`；
+> `max_coverage_for_n` / `min_wait_for_n` 才问 `n_sats`。
+
 1. **确定任务模式**（必需）——四选一：
    `min_sats_for_coverage` 最少星达覆盖率 / `min_sats_for_revisit` 最少星达重访 /
    `max_coverage_for_n` 给定 N 颗最大覆盖 / `min_wait_for_n` 给定 N 颗最小等待。
@@ -52,9 +58,13 @@ when-to-use: 用户问"覆盖杭州 90% 要几颗星""3 颗星能覆盖多少""�
 
 收到这个错误时：
 
-- **有 `ask_user_question` 工具就用它**，按 `schema` 逐项追问；`options` 字段直接作为选项；
-  `aoi` 的选项必须来自 `list_aoi` 的返回，不要凭常识补充省外城市；
-- **没有就文本追问**，一次列全，不要一项一项问。
+- 只取 `missing` 里的**第一个**字段，用 `ask_user_question` 问**这一个**问题
+  （`questions` 数组只放 1 项）；拿到回答后再重新检查 `missing`，问下一个；
+- 不要一次列出全部缺失字段，也不要把多个问题塞进同一次调用；
+- `options` 直接作为选项；`aoi` 的选项必须来自 `list_aoi` 的返回，
+  不要凭常识补充省外城市；
+- 没有 `ask_user_question` 时用文本追问，同样一次只问一个；
+- 用户已经给过的字段直接跳过，不要重复问。
 
 无论哪种，都**不要替用户假设默认值**（除了 `sensor_types` 默认三类全开、`hours` 默认 72）。
 

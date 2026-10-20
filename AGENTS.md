@@ -47,6 +47,7 @@
 - 每个 skill 一个目录：`skills/<slug>/SKILL.md` + `COMMANDS.md`。
 - `COMMANDS.md` 每条命令写清：**用途 / 风险等级 / 是否需审批 / 示例 / 失败处理**。
 - 命令走 `run_command` 的注册子命令；Phase 2 不做拦截，Phase 3 按风险等级补门禁。
+- 追问一次一问：`ask_user_question` 的 `questions` 只放 1 项，等用户回答后再决定下一问；禁止一次抛出多个问题。
 - 新增 MCP 工具必须同步 §5.2 与 `COMMANDS.md`，并补一个调用测试。
 
 ## 5. 前端
