@@ -117,7 +117,20 @@ footer{margin-top:60px;padding-top:18px;border-top:1px solid var(--line);color:v
 @media (prefers-reduced-motion:reduce){
   *{animation:none!important;transition:none!important}
 }
+/* ---------- export ---------- */
+.export-pdf{position:fixed;top:16px;right:18px;z-index:9999;padding:8px 15px;border:1px solid rgba(72,199,217,.65);border-radius:999px;background:rgba(10,16,23,.9);color:var(--cyan);font:600 13px var(--sans);cursor:pointer;backdrop-filter:blur(8px);box-shadow:0 6px 20px rgba(0,0,0,.35)}
+.export-pdf:hover{background:rgba(72,199,217,.14);border-color:var(--cyan)}
+@media print{
+  .export-pdf{display:none}
+  body{display:block;background:#fff;color:#111}
+  .side{display:none}
+  main{padding:0;max-width:none}
+  section{break-inside:avoid}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  @page{size:A4;margin:12mm}
+}
 </style></head><body>
+<button class="export-pdf" type="button" onclick="window.print()" title="导出为 PDF">导出 PDF</button>
 
 <aside class="side">
   <div class="brand">
@@ -162,7 +175,7 @@ footer{margin-top:60px;padding-top:18px;border-top:1px solid var(--line);color:v
     {% if feasible %}<b>达标。</b>{% else %}<b class="flag">未达标。</b>{% endif %}
     实际覆盖 {{ "%.1f"|format(coverage_pct) }}%，重访 P95 {{ gap.p95_hours if gap.p95_hours is not none else "—" }} 小时，
     最大间隔 {{ gap.max_hours if gap.max_hours is not none else "—" }} 小时。
-    {% if uncovered %}<span class="flag">有 {{ uncovered }} 个格点在窗口内只被访问一次或从未被访问。</span>{% endif %}
+    {% if uncovered_grid %}<span class="flag">有 {{ uncovered_grid }} 个格点在窗口内从未被覆盖。</span>{% elif under_covered %}<span>有 {{ under_covered }} 个格点在窗口内只被访问一次，重访间隔按窗口长度计。</span>{% endif %}
   </div>
 
   <div class="strip">
@@ -171,7 +184,7 @@ footer{margin-top:60px;padding-top:18px;border-top:1px solid var(--line);color:v
     <div><div class="lab">重访 P95</div><div class="val">{{ gap.p95_hours if gap.p95_hours is not none else "—" }}<small>h</small></div></div>
     <div><div class="lab">MRT</div><div class="val">{{ gap.mrt_hours if gap.mrt_hours is not none else "—" }}<small>h</small></div></div>
     <div><div class="lab">网格</div><div class="val">{{ "%.3f"|format(grid_spacing) }}<small>°</small></div></div>
-    <div><div class="lab">未覆盖格点</div><div class="val">{{ uncovered }}</div></div>
+    <div><div class="lab">未覆盖格点</div><div class="val">{{ uncovered_grid }}</div></div>
   </div>
 
   <section id="plan">
@@ -228,6 +241,7 @@ footer{margin-top:60px;padding-top:18px;border-top:1px solid var(--line);color:v
     <h2>口径与精度</h2>
     <ul class="notes">
       {% for n in notes %}<li>{{ n }}</li>{% endfor %}
+      {% if single_pass %}<li><b>窗口内仅 1 次有效过境</b>：P95 / MRT / MAX 均等于窗口长度 {{ window_hours }} h，只说明本次单次覆盖，不能作为重访能力。</li>{% endif %}
       <li>覆盖率与重访间隔均为估算值，不得作为精确面积或保证重访的依据。</li>
     </ul>
     <footer>{{ algo_label }}<br>生成于 {{ generated_at }} · 网格 {{ "%.3f"|format(grid_spacing) }}° / {{ grid_points }} 点</footer>

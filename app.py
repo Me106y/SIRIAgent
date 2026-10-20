@@ -13,7 +13,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from flask import Flask, Response, jsonify, request, send_from_directory, stream_with_context
+from flask import Flask, Response, jsonify, request, send_file, send_from_directory, stream_with_context
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 STATIC_DIR = PROJECT_ROOT / "static"
@@ -370,6 +370,28 @@ def chat_cancel() -> Response:
     """中止当前一轮：取消未答问题并重建 runtime，释放单轮锁。"""
     manager.abort()
     return jsonify({"ok": True})
+
+
+@app.get("/api/files")
+def serve_generated_file() -> Response:
+    """把模型生成的文件（报告等）安全地提供给前端点击打开。"""
+    raw = (request.args.get("path") or "").strip()
+    if not raw:
+        return jsonify({"error": "missing path"}), 400
+    candidate = Path(raw).expanduser()
+    if not candidate.is_absolute():
+        candidate = PROJECT_ROOT / candidate
+    try:
+        resolved = candidate.resolve(strict=True)
+    except (OSError, RuntimeError):
+        return jsonify({"error": "not found"}), 404
+    if not resolved.is_relative_to(PROJECT_ROOT):
+        return jsonify({"error": "forbidden"}), 403
+    if not resolved.is_file():
+        return jsonify({"error": "not found"}), 404
+    response = send_file(resolved, as_attachment=False, download_name=resolved.name)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
 
 
 @app.get("/api/config")

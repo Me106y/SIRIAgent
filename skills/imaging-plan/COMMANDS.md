@@ -63,7 +63,7 @@ rs-service plan coverage \
 ### 渲染
 
 ```bash
-skills/imaging-plan/scripts/render.sh --in plan.json --out /tmp/report.html
+skills/imaging-plan/scripts/render.sh --in plan.json --out reports/report.html
 ```
 
 - 风险：write（只写 HTML 文件）。

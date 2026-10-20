@@ -44,7 +44,7 @@ when-to-use: 用户问"覆盖杭州 90% 要几颗星""3 颗星能覆盖多少""�
 4. **确定最大分辨率**（必需，单位米）——数值越小越清晰。注意这是"不差于"。
 5. **确定目标覆盖率**（必需，百分比）。
 6. **调用 `mcp__rs-service__plan_coverage`**，拿 JSON。
-7. **渲染报告**：用 `skills/imaging-plan/scripts/render.sh --in plan.json --out report.html`（固定走项目 venv，含 jinja2），生成 HTML，给出绝对路径。
+7. **渲染报告**：用 `skills/imaging-plan/scripts/render.sh --in plan.json --out reports/<名称>.html`（固定走项目 venv，含 jinja2），生成 HTML；给出 `reports/` 下的绝对路径，前端会把它变成可点击链接。
 
 ## 参数不全怎么办
 
