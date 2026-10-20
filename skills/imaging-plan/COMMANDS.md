@@ -9,7 +9,7 @@
 | `mcp__rs-service__list_aoi` | 列出可用 AOI（只支持浙江） | read | 否 | `{"level": "city"}` | 空 → 检查 `aoi` 表是否已 seed |
 | `mcp__rs-service__plan_coverage` | 求解编成方案（首选） | write | 否 | 见下 | 按 `error` 分诊，见"错误码" |
 | `rs-service plan coverage --mode … --aoi …` | 同上（CLI 等价实现） | write | 否 | 见下 | 退出码 2 表示业务错误，stderr 有 JSON |
-| `python scripts/render.py --in plan.json --out report.html` | 渲染 HTML 报告 | write | 否 | 见下 | 文件不存在 / JSON 缺 `data` → 检查上一步 |
+| `scripts/render.sh --in plan.json --out report.html` | 渲染 HTML 报告（固定项目 venv） | write | 否 | 见下 | 文件不存在 / JSON 缺 `data` → 检查上一步 |
 
 > `plan_coverage` 会写 `coverage_snapshot`（覆盖率、网格间距、算法版本），因此风险等级是 **write**；只读场景可传 `persist=false`。
 
@@ -63,7 +63,7 @@ rs-service plan coverage \
 ### 渲染
 
 ```bash
-python scripts/render.py --in plan.json --out /tmp/report.html
+skills/imaging-plan/scripts/render.sh --in plan.json --out /tmp/report.html
 ```
 
 - 风险：write（只写 HTML 文件）。
