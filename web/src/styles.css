@@ -1418,7 +1418,7 @@ button {
 
 .question-options {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 8px;
 }
 
@@ -1427,7 +1427,8 @@ button {
   flex-direction: column;
   align-items: flex-start;
   gap: 2px;
-  min-width: 140px;
+  width: 100%;
+  min-width: 0;
   padding: 8px 12px;
   border: 1px solid var(--line);
   border-radius: 10px;
