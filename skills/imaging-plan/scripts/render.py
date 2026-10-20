@@ -102,6 +102,12 @@ def main() -> int:
     notes = list(data.get("notes") or [])
     if data.get("cloud", {}).get("used"):
         notes.insert(0, f'光学卫星已按云量过滤（阈值 {data["cloud"]["threshold_pct"]:.0f}%），SAR 不受影响。')
+    notes = list(dict.fromkeys(notes))
+
+    # 口径区分：从未覆盖的格点 vs. 窗口内只被访问一次（重访按窗口长度计）的格点。
+    uncovered_grid = len(data.get("uncovered_points") or [])
+    under_covered = plan.get("under_covered_points") or 0
+    single_pass = len(events) <= 1
 
     env = Environment(loader=FileSystemLoader(str(TEMPLATES)),
                       autoescape=select_autoescape(["html"]))
@@ -120,7 +126,10 @@ def main() -> int:
         coverage_pct=plan["coverage_pct"],
         feasible=plan["feasible"],
         gap=gap,
-        uncovered=plan.get("under_covered_points") or 0,
+        uncovered=uncovered_grid,
+        uncovered_grid=uncovered_grid,
+        under_covered=under_covered,
+        single_pass=single_pass,
         sats=sats,
         grid_spacing=data["grid"]["spacing_deg"],
         grid_points=total_points,
