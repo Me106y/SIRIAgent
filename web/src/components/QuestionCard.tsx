@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 import { MapDrawModal } from "./MapDrawModal";
-import type { MessageBlock, QuestionAnswer } from "../types";
+import type { AnswerResult, MessageBlock, QuestionAnswer } from "../types";
 
 type QuestionBlock = Extract<MessageBlock, { kind: "question" }>;
 
@@ -12,7 +12,7 @@ interface Props {
     blockId: string,
     callId: string,
     answers: QuestionAnswer[],
-  ) => Promise<boolean>;
+  ) => Promise<AnswerResult>;
   onRevise?: (text: string) => void;
   onCancel?: () => void;
 }
@@ -22,7 +22,7 @@ export function QuestionCard({ block, interactive = true, onAnswer, onRevise, on
   const [custom, setCustom] = useState<Record<string, string>>({});
   const [step, setStep] = useState(0);
   const [sending, setSending] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [error, setError] = useState<"stale" | "network" | null>(null);
   const [revising, setRevising] = useState(false);
   const [drawOpen, setDrawOpen] = useState(false);
   const [revisedAnswers, setRevisedAnswers] = useState<QuestionAnswer[] | null>(null);
@@ -155,9 +155,15 @@ export function QuestionCard({ block, interactive = true, onAnswer, onRevise, on
       return;
     }
     setSending(true);
-    const ok = await onAnswer(block.id, block.callId, answers);
+    setError(null);
+    let result: AnswerResult = "network";
+    try {
+      result = await onAnswer(block.id, block.callId, answers);
+    } catch {
+      result = "network";
+    }
     setSending(false);
-    if (!ok) setFailed(true);
+    if (result !== "ok") setError(result);
   };
 
   const advance = () => {
@@ -238,7 +244,13 @@ export function QuestionCard({ block, interactive = true, onAnswer, onRevise, on
         </button>
       )}
 
-      {failed && <div className="question-error">提交失败，请重试</div>}
+      {error && (
+        <div className="question-error">
+          {error === "stale"
+            ? "这个问题已失效（本轮可能已结束），请重新发送你的需求"
+            : "提交失败：网络中断，请再试一次"}
+        </div>
+      )}
 
       <div className="question-nav">
         {index > 0 && (

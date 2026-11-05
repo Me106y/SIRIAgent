@@ -53,6 +53,7 @@ export function Globe({
   focusRef.current = { lat: footprintLat, lon: footprintLon, radius: footprintRadiusKm };
   const onSelectRef = useRef(onSelect);
   onSelectRef.current = onSelect;
+  const userMovedRef = useRef(false);
 
   useEffect(() => {
     if (!enabled) return;
@@ -117,9 +118,31 @@ export function Globe({
         .catch(() => undefined);
     }, 1500);
     viewer.scene.fog.enabled = true;
-    viewer.camera.setView({
-      destination: cesium.Cartesian3.fromDegrees(112, 27, 20_000_000),
-    });
+
+    // 地球是全高主视觉：按容器宽高比取景，窄而高的中栏也不会把球体裁掉。
+    const fitGlobe = () => {
+      const element = containerRef.current;
+      if (!element || element.clientWidth === 0 || element.clientHeight === 0) return;
+      const aspect = element.clientWidth / element.clientHeight;
+      const frustum = viewer.camera.frustum;
+      const fovy = ("fovy" in frustum ? frustum.fovy : Math.PI / 3) ?? Math.PI / 3;
+      const hfov = 2 * Math.atan(Math.tan(fovy / 2) * aspect);
+      const angular = Math.min(fovy, hfov) * 0.76;
+      const radius = 6_371_000;
+      const distance = radius / Math.tan(angular / 2);
+      viewer.camera.setView({
+        destination: cesium.Cartesian3.fromDegrees(112, 27, distance - radius),
+      });
+    };
+    fitGlobe();
+
+    // 用户一旦自己动过相机，resize 就不再重新取景。
+    const markMoved = () => {
+      userMovedRef.current = true;
+    };
+    const canvas = viewer.scene.canvas;
+    canvas.addEventListener("pointerdown", markMoved);
+    canvas.addEventListener("wheel", markMoved, { passive: true });
     const credit = viewer.cesiumWidget.creditContainer as HTMLElement;
     credit.style.display = "none";
 
@@ -137,9 +160,21 @@ export function Globe({
 
     viewerRef.current = viewer;
     (window as unknown as { __viewer?: CesiumModule.Viewer }).__viewer = viewer;
+
+    // 三栏布局在断点切换时容器尺寸会变，window resize 不一定触发。
+    const resizeObserver = new ResizeObserver(() => {
+      if (viewer.isDestroyed()) return;
+      viewer.resize();
+      if (!userMovedRef.current) fitGlobe();
+    });
+    if (containerRef.current) resizeObserver.observe(containerRef.current);
+
     return () => {
       imageryCancelled = true;
       window.clearTimeout(imageryTimer);
+      resizeObserver.disconnect();
+      canvas.removeEventListener("pointerdown", markMoved);
+      canvas.removeEventListener("wheel", markMoved);
       handler.destroy();
       viewer.destroy();
       viewerRef.current = null;
@@ -234,6 +269,7 @@ export function Globe({
     if (!cesium || hangzhouToken === 0) return;
     const viewer = viewerRef.current;
     if (!viewer) return;
+    userMovedRef.current = true;
     viewer.camera.flyTo({
       destination: cesium.Cartesian3.fromDegrees(120.16, 30.27, 650_000),
       orientation: {
@@ -319,6 +355,7 @@ export function Globe({
     if (!viewer || target.lat == null || target.lon == null) return;
     const radius = target.radius ?? 100;
     const height = Math.min(6_000_000, Math.max(400_000, radius * 1000 * 8));
+    userMovedRef.current = true;
     viewer.camera.flyTo({
       destination: cesium.Cartesian3.fromDegrees(target.lon, target.lat, height),
       duration: 1.1,

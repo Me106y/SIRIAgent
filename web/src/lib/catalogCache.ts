@@ -1,6 +1,6 @@
 import type { Satellite } from "../types";
 
-const KEY = "siria:catalog:v1";
+const KEY = "siria:catalog:v2";
 const MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 interface CachedCatalog {

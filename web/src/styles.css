@@ -190,26 +190,23 @@ button {
 
 /* ---------- 版面 ---------- */
 .layout {
+  --catalog-w: 344px;
+  --agent-w: 464px;
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(320px, 34%) minmax(0, 1fr);
+  grid-template-columns: var(--catalog-w) minmax(0, 1fr) var(--agent-w);
+  grid-template-rows: minmax(0, 1fr);
+  grid-template-areas: "catalog globe agent";
   gap: 12px;
   padding: 12px;
 }
 
-.left-col {
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  overflow: hidden;
-}
-
 .globe-card {
+  grid-area: globe;
   position: relative;
-  flex: 0 0 27%;
-  min-height: 200px;
+  min-width: 0;
+  min-height: 0;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   overflow: hidden;
@@ -293,7 +290,7 @@ button {
 
 /* ---------- 卫星面板 ---------- */
 .sat-panel {
-  flex: 1;
+  grid-area: catalog;
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -441,6 +438,7 @@ button {
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .detail-head h3 {
@@ -508,6 +506,7 @@ button {
 
 /* ---------- Agent 面板 ---------- */
 .agent-panel {
+  grid-area: agent;
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -524,7 +523,7 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 13px 16px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--line-soft);
 }
 
@@ -546,7 +545,7 @@ button {
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: 18px 20px 10px;
+  padding: 16px 16px 8px;
   scroll-behavior: smooth;
 }
 
@@ -565,7 +564,7 @@ button {
 
 .welcome h1 {
   margin: 0 0 8px;
-  font-size: 28px;
+  font-size: clamp(21px, 1.5vw + 12px, 26px);
   letter-spacing: -0.5px;
 }
 
@@ -584,12 +583,12 @@ button {
 
 .message {
   margin: 0 0 16px;
-  max-width: 86%;
+  max-width: 92%;
 }
 
 .message.user {
   width: fit-content;
-  max-width: 82%;
+  max-width: 90%;
   margin-left: auto;
 }
 
@@ -816,6 +815,13 @@ button {
   font-family: var(--mono);
   font-size: 10px;
   white-space: nowrap;
+}
+
+.work-count {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .work-current {
@@ -1107,7 +1113,7 @@ button {
 
 .composer {
   flex: 0 0 auto;
-  padding: 12px 16px 16px;
+  padding: 12px 14px 14px;
   border-top: 1px solid var(--line-soft);
   background: linear-gradient(180deg, rgba(4, 10, 18, 0.2), rgba(4, 10, 18, 0.62));
 }
@@ -1321,7 +1327,28 @@ button {
   background: transparent;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1919px) {
+  .layout {
+    --catalog-w: 316px;
+    --agent-w: 412px;
+  }
+}
+
+@media (max-width: 1439px) {
+  .layout {
+    --catalog-w: 292px;
+    --agent-w: 376px;
+  }
+}
+
+@media (max-width: 1279px) {
+  .layout {
+    --catalog-w: 272px;
+    --agent-w: 340px;
+  }
+}
+
+@media (max-width: 1023px) {
   body {
     overflow: auto;
   }
@@ -1332,29 +1359,25 @@ button {
   }
 
   .layout {
-    display: flex;
-    flex-direction: column;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(300px, 40vh) auto auto;
+    grid-template-areas:
+      "globe"
+      "catalog"
+      "agent";
     overflow: visible;
     min-height: 0;
   }
 
-  .left-col {
-    flex: none;
-    min-height: auto;
-    overflow: visible;
-  }
-
   .globe-card {
-    flex: 0 0 340px;
+    min-height: 300px;
   }
 
   .sat-panel {
-    flex: none;
     min-height: 520px;
   }
 
   .agent-panel {
-    flex: none;
     min-height: 640px;
   }
 

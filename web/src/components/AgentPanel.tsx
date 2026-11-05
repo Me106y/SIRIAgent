@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { api } from "../api";
-import type { ChatMessage, MessageBlock, QuestionAnswer, Skill } from "../types";
+import type { AnswerResult, ChatMessage, MessageBlock, QuestionAnswer, Skill } from "../types";
 import { Markdown } from "./Markdown";
 import { QuestionCard } from "./QuestionCard";
 
@@ -11,7 +11,7 @@ interface Props {
   sessionId?: string;
   onSend: (text: string) => void;
   onReset: () => void;
-  onAnswer: (blockId: string, callId: string, answers: QuestionAnswer[]) => Promise<boolean>;
+  onAnswer: (blockId: string, callId: string, answers: QuestionAnswer[]) => Promise<AnswerResult>;
   onRevise: (text: string) => void;
   onCancel: () => void;
 }
@@ -19,7 +19,7 @@ interface Props {
 const EXAMPLES = [
   "杭州明天有哪些卫星过境？",
   "GF-2 现在在什么位置？",
-  "帮我看看这 111 颗星里，哪些是 SAR。",
+  "帮我看看这 102 颗星里，哪些是 SAR。",
 ];
 
 function CheckIcon() {

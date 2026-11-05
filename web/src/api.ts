@@ -4,6 +4,7 @@ import type {
   HangzhouBoundary,
   PassItem,
   PositionItem,
+  AnswerResult,
   QuestionAnswer,
   Satellite,
   SatelliteDetail,
@@ -100,16 +101,51 @@ export async function chat(message: string, sessionId?: string): Promise<ChatRes
   return payload;
 }
 
-export async function streamChat(
+export interface TurnHandle {
+  turn_id: string;
+  session_id: string;
+}
+
+export class TurnGoneError extends Error {}
+export class TurnBusyError extends Error {}
+
+export async function startTurn(
   message: string,
   sessionId: string | undefined,
-  onEvent: (event: StreamEvent) => void,
-): Promise<void> {
-  const response = await fetch("/api/chat/stream", {
+): Promise<TurnHandle> {
+  const response = await fetch("/api/chat/turns", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ message, session_id: sessionId }),
   });
+  const payload = (await response.json().catch(() => null)) as
+    | { ok?: boolean; turn_id?: string; session_id?: string; error?: string }
+    | null;
+  if (response.status === 409) {
+    throw new TurnBusyError(payload?.error || "上一轮仍在运行。");
+  }
+  if (!response.ok || !payload?.ok || !payload.turn_id) {
+    throw new Error(payload?.error || `HTTP ${response.status}`);
+  }
+  return { turn_id: payload.turn_id, session_id: payload.session_id || "" };
+}
+
+/**
+ * 读取一轮事件。返回下一次续读的游标；收到 done/error/closed 才算正常结束。
+ * 连接被隧道掐断时抛错，调用方用同一个 turn_id + 游标重连即可补发。
+ */
+export async function streamTurn(
+  turnId: string,
+  cursor: number,
+  onEvent: (event: StreamEvent) => void,
+): Promise<number> {
+  const response = await fetch(
+    `/api/chat/turns/${encodeURIComponent(turnId)}/events?cursor=${cursor}`,
+    { headers: { Accept: "text/event-stream" } },
+  );
+  if (response.status === 404) {
+    throw new TurnGoneError("会话回合已过期");
+  }
   if (!response.ok || !response.body) {
     const detail = await response.text().catch(() => "");
     throw new Error(detail || `HTTP ${response.status}`);
@@ -117,41 +153,104 @@ export async function streamChat(
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    let separator = buffer.indexOf("\n\n");
-    while (separator >= 0) {
-      const frame = buffer.slice(0, separator);
-      buffer = buffer.slice(separator + 2);
-      for (const line of frame.split("\n")) {
-        if (!line.startsWith("data:")) continue;
-        const raw = line.slice(5).trim();
-        if (!raw) continue;
-        try {
-          onEvent(JSON.parse(raw) as StreamEvent);
-        } catch {
-          // 忽略无法解析的保活帧
-        }
+  let nextCursor = cursor;
+  let finished = false;
+
+  const consume = (frame: string) => {
+    let frameId: number | null = null;
+    let data: string | null = null;
+    for (const line of frame.split("\n")) {
+      if (line.startsWith("id:")) {
+        const parsed = Number(line.slice(3).trim());
+        if (Number.isFinite(parsed)) frameId = parsed;
+      } else if (line.startsWith("data:")) {
+        data = (data ?? "") + line.slice(5).trim();
       }
-      separator = buffer.indexOf("\n\n");
     }
+    if (data === null) return;
+    let event: StreamEvent;
+    try {
+      event = JSON.parse(data) as StreamEvent;
+    } catch {
+      // 帧被截断时不要推进游标，重连后服务器会重发这一条。
+      return;
+    }
+    onEvent(event);
+    if (frameId !== null) nextCursor = frameId + 1;
+    if (
+      event.type === "done" ||
+      event.type === "error" ||
+      event.type === "closed"
+    ) {
+      finished = true;
+    }
+  };
+
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let separator = buffer.indexOf("\n\n");
+      while (separator >= 0) {
+        const frame = buffer.slice(0, separator);
+        buffer = buffer.slice(separator + 2);
+        consume(frame);
+        separator = buffer.indexOf("\n\n");
+      }
+    }
+  } finally {
+    reader.releaseLock();
   }
+
+  if (!finished) {
+    throw new Error("事件流提前结束");
+  }
+  return nextCursor;
 }
 
+const ANSWER_TIMEOUT_MS = 10_000;
+// 隧道抖动常持续几十秒：答复比 SSE 更重要，给足重试预算（最坏约 1 分钟）。
+const ANSWER_ATTEMPTS = 5;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+/**
+ * 提交问题答复。隧道抖动时答复 POST 可能被中间层打断（浏览器看到 502/504），
+ * 而服务端的问题仍在等待，所以对网络错误/5xx 自动重试；服务端按 callId 幂等，
+ * 即使上一次其实已经送达，重试也会返回成功。
+ */
 export async function answerQuestion(
   callId: string,
   answers: QuestionAnswer[],
-): Promise<boolean> {
-  const response = await fetch("/api/question/answer", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ callId, answers }),
-  });
-  if (!response.ok) return false;
-  const payload = (await response.json().catch(() => null)) as { ok?: boolean } | null;
-  return Boolean(payload?.ok);
+): Promise<AnswerResult> {
+  for (let attempt = 1; attempt <= ANSWER_ATTEMPTS; attempt += 1) {
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), ANSWER_TIMEOUT_MS);
+    try {
+      const response = await fetch("/api/question/answer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ callId, answers }),
+        signal: controller.signal,
+      });
+      if (response.ok) {
+        const payload = (await response.json().catch(() => null)) as { ok?: boolean } | null;
+        return payload?.ok ? "ok" : "stale";
+      }
+      const transient =
+        response.status >= 500 || response.status === 408 || response.status === 429;
+      if (!transient || attempt === ANSWER_ATTEMPTS) return "network";
+    } catch {
+      if (attempt === ANSWER_ATTEMPTS) return "network";
+    } finally {
+      window.clearTimeout(timer);
+    }
+    await sleep(Math.min(3000, 700 * attempt));
+  }
+  return "network";
 }
 
 export async function cancelChat(): Promise<void> {

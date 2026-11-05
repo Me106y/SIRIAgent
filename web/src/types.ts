@@ -111,6 +111,8 @@ export interface QuestionItem {
   multi_select?: boolean;
 }
 
+export type AnswerResult = "ok" | "stale" | "network";
+
 export interface QuestionAnswer {
   id: string;
   selected: string[];
@@ -166,7 +168,8 @@ export type StreamEvent =
       finish_reason?: string | null;
       elapsed_ms?: number;
     }
-  | { type: "error"; message: string };
+  | { type: "error"; message: string }
+  | { type: "closed" };
 
 export interface HangzhouBoundary {
   type: "FeatureCollection";
