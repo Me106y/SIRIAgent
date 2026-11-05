@@ -2768,3 +2768,10 @@ button {
 .plan-field input[type="datetime-local"] {
   color-scheme: dark;
 }
+
+.plan-warning {
+  margin: 0;
+  color: #fcd34d;
+  font-size: 12px;
+  line-height: 1.6;
+}
