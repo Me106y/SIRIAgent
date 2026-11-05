@@ -2,12 +2,11 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
-import queue
 import re
 import shutil
 import subprocess
-import threading
 import time
 import urllib.error
 import urllib.request
@@ -22,7 +21,7 @@ PATCH_FILE = PROJECT_ROOT / "headless.patch.yml"
 SKILLS_DIR = PROJECT_ROOT / "skills"
 RS_SERVICE_BASE = os.environ.get("RS_SERVICE_BASE", "http://127.0.0.1:8766/api/v1")
 
-from sdk_runtime import manager  # noqa: E402  (项目根模块)
+from sdk_runtime import Turn, TurnBusy, manager  # noqa: E402  (项目根模块)
 _RS_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
 
@@ -66,6 +65,9 @@ DSH_TIMEOUT = int(os.environ.get("DSH_TIMEOUT", "240"))
 MAX_MESSAGE_CHARS = int(os.environ.get("MAX_MESSAGE_CHARS", "12000"))
 
 app = Flask(__name__, static_folder=None)
+# gunicorn 只把 WARNING 以上的 root 日志放出来；回合/答复日志是排查依据，显式开到 INFO。
+app.logger.setLevel(logging.INFO)
+logging.getLogger("siriagent.turns").setLevel(logging.INFO)
 
 
 def _event_text(events: list[dict], event_type: str) -> str:
@@ -362,12 +364,18 @@ def question_answer() -> Response:
     answers = body.get("answers")
     if not call_id or not isinstance(answers, list):
         return jsonify({"ok": False, "error": "callId 与 answers 必填"}), 400
-    return jsonify({"ok": manager.answer(call_id, answers)})
+    ok = manager.answer(call_id, answers)
+    if ok:
+        app.logger.info("answer ok call_id=%s items=%d", call_id, len(answers))
+    else:
+        app.logger.warning("answer miss call_id=%s items=%d", call_id, len(answers))
+    return jsonify({"ok": ok})
 
 
 @app.post("/api/chat/cancel")
 def chat_cancel() -> Response:
     """中止当前一轮：取消未答问题并重建 runtime，释放单轮锁。"""
+    app.logger.info("turn cancel requested")
     manager.abort()
     return jsonify({"ok": True})
 
@@ -427,9 +435,47 @@ def health():
     return response
 
 
-@app.post("/api/chat/stream")
-def chat_stream():
-    """SDK 事件流：tool_call / tool_result / text / done，直接以 SSE 返回。"""
+def _sse_response(turn: Turn, cursor: int) -> Response:
+    """把回合事件按游标以 SSE 推给浏览器；客户端断开只 detach，不终止回合。"""
+
+    def generate():
+        yield "retry: 3000\n\n"
+        for item in manager.attach(turn, cursor):
+            if item is None:
+                yield ": keep-alive\n\n"
+                continue
+            seq, event = item
+            yield f"id: {seq}\ndata: {json.dumps(event, ensure_ascii=False)}\n\n"
+
+    return Response(
+        stream_with_context(generate()),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+            "X-Turn-Id": turn.id,
+        },
+    )
+
+
+def _turn_cursor() -> int:
+    """断线重连游标：优先 ?cursor=，其次 SSE 标准的 Last-Event-ID。"""
+    raw = request.args.get("cursor")
+    if raw is not None:
+        try:
+            return max(0, int(raw))
+        except ValueError:
+            return 0
+    last = request.headers.get("Last-Event-ID")
+    if last and last.isdigit():
+        return int(last) + 1
+    return 0
+
+
+@app.post("/api/chat/turns")
+def chat_turn_start():
+    """开一轮对话，立刻返回 turn_id；事件走 SSE，断线可用 cursor 续读。"""
     body = request.get_json(silent=True) or {}
     message = str(body.get("message", "")).strip()
     session_id = str(body.get("session_id") or "").strip() or None
@@ -446,44 +492,55 @@ def chat_stream():
             ),
             413,
         )
+    try:
+        turn = manager.start(message, session_id)
+    except TurnBusy as exc:
+        return jsonify({"ok": False, "busy": True, "error": str(exc)}), 409
 
-    def generate():
-        events: queue.Queue[dict | None] = queue.Queue()
-
-        def pump() -> None:
-            try:
-                for item in manager.stream(message, session_id):
-                    events.put(item)
-            except Exception as exc:  # noqa: BLE001 - 转成 SSE error
-                events.put({"type": "error", "message": f"{type(exc).__name__}: {exc}"})
-            finally:
-                events.put(None)
-
-        threading.Thread(target=pump, name="sse-pump", daemon=True).start()
-        yield "retry: 3000\n\n"
-        try:
-            while True:
-                try:
-                    event = events.get(timeout=10)
-                except queue.Empty:
-                    yield ": keep-alive\n\n"
-                    continue
-                if event is None:
-                    break
-                yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
-        finally:
-            # 浏览器断开时取消未回答问题，释放下一轮对话。
-            manager.cancel_questions()
-
-    return Response(
-        stream_with_context(generate()),
-        mimetype="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no",
-            "Connection": "keep-alive",
-        },
+    response = jsonify(
+        {"ok": True, "turn_id": turn.id, "session_id": turn.session_id}
     )
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@app.get("/api/chat/turns/<turn_id>/events")
+def chat_turn_events(turn_id: str):
+    """续读某轮事件。浏览器断线后带 cursor 重连即可补发，不会打断模型。"""
+    turn = manager.turn(turn_id)
+    if turn is None:
+        app.logger.warning("turn miss %s (events)", turn_id)
+        return jsonify({"ok": False, "error": "turn_not_found", "turn_id": turn_id}), 404
+    cursor = _turn_cursor()
+    if cursor:
+        app.logger.info("turn resume %s cursor=%d", turn_id, cursor)
+    return _sse_response(turn, cursor)
+
+
+@app.post("/api/chat/stream")
+def chat_stream():
+    """兼容旧入口：开一轮并直接 SSE 返回（新前端走 /api/chat/turns + 续读）。"""
+    body = request.get_json(silent=True) or {}
+    message = str(body.get("message", "")).strip()
+    session_id = str(body.get("session_id") or "").strip() or None
+
+    if not message:
+        return jsonify({"ok": False, "error": "消息不能为空。"}), 400
+    if len(message) > MAX_MESSAGE_CHARS:
+        return (
+            jsonify(
+                {
+                    "ok": False,
+                    "error": f"消息太长（{len(message)} 字符），上限 {MAX_MESSAGE_CHARS}。",
+                }
+            ),
+            413,
+        )
+    try:
+        turn = manager.start(message, session_id)
+    except TurnBusy as exc:
+        return jsonify({"ok": False, "busy": True, "error": str(exc)}), 409
+    return _sse_response(turn, 0)
 
 
 @app.post("/api/chat")
