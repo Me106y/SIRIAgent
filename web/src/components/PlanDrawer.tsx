@@ -185,12 +185,13 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
   const [drawOpen, setDrawOpen] = useState(false);
   const [startLocal, setStartLocal] = useState(nowLocal);
   const [horizon, setHorizon] = useState(72);
+  const [autoExpand, setAutoExpand] = useState(false);
   const [sensors, setSensors] = useState<string[]>(["optical", "hyperspectral"]);
   const [maxResolution, setMaxResolution] = useState(10);
   const [pointing, setPointing] = useState<"nadir" | "targeted">("nadir");
   const [cloud, setCloud] = useState(true);
   const [fields, setFields] = useState<Record<string, string>>({
-    temporal_coverage_target_pct: "90",
+    temporal_coverage_target_pct: "10",
     mrt_target_minutes: "24",
     n_budget: "3",
   });
@@ -242,6 +243,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
         setProvinceCode(nextProvince);
         setCityCode(firstCity?.code ?? "");
         setDistrictCode("");
+        setAutoExpand(Boolean(payload.defaults?.auto_expand));
       })
       .catch((reason: unknown) => {
         if (alive) setOptionsError(reason instanceof Error ? reason.message : "无法读取规划选项");
@@ -317,6 +319,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
       aoi_wkt: aoiWkt || null,
       start_utc: new Date(startLocal).toISOString(),
       horizon_h: horizon,
+      auto_expand: operation === "task1" ? autoExpand : false,
       sensor_types: sensors,
       max_resolution_m: maxResolution,
       pointing,
@@ -400,7 +403,10 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
               role="radio"
               aria-checked={active}
               className={`plan-task ${active ? "active" : ""}`}
-              onClick={() => setOperation(item.operation)}
+              onClick={() => {
+                setOperation(item.operation);
+                if (item.operation !== "task1") setAutoExpand(false);
+              }}
             >
               <span className="plan-task-mark">{active ? <CheckIcon /> : String(index + 1)}</span>
               <span className="plan-task-copy">
@@ -560,6 +566,21 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
         ))}
       </div>
       <p className="plan-note">开始时间按本机时区填写，提交时转成 UTC。</p>
+      {(task?.supports_auto_expand ?? operation === "task1") ? (
+        <label className="plan-switch">
+          <input
+            type="checkbox"
+            checked={autoExpand}
+            onChange={(event) => setAutoExpand(event.target.checked)}
+          />
+          <span>
+            达不到目标时自动扩窗
+            <small>先试当前窗口，再试 72h；最多 2 次求解，报告会标注实际窗口。7 天请手动设置窗口。仅 task1。</small>
+          </span>
+        </label>
+      ) : (
+        <p className="plan-note">此任务按你给定的窗口计算，不会自动扩窗。</p>
+      )}
     </div>
   );
 
@@ -585,11 +606,19 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
               }
               min={name === "mrt_target_minutes" ? 0 : 1}
               max={name === "n_budget" ? 500 : name === "temporal_coverage_target_pct" ? 100 : 10_000}
-              placeholder={name === "n_budget" ? "3" : name === "mrt_target_minutes" ? "24" : "90"}
+              placeholder={name === "n_budget" ? "3" : name === "mrt_target_minutes" ? "24" : "10"}
             />
           </div>
         ))}
       </div>
+
+      {operation === "task1" &&
+      Number(fields.temporal_coverage_target_pct || 0) > 50 &&
+      horizon <= 72 ? (
+        <p className="plan-warning">
+          目标时间覆盖率超过 50%；72 小时内通常不可达，建议 10% 左右或更长窗口。
+        </p>
+      ) : null}
 
       <fieldset className="plan-fieldset">
         <legend>传感器</legend>
@@ -659,18 +688,27 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
     </div>
   );
 
+  const tle = options?.tle;
+  const tleStale = Boolean(tle?.stale);
+  const tleAge = tle?.max_age_hours;
   const result = job?.result ?? null;
 
   const renderResult = (value: PlanResult) => {
     const cards = value.summary_cards ?? {};
     const sats = value.report_data?.sats ?? [];
+    const target = value.targets?.temporal_coverage_pct;
+    const windowInfo = value.window;
+    const expanded = Boolean(windowInfo?.expanded);
+    const usedHorizon = windowInfo?.used_horizon_h;
+    const requestedHorizon = windowInfo?.requested_horizon_h;
     return (
       <div className="plan-result">
         <div className={`plan-verdict ${value.feasible ? "ok" : "warn"}`}>
           <strong>{value.feasible ? "目标可行" : "目标未达成"}</strong>
           <span>
-            {value.optimality ?? "—"} · 候选 {value.candidate_count ?? "—"} 颗 · 未参与{" "}
-            {value.blocked_count ?? 0} 颗
+            {value.optimality ?? "—"} · 窗口 {usedHorizon ?? "—"}h
+            {expanded ? `（请求 ${requestedHorizon}h，已扩窗）` : ""} · 候选{" "}
+            {value.candidate_count ?? "—"} 颗 · 未参与 {value.blocked_count ?? 0} 颗
           </span>
         </div>
         <div className="plan-stats">
@@ -679,7 +717,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
             <strong>{cards.satellite_count ?? sats.length}</strong>
           </div>
           <div>
-            <span>达标面积</span>
+            <span>{target != null ? `达标面积（目标 ${target}%）` : "达标面积"}</span>
             <strong>{formatNumber(cards.qualified_area_pct)}%</strong>
           </div>
           <div>
@@ -691,6 +729,17 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
             <strong>{formatNumber(cards.area_weighted_mrt_minutes, 0)} 分</strong>
           </div>
         </div>
+
+        {expanded ? (
+          <p className="plan-note">
+            请求窗口 {requestedHorizon}h，实际按 {usedHorizon}h 计算；报告按实际窗口展示。
+          </p>
+        ) : null}
+        {value.tle?.degraded ? (
+          <p className="plan-warning">
+            TLE 最大年龄 {value.tle.max_age_hours}h（&gt;72h），结果按 degraded 处理。
+          </p>
+        ) : null}
 
         {sats.length > 0 ? (
           <table className="plan-table">
@@ -793,7 +842,12 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
       ) : null}
 
       {!jobId ? (
-        <button type="button" className="plan-solve" onClick={() => void solve()}>
+        <button
+          type="button"
+          className="plan-solve"
+          onClick={() => void solve()}
+          disabled={tleStale}
+        >
           开始求解
           <ArrowIcon />
         </button>
@@ -887,6 +941,19 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
             </div>
           ) : null}
           {!options && !optionsError ? <div className="plan-loading">正在读取任务与范围…</div> : null}
+          {options && tleStale ? (
+            <div className="plan-error" role="alert">
+              <strong>TLE 已过期</strong>
+              <p>
+                最新 TLE 年龄 {tleAge ?? "—"} 小时（超过 7 天）；先运行
+                <code> rs-service sync</code> 再规划。
+              </p>
+            </div>
+          ) : options && tle?.degraded ? (
+            <p className="plan-warning">
+              TLE 最大年龄 {tleAge}h（&gt;72h）；本次结果会标 degraded。
+            </p>
+          ) : null}
           {options ? stepContent() : null}
 
           {options ? (

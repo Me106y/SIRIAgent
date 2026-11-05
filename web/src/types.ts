@@ -208,6 +208,7 @@ export interface Skill {
 
 export interface PlanTask {
   operation: string;
+  supports_auto_expand?: boolean;
   label: string;
   required: string[];
   advanced: string[];
@@ -239,6 +240,13 @@ export interface PlanOptions {
     plannable: number;
     blocked: number;
     blocked_by_reason: Record<string, number>;
+  };
+  tle?: {
+    latest_epoch_utc?: string | null;
+    oldest_epoch_utc?: string | null;
+    max_age_hours?: number | null;
+    degraded?: boolean;
+    stale?: boolean;
   };
 }
 
@@ -277,6 +285,24 @@ export interface PlanResult {
   feasible?: boolean;
   optimality?: string;
   summary_cards?: PlanSummaryCards;
+  targets?: {
+    temporal_coverage_pct?: number | null;
+    area_pct?: number | null;
+    mrt_minutes?: number | null;
+  };
+  window?: {
+    requested_horizon_h?: number;
+    used_horizon_h?: number;
+    expanded?: boolean;
+    attempts?: number;
+  };
+  tle?: {
+    latest_epoch_utc?: string | null;
+    max_age_hours?: number | null;
+    min_age_hours?: number | null;
+    degraded?: boolean;
+    stale?: boolean;
+  };
   report_data?: {
     sats?: PlanSat[];
     selected_count?: number;
@@ -326,6 +352,7 @@ export interface PlanCreateBody {
   aoi_wkt?: string | null;
   start_utc?: string;
   horizon_h?: number;
+  auto_expand?: boolean;
   sensor_types?: string[];
   max_resolution_m?: number;
   pointing?: "nadir" | "targeted";
