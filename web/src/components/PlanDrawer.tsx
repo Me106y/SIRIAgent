@@ -94,6 +94,85 @@ function parentCityCode(item: PlanAoi): string {
   return digits.length >= 4 ? `${digits.slice(0, 4)}00` : "";
 }
 
+function MinusIcon() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M3.5 8h9" />
+    </svg>
+  );
+}
+
+function PlusIcon() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M3.5 8h9M8 3.5v9" />
+    </svg>
+  );
+}
+
+interface NumberStepperProps {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  min?: number;
+  max?: number;
+  step?: number;
+  placeholder?: string;
+}
+
+function NumberStepper({ label, value, onChange, min, max, step = 1, placeholder }: NumberStepperProps) {
+  const current = value.trim() === "" ? null : Number(value);
+  const numeric = current != null && Number.isFinite(current) ? current : null;
+  const floor = min ?? Number.NEGATIVE_INFINITY;
+  const ceiling = max ?? Number.POSITIVE_INFINITY;
+  const clamp = (next: number) => Math.min(ceiling, Math.max(floor, next));
+  const bump = (direction: 1 | -1) => {
+    if (numeric == null) {
+      onChange(String(min ?? 0));
+      return;
+    }
+    onChange(String(clamp(numeric + direction * step)));
+  };
+  return (
+    <div className="plan-number">
+      <button
+        type="button"
+        className="plan-number-btn"
+        onClick={() => bump(-1)}
+        disabled={numeric != null && numeric <= floor}
+        aria-label={`减少${label}`}
+      >
+        <MinusIcon />
+      </button>
+      <input
+        type="number"
+        inputMode="numeric"
+        aria-label={label}
+        value={value}
+        min={min}
+        max={max}
+        step={step}
+        placeholder={placeholder}
+        onChange={(event) => onChange(event.target.value)}
+        onBlur={() => {
+          if (value.trim() === "") return;
+          const next = Number(value);
+          if (Number.isFinite(next)) onChange(String(clamp(next)));
+        }}
+      />
+      <button
+        type="button"
+        className="plan-number-btn"
+        onClick={() => bump(1)}
+        disabled={numeric != null && numeric >= ceiling}
+        aria-label={`增加${label}`}
+      >
+        <PlusIcon />
+      </button>
+    </div>
+  );
+}
+
 export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
   const [options, setOptions] = useState<PlanOptions | null>(null);
   const [optionsError, setOptionsError] = useState<string | null>(null);
@@ -456,16 +535,17 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
             onChange={(event) => setStartLocal(event.target.value)}
           />
         </label>
-        <label className="plan-field">
+        <div className="plan-field">
           <span>窗口长度（小时）</span>
-          <input
-            type="number"
+          <NumberStepper
+            label="窗口长度"
+            value={horizon ? String(horizon) : ""}
+            onChange={(value) => setHorizon(value.trim() === "" ? 0 : Number(value))}
             min={1}
             max={168}
-            value={horizon}
-            onChange={(event) => setHorizon(Number(event.target.value))}
+            placeholder="72"
           />
-        </label>
+        </div>
       </div>
       <div className="plan-chips" role="group" aria-label="常用窗口">
         {[24, 72, 168].map((hours) => (
@@ -492,20 +572,22 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
 
       <div className="plan-grid-2">
         {(task?.required ?? []).map((name) => (
-          <label className="plan-field" key={name}>
+          <div className="plan-field" key={name}>
             <span>
               {FIELD_LABELS[name] ?? name}
               {FIELD_HINTS[name] ? <small>{FIELD_HINTS[name]}</small> : null}
             </span>
-            <input
-              type="number"
+            <NumberStepper
+              label={FIELD_LABELS[name] ?? name}
               value={fields[name] ?? ""}
-              placeholder={name === "n_budget" ? "3" : name === "mrt_target_minutes" ? "24" : "90"}
-              onChange={(event) =>
-                setFields((current) => ({ ...current, [name]: event.target.value }))
+              onChange={(value) =>
+                setFields((current) => ({ ...current, [name]: value }))
               }
+              min={name === "mrt_target_minutes" ? 0 : 1}
+              max={name === "n_budget" ? 500 : name === "temporal_coverage_target_pct" ? 100 : 10_000}
+              placeholder={name === "n_budget" ? "3" : name === "mrt_target_minutes" ? "24" : "90"}
             />
-          </label>
+          </div>
         ))}
       </div>
 
