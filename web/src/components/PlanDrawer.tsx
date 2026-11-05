@@ -617,12 +617,9 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
         ))}
       </div>
 
-      {operation === "task1" &&
-      Number(fields.temporal_coverage_target_pct || 0) > 5 &&
-      horizon <= 72 ? (
-        <p className="plan-warning">
-          这是“单格时间覆盖率”，不是面积占比；65 颗/72h 通常只能到 0.1–1%。
-          达标面积按 90% 面积目标判定。
+      {operation === "task1" ? (
+        <p className="plan-note">
+          覆盖目标：90% 面积至少被任一卫星成像一次；不设时间覆盖率门槛。
         </p>
       ) : null}
 
@@ -704,6 +701,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
     const sats = value.report_data?.sats ?? [];
     const areaTarget = value.targets?.area_pct;
     const temporalTarget = value.targets?.temporal_coverage_pct;
+    const isTask1 = (value.operation ?? operation) === "task1";
     const windowInfo = value.window;
     const expanded = Boolean(windowInfo?.expanded);
     const usedHorizon = windowInfo?.used_horizon_h;
@@ -714,9 +712,9 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
           <strong>{value.feasible ? "目标可行" : "目标未达成"}</strong>
           <span>
             {value.optimality ?? "—"} · 窗口 {usedHorizon ?? "—"}h
-            {expanded ? `（请求 ${requestedHorizon}h，已扩窗）` : ""} · 单格阈值{" "}
-            {temporalTarget ?? "—"}% · 候选 {value.candidate_count ?? "—"} 颗 · 未参与{" "}
-            {value.blocked_count ?? 0} 颗
+            {expanded ? `（请求 ${requestedHorizon}h，已扩窗）` : ""}
+            {isTask1 ? "" : ` · 单格阈值 ${temporalTarget ?? "—"}%`} · 候选{" "}
+            {value.candidate_count ?? "—"} 颗 · 未参与 {value.blocked_count ?? 0} 颗
           </span>
         </div>
         <div className="plan-stats">
@@ -730,10 +728,12 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
             </span>
             <strong>{formatNumber(cards.qualified_area_pct)}%</strong>
           </div>
-          <div>
-            <span>时间覆盖率</span>
-            <strong>{formatNumber(cards.city_mean_temporal_coverage_pct, 2)}%</strong>
-          </div>
+          {!isTask1 ? (
+            <div>
+              <span>时间覆盖率</span>
+              <strong>{formatNumber(cards.city_mean_temporal_coverage_pct, 2)}%</strong>
+            </div>
+          ) : null}
           <div>
             <span>面积加权 MRT</span>
             <strong>{formatNumber(cards.area_weighted_mrt_minutes, 0)} 分</strong>
