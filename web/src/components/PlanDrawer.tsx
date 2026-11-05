@@ -26,7 +26,7 @@ const FIELD_LABELS: Record<string, string> = {
   temporal_coverage_target_pct: "单格时间覆盖率",
   mrt_target_minutes: "P95 重访上限",
   n_budget: "星数预算",
-  area_target_pct: "面积目标",
+  area_target_pct: "面积覆盖率目标",
   fallback_area_target_pct: "面积回退",
   exact_budget: "精确星数预算",
   grid_size_km: "网格大小",
@@ -37,7 +37,7 @@ const FIELD_HINTS: Record<string, string> = {
   temporal_coverage_target_pct: "每格覆盖时间占比",
   mrt_target_minutes: "分钟",
   n_budget: "颗",
-  area_target_pct: "%",
+  area_target_pct: "%（达标面积占比）",
   fallback_area_target_pct: "%",
   grid_size_km: "km",
   detection_step_s: "秒",
@@ -194,6 +194,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
     temporal_coverage_target_pct: "0.1",
     mrt_target_minutes: "24",
     n_budget: "3",
+    area_target_pct: "90",
   });
   const [jobId, setJobId] = useState<string | null>(null);
   const [job, setJob] = useState<PlanJob | null>(null);
@@ -609,9 +610,9 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
                 setFields((current) => ({ ...current, [name]: value }))
               }
               min={name === "mrt_target_minutes" ? 0 : name === "temporal_coverage_target_pct" ? 0.01 : 1}
-              max={name === "n_budget" ? 500 : name === "temporal_coverage_target_pct" ? 100 : 10_000}
+              max={name === "n_budget" ? 500 : name === "temporal_coverage_target_pct" || name === "area_target_pct" ? 100 : 10_000}
               step={name === "temporal_coverage_target_pct" ? 0.1 : 1}
-              placeholder={name === "n_budget" ? "3" : name === "mrt_target_minutes" ? "24" : "0.1"}
+              placeholder={name === "n_budget" ? "3" : name === "mrt_target_minutes" ? "24" : name === "area_target_pct" ? "90" : "0.1"}
             />
           </div>
         ))}
@@ -619,7 +620,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
 
       {operation === "task1" ? (
         <p className="plan-note">
-          覆盖目标：90% 面积至少被任一卫星成像一次；不设时间覆盖率门槛。
+          覆盖目标：{fields.area_target_pct || "90"}% 面积至少被任一卫星成像一次；不设时间覆盖率门槛。
         </p>
       ) : null}
 
