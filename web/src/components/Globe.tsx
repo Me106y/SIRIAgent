@@ -1,6 +1,7 @@
-import { useEffect, useRef } from "react";
-import * as Cesium from "cesium";
+import { useEffect, useRef, useState } from "react";
+import type * as CesiumModule from "cesium";
 
+import { loadCesium } from "../lib/cesium";
 import type { PositionItem, TrackPoint } from "../types";
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -22,6 +23,7 @@ interface GlobeProps {
   focusToken: number;
   hangzhouToken: number;
   hangzhouPolygon: number[][] | null;
+  enabled?: boolean;
 }
 
 export function Globe({
@@ -35,23 +37,48 @@ export function Globe({
   focusToken,
   hangzhouToken,
   hangzhouPolygon,
+  enabled = true,
 }: GlobeProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const viewerRef = useRef<Cesium.Viewer | null>(null);
-  const entitiesRef = useRef(new Map<number, Cesium.Entity>());
+  const [cesium, setCesium] = useState<typeof import("cesium") | null>(null);
+  const [cesiumFailed, setCesiumFailed] = useState(false);
+  const viewerRef = useRef<CesiumModule.Viewer | null>(null);
+  const entitiesRef = useRef(new Map<number, CesiumModule.Entity>());
   const colorsRef = useRef(new Map<number, string>());
-  const trackRef = useRef<Cesium.Entity[]>([]);
-  const footprintRef = useRef<Cesium.Entity | null>(null);
-  const pulseRef = useRef<Cesium.Entity | null>(null);
+  const trackRef = useRef<CesiumModule.Entity[]>([]);
+  const footprintRef = useRef<CesiumModule.Entity | null>(null);
+  const pulseRef = useRef<CesiumModule.Entity | null>(null);
   const pulseTimer = useRef<number | null>(null);
   const focusRef = useRef({ lat: footprintLat, lon: footprintLon, radius: footprintRadiusKm });
   focusRef.current = { lat: footprintLat, lon: footprintLon, radius: footprintRadiusKm };
   const onSelectRef = useRef(onSelect);
   onSelectRef.current = onSelect;
+  const userMovedRef = useRef(false);
 
   useEffect(() => {
-    if (!containerRef.current) return;
-    const viewer = new Cesium.Viewer(containerRef.current, {
+    if (!enabled) return;
+    let alive = true;
+    // 再等一小会儿，让目录选中星的 track/passes 先回来。
+    const timer = window.setTimeout(() => {
+      loadCesium()
+        .then((namespace) => {
+          if (alive) setCesium(namespace);
+        })
+        .catch(() => {
+          if (alive) setCesiumFailed(true);
+        });
+    }, 800);
+    return () => {
+      alive = false;
+      window.clearTimeout(timer);
+    };
+  }, [enabled]);
+
+  useEffect(() => {
+    if (!cesium || !containerRef.current) return;
+    let viewer: CesiumModule.Viewer;
+    try {
+      viewer = new cesium.Viewer(containerRef.current, {
       animation: false,
       timeline: false,
       baseLayerPicker: false,
@@ -63,44 +90,91 @@ export function Globe({
       infoBox: false,
       selectionIndicator: false,
       baseLayer: false,
-    });
-    viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString("#07182B");
-    viewer.scene.backgroundColor = Cesium.Color.fromCssColorString("#03080F");
+      });
+    } catch {
+      // WebGL 初始化失败：保留目录/过境，地球退化为占位。
+      setCesiumFailed(true);
+      return;
+    }
+    viewer.scene.globe.baseColor = cesium.Color.fromCssColorString("#07182B");
+    viewer.scene.backgroundColor = cesium.Color.fromCssColorString("#03080F");
     if (viewer.scene.skyAtmosphere) viewer.scene.skyAtmosphere.show = true;
     viewer.scene.globe.showGroundAtmosphere = true;
-    Cesium.TileMapServiceImageryProvider.fromUrl(
-      Cesium.buildModuleUrl("Assets/Textures/NaturalEarthII"),
-    )
-      .then((provider) => {
-        if (viewer.isDestroyed()) return;
-        const layer = viewer.imageryLayers.addImageryProvider(provider);
-        layer.brightness = 0.32;
-        layer.contrast = 1.28;
-        layer.saturation = 0.22;
-      })
-      .catch(() => undefined);
+    // 底图约 4.7 MB：先让目录/过境请求跑完，再在后台补贴图。
+    let imageryCancelled = false;
+    const imageryTimer = window.setTimeout(() => {
+      if (imageryCancelled || viewer.isDestroyed()) return;
+      cesium.TileMapServiceImageryProvider.fromUrl(
+        cesium.buildModuleUrl("Assets/Textures/NaturalEarthII"),
+        { maximumLevel: 2 },
+      )
+        .then((provider) => {
+          if (imageryCancelled || viewer.isDestroyed()) return;
+          const layer = viewer.imageryLayers.addImageryProvider(provider);
+          layer.brightness = 0.32;
+          layer.contrast = 1.28;
+          layer.saturation = 0.22;
+        })
+        .catch(() => undefined);
+    }, 1500);
     viewer.scene.fog.enabled = true;
-    viewer.camera.setView({
-      destination: Cesium.Cartesian3.fromDegrees(112, 27, 20_000_000),
-    });
+
+    // 地球是全高主视觉：按容器宽高比取景，窄而高的中栏也不会把球体裁掉。
+    const fitGlobe = () => {
+      const element = containerRef.current;
+      if (!element || element.clientWidth === 0 || element.clientHeight === 0) return;
+      const aspect = element.clientWidth / element.clientHeight;
+      const frustum = viewer.camera.frustum;
+      const fovy = ("fovy" in frustum ? frustum.fovy : Math.PI / 3) ?? Math.PI / 3;
+      const hfov = 2 * Math.atan(Math.tan(fovy / 2) * aspect);
+      const angular = Math.min(fovy, hfov) * 0.76;
+      const radius = 6_371_000;
+      const distance = radius / Math.tan(angular / 2);
+      viewer.camera.setView({
+        destination: cesium.Cartesian3.fromDegrees(112, 27, distance - radius),
+      });
+    };
+    fitGlobe();
+
+    // 用户一旦自己动过相机，resize 就不再重新取景。
+    const markMoved = () => {
+      userMovedRef.current = true;
+    };
+    const canvas = viewer.scene.canvas;
+    canvas.addEventListener("pointerdown", markMoved);
+    canvas.addEventListener("wheel", markMoved, { passive: true });
     const credit = viewer.cesiumWidget.creditContainer as HTMLElement;
     credit.style.display = "none";
 
-    const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+    const handler = new cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
     handler.setInputAction(
-      (movement: { position: Cesium.Cartesian2 }) => {
+      (movement: { position: CesiumModule.Cartesian2 }) => {
         const picked = viewer.scene.pick(movement.position);
         const entityId = picked?.id?.id;
         if (typeof entityId === "string" && entityId.startsWith("sat-")) {
           onSelectRef.current(Number(entityId.slice(4)));
         }
       },
-      Cesium.ScreenSpaceEventType.LEFT_CLICK,
+      cesium.ScreenSpaceEventType.LEFT_CLICK,
     );
 
     viewerRef.current = viewer;
-    (window as unknown as { __viewer?: Cesium.Viewer }).__viewer = viewer;
+    (window as unknown as { __viewer?: CesiumModule.Viewer }).__viewer = viewer;
+
+    // 三栏布局在断点切换时容器尺寸会变，window resize 不一定触发。
+    const resizeObserver = new ResizeObserver(() => {
+      if (viewer.isDestroyed()) return;
+      viewer.resize();
+      if (!userMovedRef.current) fitGlobe();
+    });
+    if (containerRef.current) resizeObserver.observe(containerRef.current);
+
     return () => {
+      imageryCancelled = true;
+      window.clearTimeout(imageryTimer);
+      resizeObserver.disconnect();
+      canvas.removeEventListener("pointerdown", markMoved);
+      canvas.removeEventListener("wheel", markMoved);
       handler.destroy();
       viewer.destroy();
       viewerRef.current = null;
@@ -112,9 +186,10 @@ export function Globe({
       if (pulseRef.current && !viewer.isDestroyed()) viewer.entities.remove(pulseRef.current);
       pulseRef.current = null;
     };
-  }, []);
+  }, [cesium]);
 
   useEffect(() => {
+    if (!cesium) return;
     const viewer = viewerRef.current;
     if (!viewer) return;
     const seen = new Set<number>();
@@ -122,12 +197,12 @@ export function Globe({
       seen.add(item.norad);
       const color = CATEGORY_COLORS[item.category] || "#22D3EE";
       colorsRef.current.set(item.norad, color);
-      const position = Cesium.Cartesian3.fromDegrees(item.lon, item.lat, item.alt_km * 1000);
+      const position = cesium.Cartesian3.fromDegrees(item.lon, item.lat, item.alt_km * 1000);
       const existing = entitiesRef.current.get(item.norad);
       if (existing) {
-        existing.position = new Cesium.ConstantPositionProperty(position);
+        existing.position = new cesium.ConstantPositionProperty(position);
         if (existing.point) {
-          existing.point.pixelSize = new Cesium.ConstantProperty(
+          existing.point.pixelSize = new cesium.ConstantProperty(
             item.norad === selected ? 11 : 6,
           );
         }
@@ -137,10 +212,10 @@ export function Globe({
           position,
           point: {
             pixelSize: item.norad === selected ? 11 : 6,
-            color: Cesium.Color.fromCssColorString(
+            color: cesium.Color.fromCssColorString(
               item.norad === selected ? SELECTED_COLOR : color,
             ),
-            outlineColor: Cesium.Color.fromCssColorString("#02121F"),
+            outlineColor: cesium.Color.fromCssColorString("#02121F"),
             outlineWidth: 1,
           },
         });
@@ -154,27 +229,28 @@ export function Globe({
         colorsRef.current.delete(norad);
       }
     }
-  }, [positions, selected]);
+  }, [cesium, positions, selected]);
 
   useEffect(() => {
+    if (!cesium) return;
     const viewer = viewerRef.current;
     if (!viewer) return;
     trackRef.current.forEach((entity) => viewer.entities.remove(entity));
     trackRef.current = [];
     if (track.length < 2) return;
     const orbit = track.map((point) =>
-      Cesium.Cartesian3.fromDegrees(point.lon_deg, point.lat_deg, point.alt_km * 1000),
+      cesium.Cartesian3.fromDegrees(point.lon_deg, point.lat_deg, point.alt_km * 1000),
     );
     const ground = track.map((point) =>
-      Cesium.Cartesian3.fromDegrees(point.lon_deg, point.lat_deg, 0),
+      cesium.Cartesian3.fromDegrees(point.lon_deg, point.lat_deg, 0),
     );
     trackRef.current.push(
       viewer.entities.add({
         polyline: {
           positions: orbit,
           width: 2,
-          material: new Cesium.PolylineGlowMaterialProperty({
-            color: Cesium.Color.fromCssColorString("#22D3EE"),
+          material: new cesium.PolylineGlowMaterialProperty({
+            color: cesium.Color.fromCssColorString("#22D3EE"),
             glowPower: 0.2,
           }),
         },
@@ -183,21 +259,22 @@ export function Globe({
         polyline: {
           positions: ground,
           width: 1.5,
-          material: Cesium.Color.fromCssColorString("#2DD4BF").withAlpha(0.75),
+          material: cesium.Color.fromCssColorString("#2DD4BF").withAlpha(0.75),
         },
       }),
     );
-  }, [track]);
+  }, [cesium, track]);
 
   useEffect(() => {
-    if (hangzhouToken === 0) return;
+    if (!cesium || hangzhouToken === 0) return;
     const viewer = viewerRef.current;
     if (!viewer) return;
+    userMovedRef.current = true;
     viewer.camera.flyTo({
-      destination: Cesium.Cartesian3.fromDegrees(120.16, 30.27, 650_000),
+      destination: cesium.Cartesian3.fromDegrees(120.16, 30.27, 650_000),
       orientation: {
         heading: 0,
-        pitch: Cesium.Math.toRadians(-90),
+        pitch: cesium.Math.toRadians(-90),
         roll: 0,
       },
       duration: 1.1,
@@ -216,36 +293,36 @@ export function Globe({
       const seconds = (performance.now() - started) / 1000;
       return 0.5 + 0.5 * Math.sin(seconds * Math.PI * 2 * 1.4);
     };
-    const fill = new Cesium.CallbackProperty(
-      () => Cesium.Color.fromCssColorString("#22D3EE").withAlpha(0.1 + 0.45 * alpha()),
+    const fill = new cesium.CallbackProperty(
+      () => cesium.Color.fromCssColorString("#22D3EE").withAlpha(0.1 + 0.45 * alpha()),
       false,
     );
-    const outline = new Cesium.CallbackProperty(
+    const outline = new cesium.CallbackProperty(
       () =>
-        Cesium.Color.fromCssColorString("#A5F3FC").withAlpha(0.35 + 0.55 * alpha()),
+        cesium.Color.fromCssColorString("#A5F3FC").withAlpha(0.35 + 0.55 * alpha()),
       false,
     );
-    const center = Cesium.Cartesian3.fromDegrees(120.2099, 30.2466, 80);
+    const center = cesium.Cartesian3.fromDegrees(120.2099, 30.2466, 80);
     const common = {
       position: center,
       label: {
         text: "杭州",
         font: "12px sans-serif",
-        fillColor: Cesium.Color.fromCssColorString("#E0F7FF"),
+        fillColor: cesium.Color.fromCssColorString("#E0F7FF"),
         showBackground: true,
-        backgroundColor: Cesium.Color.fromCssColorString("#04121F").withAlpha(0.75),
-        pixelOffset: new Cesium.Cartesian2(0, -18),
+        backgroundColor: cesium.Color.fromCssColorString("#04121F").withAlpha(0.75),
+        pixelOffset: new cesium.Cartesian2(0, -18),
       },
     } as const;
     if (hangzhouPolygon && hangzhouPolygon.length > 3) {
       pulseRef.current = viewer.entities.add({
         ...common,
         polygon: {
-          hierarchy: new Cesium.PolygonHierarchy(
-            Cesium.Cartesian3.fromDegreesArray(hangzhouPolygon.flat()),
+          hierarchy: new cesium.PolygonHierarchy(
+            cesium.Cartesian3.fromDegreesArray(hangzhouPolygon.flat()),
           ),
           height: 50,
-          material: new Cesium.ColorMaterialProperty(fill),
+          material: new cesium.ColorMaterialProperty(fill),
           outline: true,
           outlineColor: outline,
         },
@@ -257,7 +334,7 @@ export function Globe({
           semiMajorAxis: 80_000,
           semiMinorAxis: 80_000,
           height: 50,
-          material: new Cesium.ColorMaterialProperty(fill),
+          material: new cesium.ColorMaterialProperty(fill),
           outline: true,
           outlineColor: outline,
         },
@@ -269,22 +346,24 @@ export function Globe({
         pulseRef.current = null;
       }
     }, 6000);
-  }, [hangzhouToken, hangzhouPolygon]);
+  }, [cesium, hangzhouToken, hangzhouPolygon]);
 
   useEffect(() => {
-    if (focusToken === 0) return;
+    if (!cesium || focusToken === 0) return;
     const viewer = viewerRef.current;
     const target = focusRef.current;
     if (!viewer || target.lat == null || target.lon == null) return;
     const radius = target.radius ?? 100;
     const height = Math.min(6_000_000, Math.max(400_000, radius * 1000 * 8));
+    userMovedRef.current = true;
     viewer.camera.flyTo({
-      destination: Cesium.Cartesian3.fromDegrees(target.lon, target.lat, height),
+      destination: cesium.Cartesian3.fromDegrees(target.lon, target.lat, height),
       duration: 1.1,
     });
-  }, [focusToken]);
+  }, [cesium, focusToken]);
 
   useEffect(() => {
+    if (!cesium) return;
     const viewer = viewerRef.current;
     if (!viewer) return;
     if (footprintRef.current) {
@@ -300,31 +379,39 @@ export function Globe({
       return;
     }
     footprintRef.current = viewer.entities.add({
-      position: Cesium.Cartesian3.fromDegrees(footprintLon, footprintLat, 0),
+      position: cesium.Cartesian3.fromDegrees(footprintLon, footprintLat, 0),
       point: {
         pixelSize: 5,
-        color: Cesium.Color.fromCssColorString("#F8FAFC"),
-        outlineColor: Cesium.Color.fromCssColorString("#22D3EE"),
+        color: cesium.Color.fromCssColorString("#F8FAFC"),
+        outlineColor: cesium.Color.fromCssColorString("#22D3EE"),
         outlineWidth: 2,
       },
       label: {
         text: `足迹 ${(footprintRadiusKm * 2).toFixed(0)} km`,
         font: "11px monospace",
-        fillColor: Cesium.Color.fromCssColorString("#A5F3FC"),
+        fillColor: cesium.Color.fromCssColorString("#A5F3FC"),
         showBackground: true,
-        backgroundColor: Cesium.Color.fromCssColorString("#04121F").withAlpha(0.8),
-        pixelOffset: new Cesium.Cartesian2(0, -18),
+        backgroundColor: cesium.Color.fromCssColorString("#04121F").withAlpha(0.8),
+        pixelOffset: new cesium.Cartesian2(0, -18),
       },
       ellipse: {
         semiMajorAxis: footprintRadiusKm * 1000,
         semiMinorAxis: footprintRadiusKm * 1000,
         height: 0,
-        material: Cesium.Color.fromCssColorString("#22D3EE").withAlpha(0.22),
+        material: cesium.Color.fromCssColorString("#22D3EE").withAlpha(0.22),
         outline: true,
-        outlineColor: Cesium.Color.fromCssColorString("#22D3EE").withAlpha(0.85),
+        outlineColor: cesium.Color.fromCssColorString("#22D3EE").withAlpha(0.85),
       },
     });
-  }, [footprintLat, footprintLon, footprintRadiusKm]);
+  }, [cesium, footprintLat, footprintLon, footprintRadiusKm]);
 
-  return <div className="globe" ref={containerRef} />;
+  return (
+    <div className="globe" ref={containerRef}>
+      {!cesium && (
+        <div className="globe-loading" role="status" aria-live="polite">
+          {cesiumFailed ? "地球组件加载失败，列表仍可使用" : "地球加载中…"}
+        </div>
+      )}
+    </div>
+  );
 }

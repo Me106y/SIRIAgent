@@ -1,0 +1,27 @@
+diff --git a/packages/sdk/server/src/index.ts b/packages/sdk/server/src/index.ts
+index 6fdd9398a9..d8dc97ab40 100644
+--- a/packages/sdk/server/src/index.ts
++++ b/packages/sdk/server/src/index.ts
+@@ -60,6 +60,22 @@ export function apply(ctx: Context, config: JsonRpcConfig): void {
+     maxTokensAsSuccess: resolvedConfig.maxTokensAsSuccess,
+   })
+ 
++  // SIRIAgent: bridge user questions to the SDK client over JSON-RPC. The
++  // user-questions service dispatches an agent-scoped waterfall; this process
++  // forwards each request to the client and answers with its result.
++  const questionEvents = ctx as unknown as {
++    on(
++      name: 'user-questions/request',
++      handler: (request: { questions: unknown, wait?: { callId?: string } }) => Promise<unknown>,
++    ): void
++  }
++  questionEvents.on('user-questions/request', async (request) => {
++    return transport.request('userQuestion/ask', {
++      questions: request.questions,
++      callId: request.wait?.callId ?? null,
++    })
++  })
++
+   // Share one exit task so racing shutdown requests cannot dispose the root or
+   // exit the process more than once.
+   let exitTask: Promise<void> | undefined

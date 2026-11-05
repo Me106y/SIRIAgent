@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { api } from "../api";
-import type { ChatMessage, MessageBlock, Skill } from "../types";
+import type { AnswerResult, ChatMessage, MessageBlock, QuestionAnswer, Skill } from "../types";
 import { Markdown } from "./Markdown";
+import { QuestionCard } from "./QuestionCard";
 
 interface Props {
   messages: ChatMessage[];
@@ -10,12 +11,15 @@ interface Props {
   sessionId?: string;
   onSend: (text: string) => void;
   onReset: () => void;
+  onAnswer: (blockId: string, callId: string, answers: QuestionAnswer[]) => Promise<AnswerResult>;
+  onRevise: (text: string) => void;
+  onCancel: () => void;
 }
 
 const EXAMPLES = [
   "杭州明天有哪些卫星过境？",
   "GF-2 现在在什么位置？",
-  "帮我看看这 111 颗星里，哪些是 SAR。",
+  "帮我看看这 102 颗星里，哪些是 SAR。",
 ];
 
 function CheckIcon() {
@@ -196,7 +200,7 @@ function WorkSteps({
   );
 }
 
-export function AgentPanel({ messages, busy, sessionId, onSend, onReset }: Props) {
+export function AgentPanel({ messages, busy, sessionId, onSend, onReset, onAnswer, onRevise, onCancel }: Props) {
   const [input, setInput] = useState("");
   const [skills, setSkills] = useState<Skill[]>([]);
   const [slashOpen, setSlashOpen] = useState(false);
@@ -351,6 +355,10 @@ export function AgentPanel({ messages, busy, sessionId, onSend, onReset }: Props
           );
           const texts = blocks.filter((block) => block.kind === "text");
           const notices = blocks.filter((block) => block.kind === "notice");
+          const questions = blocks.filter(
+            (block): block is Extract<MessageBlock, { kind: "question" }> =>
+              block.kind === "question",
+          );
           const loading =
             message.role === "assistant" && phase === "streaming" && texts.length === 0;
 
@@ -358,6 +366,17 @@ export function AgentPanel({ messages, busy, sessionId, onSend, onReset }: Props
             if (block.kind === "tool") return <ToolRow key={block.id} block={block} />;
             if (block.kind === "thinking") {
               return <ThinkingRow key={block.id} block={block} />;
+            }
+            if (block.kind === "question") {
+              return (
+                <QuestionCard
+                  key={block.id}
+                  block={block}
+                  onAnswer={onAnswer}
+                  onRevise={onRevise}
+                  onCancel={onCancel}
+                />
+              );
             }
             if (block.kind === "notice") {
               return (
@@ -406,6 +425,16 @@ export function AgentPanel({ messages, busy, sessionId, onSend, onReset }: Props
                           elapsedMs={message.elapsed_ms}
                         />
                       )}
+                      {questions.map((block) => (
+                        <QuestionCard
+                          key={block.id}
+                          block={block}
+                          interactive={false}
+                          onAnswer={onAnswer}
+                          onRevise={onRevise}
+                          onCancel={onCancel}
+                        />
+                      ))}
                       {texts.map((block) => (
                         <div
                           className={
