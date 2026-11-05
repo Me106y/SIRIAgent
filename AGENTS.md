@@ -44,6 +44,12 @@ git log --oneline -10
 - 只重启改动对应的单元：前端/后端改 `siriagent-demo`；星历改 `rs-service-api` 与 `rs-service-mcp`（两个都要）。
 - `.env` 只在本机存在（目前只放高德 key）；仓库里只提交 `.env.example`。
 
+## 成图产物（运行时约定）
+
+- 成图由右栏“卫星成图”抽屉提交到 RS-Service，不再走 DSH skill；`skills/imaging-plan` 已移除。
+- 产物在 `reports/imaging-plan/<run_id>/`（`plan.json` + `report.html`），`latest` 指向最近一次。
+- 要分析方案，先读 `reports/imaging-plan/latest/plan.json` 与 `report.html`；不要重新求解。
+
 ## 架构：四条不能破的线
 
 **① 边界。** 浏览器 → Flask `8000` → RS-Service `8766`。浏览器与公网都不直连 `8766`；`/api/rs/*` 是唯一反代入口。

@@ -14,12 +14,13 @@ interface Props {
   onAnswer: (blockId: string, callId: string, answers: QuestionAnswer[]) => Promise<AnswerResult>;
   onRevise: (text: string) => void;
   onCancel: () => void;
+  onOpenPlan: () => void;
 }
 
 const EXAMPLES = [
   "杭州明天有哪些卫星过境？",
   "GF-2 现在在什么位置？",
-  "帮我看看这 102 颗星里，哪些是 SAR。",
+  "帮我看看这 65 颗星里，哪些是 SAR。",
 ];
 
 function CheckIcon() {
@@ -200,7 +201,7 @@ function WorkSteps({
   );
 }
 
-export function AgentPanel({ messages, busy, sessionId, onSend, onReset, onAnswer, onRevise, onCancel }: Props) {
+export function AgentPanel({ messages, busy, sessionId, onSend, onReset, onAnswer, onRevise, onCancel, onOpenPlan }: Props) {
   const [input, setInput] = useState("");
   const [skills, setSkills] = useState<Skill[]>([]);
   const [slashOpen, setSlashOpen] = useState(false);
@@ -322,9 +323,17 @@ export function AgentPanel({ messages, busy, sessionId, onSend, onReset, onAnswe
           <h2>Agent</h2>
           <p>{sessionId ? `会话 · ${sessionId.slice(-8)}` : "新会话"}</p>
         </div>
-        <button type="button" className="ghost" onClick={onReset}>
-          新会话
-        </button>
+        <div className="agent-head-actions">
+          <button type="button" className="plan-entry" onClick={onOpenPlan}>
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M3 3h10v10H3zM3 8h10M8 3v10" />
+            </svg>
+            卫星成图
+          </button>
+          <button type="button" className="ghost" onClick={onReset}>
+            新会话
+          </button>
+        </div>
       </div>
 
       <div className="messages" ref={scrollRef}>

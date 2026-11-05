@@ -12,6 +12,7 @@ import {
 } from "./api";
 import { readCatalogCache, writeCatalogCache } from "./lib/catalogCache";
 import { AgentPanel } from "./components/AgentPanel";
+import { PlanDrawer } from "./components/PlanDrawer";
 import { Globe } from "./components/Globe";
 import { SatellitePanel } from "./components/SatellitePanel";
 import type {
@@ -35,6 +36,7 @@ export default function App() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sessionId, setSessionId] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
+  const [planOpen, setPlanOpen] = useState(false);
   const [swathKm, setSwathKm] = useState<number | null>(null);
   const [focusToken, setFocusToken] = useState(0);
   const [hangzhouToken, setHangzhouToken] = useState(0);
@@ -599,8 +601,20 @@ export default function App() {
           onRevise={(text) => void send(text)}
           onCancel={handleCancel}
           onReset={reset}
+          onOpenPlan={() => setPlanOpen(true)}
         />
       </main>
+
+      <PlanDrawer
+        open={planOpen}
+        onClose={() => setPlanOpen(false)}
+        onAnalyze={(path) => {
+          setPlanOpen(false);
+          void send(
+            `请分析这份成图方案：${path}。重点看覆盖薄弱区、选星是否合理、云量影响，并给出下一步建议。`,
+          );
+        }}
+      />
     </div>
   );
 }

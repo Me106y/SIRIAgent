@@ -45,7 +45,7 @@ DSH agent（DeepSeek Harness） + RS-Service（星历/MCP）
 - 首屏：Cesium 运行时按需加载；目录先读 localStorage 再后台刷新；`/api/bootstrap` 合并目录/星历/余额。目录类接口带 `ETag` 与 `Cache-Control`，位置/过境保持 `no-store`。
 - 问答组件：`ask_user_question` 走 DSH SDK 问答通道，前端渲染单选/多选卡片并回传 `/api/question/answer`；DSH 侧补丁见 `deploy/dsh-sdk-questions.patch`。
 - 文件打开：模型输出里的 `reports/*.html` 等路径会自动变成链接，经 `/api/files` 打开；只允许项目目录内文件（目录穿越返回 403）。
-- 报告导出：imaging-plan 生成的 HTML 报告右上角有“导出 PDF”，调用浏览器打印，选择“另存为 PDF”即可；旁边可切换深/浅主题（记住选择），PDF 强制浅色。报告分“卫星构成 / 覆盖与回放 / 推荐计划 / 口径与精度”，推荐计划逐星给出 CelesTrak 来源与必选/可选原因。
+- 报告导出：右栏“卫星成图”生成的 HTML 报告右上角有“导出 PDF”，调用浏览器打印，选择“另存为 PDF”即可；旁边可切换深/浅主题（记住选择），PDF 强制浅色。报告分“卫星构成 / 覆盖与回放 / 推荐计划 / 口径与精度”，推荐计划逐星给出 CelesTrak 来源与必选/可选原因。
 - 静态资源：`/assets/*` 一年 `immutable`，`/cesium/*` 7 天；首次访问后浏览器不再重复下载 Cesium。
 - Service Worker（`web/public/sw.js`）：`/cesium/*`、`/assets/*` 进 Cache Storage，首访后离线也能开；升级 Cesium 时改 `VERSION`。
 - DSH：`dsh --profile headless`，每次消息一次运行；用 `--session-id` 续聊。
