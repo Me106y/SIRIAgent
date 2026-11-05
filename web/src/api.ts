@@ -104,9 +104,9 @@ export const api = {
   skills: () => getJson<{ items: Skill[] }>("/api/skills"),
   planOptions: () => getJson<PlanOptions>("/api/rs/plan-options", 20_000),
   createPlan: (body: PlanCreateBody) => postJson<PlanJob>("/api/rs/plans", body, 30_000),
-  planJob: (jobId: string) => getJson<PlanJob>(`/api/rs/plans/${jobId}`),
+  planJob: (jobId: string) => getJson<PlanJob>(`/api/rs/plans/${jobId}`, 30_000),
   renderReport: (jobId: string) =>
-    postJson<ReportInfo>(`/api/rs/plans/${jobId}/report`, {}, 30_000),
+    postJson<ReportInfo>(`/api/rs/plans/${jobId}/report`, {}, 60_000),
 };
 
 export interface ChatResponse {
