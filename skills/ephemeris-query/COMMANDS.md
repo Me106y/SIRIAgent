@@ -46,11 +46,11 @@ Phase 2 不做审批拦截（§2.2），"需审批"一律为否。
 | `mcp__rs-service__list_satellites` | `category?`、`orbit?` | 卫星摘要列表 |
 | `mcp__rs-service__get_satellite` | `sat_id` | 目录 + 传感器 + TLE 元数据 |
 | `mcp__rs-service__current_position` | `sat_id` | 当前星下点 + `accuracy_note` |
-| `mcp__rs-service__list_positions` | — | 111 颗当前位置 |
+| `mcp__rs-service__list_positions` | — | 102 颗当前位置 |
 | `mcp__rs-service__ground_track` | `sat_id`、`hours`、`step_s` | 星下点序列 |
 
 ## 通用约束
 
 - 所有输出必须带 `accuracy_note`；TLE 年龄 > 72 h 标 `degraded`，> 7 天拒绝过境/轨迹结论。
-- 不要为 111 颗星逐颗拉轨迹；轨迹只对选中星按需算。
+- 不要为 102 颗星逐颗拉轨迹；轨迹只对选中星按需算。
 - 查询前先确认 NORAD，禁止凭名称猜 ID（历史上有 41335/43437/44312 错配）。

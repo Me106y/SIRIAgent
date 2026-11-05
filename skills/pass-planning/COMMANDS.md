@@ -26,7 +26,7 @@
   ```
 - 失败处理：
   - 返回空 `passes`：先确认 AOI 与窗口，再降 `--min-elev`（如 0° 看全部几何过境）；仍为空则查 `tle_age_hours`。
-  - `satellite not found`：NORAD 不在 111 颗展示集，先 `list_satellites`。
+  - `satellite not found`：NORAD 不在 102 颗展示集，先 `list_satellites`。
   - TLE > 7 天：拒绝给出过境结论，提示先同步。
 
 ### `rs-service status`
@@ -42,12 +42,13 @@
 | --- | --- | --- |
 | `mcp__rs-service__next_passes` | `sat_id`、`hours`、`lat`、`lon`、`min_elev` | 过境列表 + `tle_age_hours` + `accuracy_note` |
 
-多颗星：先 `mcp__rs-service__list_satellites` 缩小范围，再逐颗 `next_passes`，避免一次全量 111 颗。
+多颗星：先 `mcp__rs-service__list_satellites` 缩小范围，再逐颗 `next_passes`，避免一次全量 102 颗。
 
 ## 输出口径（必须随结果一起说）
 
 - 时间按北京时间展示，UTC 值来自 `aos_utc`/`tca_utc`/`los_utc`。
 - 过境时间误差约 ±1 分钟；足迹边缘 ±2–5 km；SGP4 在 LEO 约 1 km/天。
+- 星历库当前只含 **102 颗 LEO**；9 颗 GEO 已于 2026-10-21 从库中移除（详见 `docs/PHASE2-REQUIREMENTS.md` §4.4.3），查询 GEO 会返回 `not_found`。
 - 云量：Phase 2 暂未接入实时预报，`passes` 出参没有 `cloud_cover_pct`，不得声称"云量可用"。
 - SAR 不看太阳高度；光学看最高仰角 ≥10° 且太阳高度 >10°。
 - 与 MCP 结果不一致时，以 MCP/CLI 同源结果为准；不要用前端缓存数字反推。

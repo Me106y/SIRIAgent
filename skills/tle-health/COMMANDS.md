@@ -43,7 +43,7 @@
 
 ### `rs-service sync`
 
-- 用途：正式同步 111 颗 TLE/OMM，写入 `tle_record`、`tle_current`、`sync_run`、`sync_state`。
+- 用途：正式同步 102 颗 TLE/OMM，写入 `tle_record`、`tle_current`、`sync_run`、`sync_state`。
 - 风险：network + write（写本地库）。
 - 示例：`rs-service sync`
 - 失败处理：
@@ -72,4 +72,4 @@
 | `last_run.status=abandoned` | 当日同步失败 | 当天不再重试；次日 03:00 自动恢复 |
 | `consecutive_failures ≥ 3` | 连续多日失败 | 检查网络/代理与 CelesTrak 可达性，必要时 `--dry-run` 定位 |
 | `circuit_open_until` 非空 | 熔断中 | 人工排障才用 `--force`，否则等待 |
-| 查不到某颗星 | 不在 111 颗展示集 | 用 `list_satellites` 核对，不擅自扩大目录 |
+| 查不到某颗星 | 不在 102 颗展示集 | 用 `list_satellites` 核对，不擅自扩大目录 |
