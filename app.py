@@ -157,6 +157,47 @@ def index():
     return send_from_directory(STATIC_DIR, "index.html")
 
 
+@app.post("/api/rs/<path:subpath>")
+def rs_proxy_post(subpath: str):
+    """POST 反代：成图任务与报告渲染需要转发 JSON body。"""
+    query = request.query_string.decode()
+    url = f"{RS_SERVICE_BASE}/{subpath}" + (f"?{query}" if query else "")
+    headers = {"Accept": "application/json"}
+    if request.content_type:
+        headers["Content-Type"] = request.content_type
+    req = urllib.request.Request(
+        url, data=request.get_data(), headers=headers, method="POST"
+    )
+    for attempt in range(2):
+        try:
+            with _RS_OPENER.open(req, timeout=60) as resp:
+                body = resp.read()
+                response = Response(
+                    body,
+                    status=resp.status,
+                    content_type=resp.headers.get("Content-Type", "application/json"),
+                )
+                response.headers["Cache-Control"] = "no-store"
+                return response
+        except urllib.error.HTTPError as exc:
+            if exc.code >= 500 and attempt == 0:
+                time.sleep(0.15)
+                continue
+            error = Response(
+                exc.read(),
+                status=exc.code,
+                content_type=exc.headers.get("Content-Type", "application/json"),
+            )
+            error.headers["Cache-Control"] = "no-store"
+            return error
+        except (urllib.error.URLError, TimeoutError) as exc:
+            if attempt == 0:
+                time.sleep(0.15)
+                continue
+            app.logger.warning("RS-Service POST proxy failed for %s: %s", subpath, exc)
+            return jsonify({"ok": False, "error": f"RS-Service 不可达：{exc}"}), 502
+
+
 @app.get("/api/rs/<path:subpath>")
 def rs_proxy(subpath: str):
     """把浏览器请求反代到本机 RS-Service；浏览器不直连 8766。"""

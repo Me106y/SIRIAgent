@@ -205,3 +205,131 @@ export interface Skill {
   when_to_use: string;
   path: string;
 }
+
+export interface PlanTask {
+  operation: string;
+  label: string;
+  required: string[];
+  advanced: string[];
+  description: string;
+}
+
+export interface PlanAdvancedField {
+  name: string;
+  label: string;
+  type: "number" | "boolean" | string;
+  default: number | boolean | null;
+}
+
+export interface PlanAoi {
+  code: string;
+  name: string;
+  level: string | null;
+  adcode: string | null;
+}
+
+export interface PlanOptions {
+  ok: boolean;
+  tasks: PlanTask[];
+  advanced: PlanAdvancedField[];
+  sensor_types: Array<{ value: string; label: string }>;
+  defaults: Record<string, unknown>;
+  aoi: PlanAoi[];
+  capability: {
+    plannable: number;
+    blocked: number;
+    blocked_by_reason: Record<string, number>;
+  };
+}
+
+export interface PlanSummaryCards {
+  satellite_count?: number;
+  qualified_area_pct?: number;
+  city_mean_temporal_coverage_pct?: number;
+  city_mean_observable_duration_minutes?: number;
+  area_weighted_mrt_minutes?: number;
+  area_weighted_art_minutes?: number;
+  [key: string]: number | undefined;
+}
+
+export interface PlanSat {
+  sat_id: number;
+  name: string;
+  sensor_label: string;
+  resolution_m: number | null;
+  swath_km: number | null;
+  passes: number | null;
+  cumulative_minutes: number | null;
+}
+
+export interface PlanPass {
+  satellite: string;
+  start_utc: string;
+  end_utc: string;
+  duration_minutes: number;
+  average_covered_area_pct: number;
+  maximum_covered_area_pct: number;
+}
+
+export interface PlanResult {
+  status: string;
+  operation: string;
+  feasible?: boolean;
+  optimality?: string;
+  summary_cards?: PlanSummaryCards;
+  report_data?: {
+    sats?: PlanSat[];
+    selected_count?: number;
+    selected_ids?: number[];
+    playback?: {
+      events?: Array<{ sat_id: number; label: string; points: number[][] }>;
+      uncovered?: number[][];
+      total?: number;
+    };
+  };
+  city?: { name: string; area_km2: number };
+  input_summary?: { start_utc?: string; end_utc?: string; analysis_horizon_h?: number };
+  city_pass_window_table?: PlanPass[];
+  weak_areas?: Array<{ grid_id: string; area_km2: number; temporal_coverage_pct: number; mrt_minutes: number }>;
+  assumptions?: string[];
+  warnings?: string[];
+  cloud?: { filtered?: boolean; threshold_pct?: number; dropped_windows?: number; reason?: string };
+  blocked_satellites?: Array<{ norad_id: number; name: string; reason: string }>;
+  candidate_count?: number;
+  blocked_count?: number;
+  [key: string]: unknown;
+}
+
+export interface PlanJob {
+  ok: boolean;
+  job_id: string;
+  status: "queued" | "running" | "completed" | "failed";
+  created_at: string;
+  result?: PlanResult | null;
+  error?: { code: string; message: string; [key: string]: unknown } | null;
+}
+
+export interface ReportInfo {
+  ok: boolean;
+  run_id: string;
+  report_path: string;
+  plan_path: string;
+  relative_report: string;
+  relative_plan: string;
+  latest: string;
+  report_url: string;
+}
+
+export interface PlanCreateBody {
+  operation: string;
+  aoi_code?: string | null;
+  aoi_wkt?: string | null;
+  start_utc?: string;
+  horizon_h?: number;
+  sensor_types?: string[];
+  max_resolution_m?: number;
+  pointing?: "nadir" | "targeted";
+  cloud_filter?: boolean;
+  cloud_threshold_pct?: number;
+  [key: string]: unknown;
+}

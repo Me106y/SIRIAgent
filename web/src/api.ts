@@ -13,7 +13,44 @@ import type {
   SyncStatus,
   ToolCall,
   TrackPoint,
+  PlanCreateBody,
+  PlanJob,
+  PlanOptions,
+  ReportInfo,
 } from "./types";
+
+async function postJson<T>(
+  path: string,
+  body: unknown,
+  timeoutMs = 20_000,
+): Promise<T> {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(path, {
+      method: "POST",
+      headers: { Accept: "application/json", "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    const payload = (await response.json().catch(() => null)) as
+      | (T & { detail?: unknown })
+      | null;
+    if (!response.ok) {
+      const detail = payload?.detail;
+      const message =
+        typeof detail === "string"
+          ? detail
+          : detail && typeof detail === "object" && "message" in detail
+            ? String((detail as { message?: unknown }).message)
+            : `HTTP ${response.status}`;
+      throw new Error(message);
+    }
+    return payload as T;
+  } finally {
+    window.clearTimeout(timer);
+  }
+}
 
 async function getJson<T>(path: string, timeoutMs = 15_000): Promise<T> {
   const controller = new AbortController();
@@ -65,6 +102,11 @@ export const api = {
   balance: (refresh = false) =>
     getJson<Balance>(`/api/balance${refresh ? "?refresh=1" : ""}`),
   skills: () => getJson<{ items: Skill[] }>("/api/skills"),
+  planOptions: () => getJson<PlanOptions>("/api/rs/plan-options", 20_000),
+  createPlan: (body: PlanCreateBody) => postJson<PlanJob>("/api/rs/plans", body, 30_000),
+  planJob: (jobId: string) => getJson<PlanJob>(`/api/rs/plans/${jobId}`),
+  renderReport: (jobId: string) =>
+    postJson<ReportInfo>(`/api/rs/plans/${jobId}/report`, {}, 30_000),
 };
 
 export interface ChatResponse {

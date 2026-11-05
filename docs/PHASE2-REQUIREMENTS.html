@@ -829,7 +829,8 @@ CREATE INDEX idx_sensor_sat     ON sensor(sat_id);
 <li>幂等：<code>UNIQUE(sat_id, epoch_utc, source_id)</code>，重复抓取只更新 <code>fetched_at</code>。</li>
 </ul>
 <h3 id="sec-4-4">4.4 卫星集：102 颗（全部国内 LEO，2026-10-21 修订）</h3>
-<div class="callout"><span class="callout-label">说明</span><p>2026-10-19 决策：<strong>不使用历史 120 颗名单</strong>，改为按"杭州 7 天真实过境频次 + 全部国内公开轨道"重新计算。方法：杭州 30.27°N / 120.16°E；2026-10-19T00:00Z 起 7 天；可见门限 5°；光学成像 = 最大仰角 ≥10° 且 TCA 太阳高度 &gt;10°；SAR/微波 = ≥10°（不看太阳）；30 s 扫描 + 峰值抛物线插值；TLE 历元 2026-10-18/19。研究用镜像取 TLE，<strong>生产仍用 CelesTrak GP</strong>。7 天 SGP4 的 TCA 误差约数秒至 1 分钟。</p></div>
+<div class="callout"><span class="callout-label">说明</span><p><strong>2026-11-05 运行库裁剪</strong>：目录保留 <strong>65 颗</strong>（61 光学 + 4 高光谱）。SAR 19 颗（缺原生入射角带）、光学 12 颗（幅宽“未公开”）、微波 6 颗（非成像）已移出运行库并归档到 RS-Service 的 <code>data/satellites_retired.json</code>；同步按库中 <code>satellite</code> 行取星，不会重新加回。下方 102 颗表保留为历史分析口径，当前接口、展示与成图以 65 颗为准。</p>
+<p>2026-10-19 决策：<strong>不使用历史 120 颗名单</strong>，改为按"杭州 7 天真实过境频次 + 全部国内公开轨道"重新计算。方法：杭州 30.27°N / 120.16°E；2026-10-19T00:00Z 起 7 天；可见门限 5°；光学成像 = 最大仰角 ≥10° 且 TCA 太阳高度 &gt;10°；SAR/微波 = ≥10°（不看太阳）；30 s 扫描 + 峰值抛物线插值；TLE 历元 2026-10-18/19。研究用镜像取 TLE，<strong>生产仍用 CelesTrak GP</strong>。7 天 SGP4 的 TCA 误差约数秒至 1 分钟。</p></div>
 <p><strong>结果：102 颗全部为 LEO；商业 64、民用 25、气象海洋 13；军事/双用途 0 颗。</strong> 其中 <code>payload_public=true</code> 90 颗，<code>false</code> 12 颗（仅给轨道/可见性，不做成像承诺）。2026-10-21 已移除 9 颗 GEO，见 §4.4.3。</p>
 <h4>4.4.1 口径与阈值</h4>
 <p>纳入阈值（同时满足）：</p>
@@ -2878,6 +2879,7 @@ when-to-use: 用户询问某地某时的卫星过境、可见性、覆盖能力�
 </tbody>
 </table></div>
 <p>风险等级：<code>read</code>（只读）、<code>write</code>（写本地库/文件）、<code>exec</code>（执行外部命令）、<code>network</code>（外网请求）。Phase 2 全部不拦截，但必须如实标注。</p>
+<div class="callout"><span class="callout-label">说明</span><p>2026-11-05：<code>imaging-plan</code> 已从 DSH skill 移除，改由右栏“卫星成图”抽屉 + RS-Service <code>/api/v1/plans</code> 承担；<code>plan_coverage</code> MCP/CLI 随清理删除。下表该行仅作历史记录。</p></div>
 <p>首批 skill：</p>
 <div class="table-wrap"><table>
 <thead>
@@ -2904,9 +2906,9 @@ when-to-use: 用户询问某地某时的卫星过境、可见性、覆盖能力�
 <td><code>sync_status</code>、<code>run_command(tle.sync)</code></td>
 </tr>
 <tr>
-<td><code>imaging-plan</code></td>
-<td>按覆盖率/重访/星数反推成图编成方案并出 HTML 报告</td>
-<td><code>list_aoi</code>；编成求解出报告走 CLI <code>plan coverage --out</code>（与 MCP 同 service 层）</td>
+<td><code>imaging-plan</code>（已移除）</td>
+<td>2026-11-05 起改由右栏“卫星成图”抽屉 + RS <code>/api/v1/plans</code> 承担</td>
+<td>—</td>
 </tr>
 </tbody>
 </table></div>
@@ -3596,6 +3598,12 @@ M5 联调上线（约 0.5 周）
 <td>2026-10-21 从库中移除 9 颗 GEO，本版本只保留 102 颗 LEO；GEO 凝视足迹模型未实现，过境接口会把常驻可见误算为整窗过境</td>
 <td>2026-10-21</td>
 </tr>
+<tr>
+<td>Q6</td>
+<td>成图规划</td>
+<td>2026-11-05 起从 DSH skill 改为 RS-Service 后端 5 任务 + 右栏全屏抽屉；目录裁剪为 65 颗（61 光学 + 4 高光谱），SAR 19/缺幅宽 12/微波 6 移出</td>
+<td>2026-11-05</td>
+</tr>
 </tbody>
 </table></div>
 <div class="callout"><span class="callout-label">说明</span><p>当前无阻塞项。下一步按 §9 的 M1 开工。</p></div>
@@ -3659,6 +3667,11 @@ M5 联调上线（约 0.5 周）
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>2026-11-05</td>
+<td>v3.5</td>
+<td>成图规划迁到 RS-Service：5 任务 API + 后台 job + 四节报告；右栏新增全屏抽屉；目录裁剪到 65 颗；移除 imaging-plan skill 与 plan_coverage MCP/CLI</td>
+</tr>
 <tr>
 <td>2026-10-21</td>
 <td>v3.4</td>
