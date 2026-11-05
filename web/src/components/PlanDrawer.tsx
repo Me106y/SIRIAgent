@@ -23,7 +23,7 @@ const LEVEL_LABELS: Record<string, string> = {
   district: "区县",
 };
 const FIELD_LABELS: Record<string, string> = {
-  temporal_coverage_target_pct: "目标覆盖率",
+  temporal_coverage_target_pct: "单格时间覆盖率",
   mrt_target_minutes: "P95 重访上限",
   n_budget: "星数预算",
   area_target_pct: "面积目标",
@@ -34,7 +34,7 @@ const FIELD_LABELS: Record<string, string> = {
   selection_time_limit_s: "选星时限",
 };
 const FIELD_HINTS: Record<string, string> = {
-  temporal_coverage_target_pct: "%",
+  temporal_coverage_target_pct: "每格覆盖时间占比",
   mrt_target_minutes: "分钟",
   n_budget: "颗",
   area_target_pct: "%",
@@ -191,7 +191,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
   const [pointing, setPointing] = useState<"nadir" | "targeted">("nadir");
   const [cloud, setCloud] = useState(true);
   const [fields, setFields] = useState<Record<string, string>>({
-    temporal_coverage_target_pct: "10",
+    temporal_coverage_target_pct: "0.1",
     mrt_target_minutes: "24",
     n_budget: "3",
   });
@@ -608,19 +608,21 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
               onChange={(value) =>
                 setFields((current) => ({ ...current, [name]: value }))
               }
-              min={name === "mrt_target_minutes" ? 0 : 1}
+              min={name === "mrt_target_minutes" ? 0 : name === "temporal_coverage_target_pct" ? 0.01 : 1}
               max={name === "n_budget" ? 500 : name === "temporal_coverage_target_pct" ? 100 : 10_000}
-              placeholder={name === "n_budget" ? "3" : name === "mrt_target_minutes" ? "24" : "10"}
+              step={name === "temporal_coverage_target_pct" ? 0.1 : 1}
+              placeholder={name === "n_budget" ? "3" : name === "mrt_target_minutes" ? "24" : "0.1"}
             />
           </div>
         ))}
       </div>
 
       {operation === "task1" &&
-      Number(fields.temporal_coverage_target_pct || 0) > 50 &&
+      Number(fields.temporal_coverage_target_pct || 0) > 5 &&
       horizon <= 72 ? (
         <p className="plan-warning">
-          目标时间覆盖率超过 50%；72 小时内通常不可达，建议 10% 左右或更长窗口。
+          这是“单格时间覆盖率”，不是面积占比；65 颗/72h 通常只能到 0.1–1%。
+          达标面积按 90% 面积目标判定。
         </p>
       ) : null}
 
@@ -700,7 +702,8 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
   const renderResult = (value: PlanResult) => {
     const cards = value.summary_cards ?? {};
     const sats = value.report_data?.sats ?? [];
-    const target = value.targets?.temporal_coverage_pct;
+    const areaTarget = value.targets?.area_pct;
+    const temporalTarget = value.targets?.temporal_coverage_pct;
     const windowInfo = value.window;
     const expanded = Boolean(windowInfo?.expanded);
     const usedHorizon = windowInfo?.used_horizon_h;
@@ -711,8 +714,9 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
           <strong>{value.feasible ? "目标可行" : "目标未达成"}</strong>
           <span>
             {value.optimality ?? "—"} · 窗口 {usedHorizon ?? "—"}h
-            {expanded ? `（请求 ${requestedHorizon}h，已扩窗）` : ""} · 候选{" "}
-            {value.candidate_count ?? "—"} 颗 · 未参与 {value.blocked_count ?? 0} 颗
+            {expanded ? `（请求 ${requestedHorizon}h，已扩窗）` : ""} · 单格阈值{" "}
+            {temporalTarget ?? "—"}% · 候选 {value.candidate_count ?? "—"} 颗 · 未参与{" "}
+            {value.blocked_count ?? 0} 颗
           </span>
         </div>
         <div className="plan-stats">
@@ -721,7 +725,9 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
             <strong>{cards.satellite_count ?? sats.length}</strong>
           </div>
           <div>
-            <span>{target != null ? `达标面积（目标 ${target}%）` : "达标面积"}</span>
+            <span>
+              {areaTarget != null ? `达标面积（目标 ${areaTarget}%）` : "达标面积"}
+            </span>
             <strong>{formatNumber(cards.qualified_area_pct)}%</strong>
           </div>
           <div>
