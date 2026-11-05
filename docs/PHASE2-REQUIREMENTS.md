@@ -31,17 +31,17 @@
 
 ### 1.2 Phase 2 目标
 
-把当前"验证台"升级为可日常使用的双栏平台，并建立独立的星历数据服务：
+把当前"验证台"升级为可日常使用的三栏平台，并建立独立的星历数据服务：
 
 1. **两仓库分工**：`SIRIAgent` = 前端 + DSH 调用 + （Phase 3 的）门禁；`RS-Service` = 星历数据、计算、MCP、CLI。
 2. **本地星历库 + 每日同步**：结构化、可追溯、带精度声明，不再依赖过期 JSON/SQLite 快照。
-3. **前端改版**：左 1/3 星历可视化，右 2/3 Agent 区；深空科技风；多分辨率与主流浏览器可用。
+3. **前端改版**：左栏星历目录、中央 3D 地球、右栏 Agent 问答区；地球为视觉主体；深空科技风；多分辨率与主流浏览器可用。
 4. **Skill 命令化 + MCP 取数**：CLI 为唯一实现，MCP 为薄包装，`COMMANDS.md` 说明命令与风险。
 
 ### 1.3 验收演示（唯一硬标准）
 
 1. 打开 `https://siriagent.dpdns.org`，通过 Cloudflare Access 登录。
-2. 左栏 3D 地球显示默认展示集的**实时位置**；选中一颗后显示星下点轨迹、传感器足迹、未来 24h 过境。
+2. 中央 3D 地球显示默认展示集的**实时位置**；选中一颗后显示星下点轨迹、传感器足迹、未来 24h 过境。
 3. 右栏可**任意提问**（不限定话题、不加话题限制）；回答以 token 级流式出现，工具调用卡片、思考块实时呈现。
 4. 问及星历/过境类问题时，Agent 经 **MCP** 调用 `RS-Service`，返回过境表或覆盖结论，并带精度声明。
 5. 刷新页面后能恢复同一会话继续对话。
@@ -114,7 +114,7 @@ SIRIAgent/
 ├── skills/                   # <slug>/SKILL.md + COMMANDS.md
 ├── web/                      # React + Vite + TS 源码
 │   ├── src/
-│   │   ├── layout/           # 1/3 + 2/3 框架
+│   │   ├── layout/           # 三栏框架（星历 / 地球 / Agent）
 │   │   ├── ephemeris/        # Cesium 地球、轨迹、足迹、杭州定位
 │   │   ├── agent/            # 消息流、工具卡、思考块、输入区
 │   │   ├── components/       # 自研通用组件
@@ -159,22 +159,24 @@ RS-Service/
 | 定时 | **systemd user timer**，每日 03:00 Asia/Shanghai | 不依赖 Web 进程，不会多 worker 重复跑 |
 | 日志 | 结构化 JSON 到 stderr + `sync_run` 表 | 可审计 |
 
-### 4.2 数据库（12 张表）
+### 4.2 数据库（14 张表）
 
 数据库：PostgreSQL 18，DSN 放 `RS-Service/.env`（`RS_DATABASE_URL`，已 gitignore），systemd 通过 `EnvironmentFile` 注入；时间统一 `TEXT ISO8601 'Z'`。旧 SQLite 文件仅作迁移源与单测回退。
 
 | 表 | 关键字段 | 说明 |
 | --- | --- | --- |
-| `satellite` | `sat_id` INTEGER PK（NORAD）、`norad_alpha5`、`intl_designator`、`name`、`name_zh`、`operator`、`country`、`category`、`object_type`、`status`、`orbit_regime`、`launch_date`、`is_domestic`、**`payload_public`**、`metadata_source`、`updated_at` | 卫星目录；`is_domestic` 由 `operator/country` 派生；`payload_public=false` 的 13 颗不展示载荷参数 |
+| `satellite` | `sat_id` INTEGER PK（NORAD）、`norad_alpha5`、`intl_designator`、`name`、`name_zh`、`operator`、`country`、`category`、`object_type`、`status`、`orbit_regime`、`launch_date`、`is_domestic`、**`payload_public`**、`metadata_source`、`updated_at` | 卫星目录；`is_domestic` 由 `operator/country` 派生；`payload_public=false` 的 12 颗不展示载荷参数 |
 | `satellite_alias` | `sat_id`、`alias`、`alias_norm`、`source`、`kind` | 解决 `JL-1` ↔ `JILIN-1 GAOFEN 03D52`、中文名 |
 | `tle_record` | `sat_id`、`epoch_utc`、`line1`、`line2`、`omm_json`、`checksum_ok`、`mean_motion`、`inclination_deg`、`eccentricity`、`raan_deg`、`argp_deg`、`mean_anomaly_deg`、`bstar`、`mean_motion_dot`、`mean_motion_ddot`、`ephemeris_type`、`element_set_no`、`rev_at_epoch`、`source_id`、`fetched_at_utc`；`UNIQUE(sat_id, epoch_utc, source_id)` | append-only；`omm_json` 是 6 位号时代的唯一载体 |
 | `tle_current` | `sat_id` PK、`tle_id`、`epoch_utc`、`age_hours`、`updated_at` | 按 `data_source.priority` 择优 |
 | `sensor` | `sat_id`、`sensor_name`、`sensor_type`、`pan_resolution_m`、`ms_resolution_m`、`tir_resolution_m`、`swath_km`、`along_track_km`、`fov_deg`、`bands_json`、`imaging_modes_json`、`revisit_days_nominal`、**`confidence`**、`source_url`、`updated_at` | `confidence ∈ official/vendor/approx/unknown`；3 处错标就是缺这一层 |
+| `sensor_mode` | `sat_id`、`mode_name`、`resolution_m`、`swath_km`、`is_default`、`confidence`、`note`、`source_text`、`parser_version`、`updated_at`；`UNIQUE(sat_id, mode_name)` | 把 `sensor.raw_spec` 的自由文本拆成（分辨率, 幅宽）成对结构 |
+| `sensor_mode_correction` | `sat_id`、`mode_name`、`field`、`raw`、`corrected`、`rule`、`parser_version`、`created_at` | 解析纠错流水，供报告与复现 |
 | `data_source` | `code`、`name`、`kind`、`base_url`、`query_template`、`auth_type`、`credential_ref`、`min_interval_s`、`daily_budget`、`priority`、`enabled`、`terms_url`、`last_success_at`、`last_http_status`、`notes` | 源注册与限流预算 |
 | `sync_run` | `source_id`、`started_at_utc`、`finished_at_utc`、`status`、`attempt_no`、`max_attempts`、`next_retry_at`、`http_status`、`requested`、`inserted`、`updated`、`unchanged`、`failed`、`bytes`、`duration_ms`、`error_code`、`error_message` | `status ∈ ok/partial/retrying/failed/abandoned/skipped_not_modified`；`failed` = 本次尝试失败但还会重试，`abandoned` = 3 次都失败、当天停止 |
 | `sync_item_error` | `run_id`、`sat_id`、`attempt_no`、`http_status`、`error_code`、`error_message`、`retry_count`、`created_at_utc` | 单星失败明细 |
 | `sync_state` | `source_id` PK、`last_attempt_at`、`last_success_at`、`last_status`、`consecutive_failures`、`attempts_today`、`retry_count_today`、`circuit_open_until`、`next_scheduled_at`、`updated_at` | 每日一次的调度与重试状态；**重启进程不丢**，避免同一天重复抓取 |
-| `aoi` | `code`、`name`、`level`、`adcode`、`geom_wkt`、`min_lat`、`min_lon`、`max_lat`、`max_lon`、`area_km2`、`source`、`datum`、`accuracy` | 城市/区县/自定义 |
+| `aoi` | `code`、`name`、`level`、`adcode`、`geom_wkt`、`min_lat`、`min_lon`、`max_lat`、`max_lon`、`area_km2`、`source`、`datum`、`accuracy` | 省 / 市 / 区县 / 自定义 |
 | `pass_window` | `sat_id`、`aoi_id`、`tle_id`、`algo_version`、`aos_utc`、`los_utc`、`tca_utc`、`max_elev_deg`、`aos_az_deg`、`los_az_deg`、`duration_s`、`min_range_km`、`sun_elev_deg`、`is_daylight`、`footprint_hit`、`coverage_ratio`、**`cloud_cover_pct`**、`computed_at`；`UNIQUE(sat_id, aoi_id, aos_utc, algo_version)` | 换 TLE 即失效 |
 | `coverage_snapshot` | `aoi_id`、`window_start_utc`、`window_end_utc`、`sat_set_hash`、`grid_spacing_deg`、`k_min`、`temporal_coverage_pct`、`area_coverage_pct`、`mrt_s`、`art_s`、`algo_version`、`computed_at` | 面向 Agent 查询与报表 |
 
@@ -224,11 +226,11 @@ CREATE INDEX idx_sensor_sat     ON sensor(sat_id);
 - 解析：优先 OMM/JSON；TLE 文本仅作兼容，校验行校验位；`sat_id` 用整数，接口同时接受 Alpha-5。
 - 幂等：`UNIQUE(sat_id, epoch_utc, source_id)`，重复抓取只更新 `fetched_at`。
 
-### 4.4 卫星集：111 颗（全部国内、公开轨道，2026-10-19 定稿）
+### 4.4 卫星集：102 颗（全部国内 LEO，2026-10-21 修订）
 
 > 2026-10-19 决策：**不使用历史 120 颗名单**，改为按"杭州 7 天真实过境频次 + 全部国内公开轨道"重新计算。方法：杭州 30.27°N / 120.16°E；2026-10-19T00:00Z 起 7 天；可见门限 5°；光学成像 = 最大仰角 ≥10° 且 TCA 太阳高度 >10°；SAR/微波 = ≥10°（不看太阳）；30 s 扫描 + 峰值抛物线插值；TLE 历元 2026-10-18/19。研究用镜像取 TLE，**生产仍用 CelesTrak GP**。7 天 SGP4 的 TCA 误差约数秒至 1 分钟。
 
-**结果：111 颗 = 102 颗 LEO + 9 颗 GEO；商业 64、民用 29、气象海洋 18；军事/双用途 0 颗。** 其中 `payload_public=true` 98 颗，`false` 13 颗（仅给轨道/可见性，不做成像承诺）。
+**结果：102 颗全部为 LEO；商业 64、民用 25、气象海洋 13；军事/双用途 0 颗。** 其中 `payload_public=true` 90 颗，`false` 12 颗（仅给轨道/可见性，不做成像承诺）。2026-10-21 已移除 9 颗 GEO，见 §4.4.3。
 
 #### 4.4.1 口径与阈值
 
@@ -237,14 +239,14 @@ CREATE INDEX idx_sensor_sat     ON sensor(sat_id);
 1. **国内**：中国民用、商业或气象海洋卫星；不含 Sentinel/Landsat/WorldView 等国外星。
 2. **在轨且非退役**：剔除已退役/失效（FY-1D、FY-3A/B/C、HJ-1A/B、HY-1B、HY-2A、ZY-1 02C 等）、已再入、140–185 km 待再入对象。
 3. **高度**：LEO 高度 ≥200 km；本表最低为 Jilin-1 GF-03D09（284 km），已标注"低轨"。
-4. **可见过境**：LEO 在杭州 7 天平均 ≥2.5 次/天（5° 门限）；GEO 为常驻可见（仰角 >5°，可见率 100%），单列、不参与 LEO 排名。
-5. **TLE**：有可用 TLE，年龄 ≤60 天；本表 **111 颗全部 ≤0.9 天**，无 >14 天条目。
-6. **载荷**：优先公开载荷；商业星座中 13 颗载荷未核实（Tianyi A–F、Xingshidai 20、Honghu 2、Dongpo 08/09/10、KX-09、LuTan-4 01A），标 `payload_public=false`，只给轨道/可见性。
+4. **可见过境**：在杭州 7 天平均 ≥2.5 次/天（5° 门限）。
+5. **TLE**：有可用 TLE，年龄 ≤60 天；本表 **102 颗全部 ≤0.9 天**，无 >14 天条目。
+6. **载荷**：优先公开载荷；商业星座中 12 颗载荷未核实（Tianyi A–F、Xingshidai 20、Honghu 2、Dongpo 08/09/10、KX-09），标 `payload_public=false`，只给轨道/可见性。
 7. **去重**：按 NORAD 去重；`JILIN-1 GAOFEN 3A`（44312）已确认是 **Bufeng-1A（GNSS-R）** 的镜像别名，**从本清单剔除**；本表无 OBJECT A/B/C 重复对象。
 
 **为什么 0 军事**：Yaogan、Yunhai、Ningxia、GF-8/9/10R/11/12/14 无公开载荷参数；本轮按要求把 110–120 全部限定在公开载荷的商业/民用/气象海洋，军事 0 颗。
 
-**数量差异**：若把退役星、140–185 km 待再入、44312 别名和 GF-8/9/10R/11/12/14 双用途也算入，会得到约 121 颗；按上述硬性排除后为 **111 颗**。
+**数量差异**：若把退役星、140–185 km 待再入、44312 别名和 GF-8/9/10R/11/12/14 双用途也算入，会得到约 121 颗；按上述硬性排除后为 **111 颗**，再移除 9 颗 GEO 后为 **102 颗**。
 
 #### 4.4.2 LEO 展示集（102 颗，按可见过境/天降序）
 
@@ -359,30 +361,23 @@ CREATE INDEX idx_sensor_sat     ON sensor(sat_id);
 >
 > **低轨/异常提示**：Jilin-1 GF-03D08/09/51/52/53、GF-03E/F 的高度为 284–382 km，处于低轨衰减段；其中 GF-03D09 最大仰角仅 16.2°，TLE 可能异常，UI 标灰并标"低置信"，不纳入成像推荐。
 
-#### 4.4.3 GEO 常驻可见性（9 颗，不参与过境排名）
+#### 4.4.3 GEO 卫星：已移除（2026-10-21）
 
-| NORAD | 名称 | 类别 | 定点经度(°E) | 仰角范围(°) | 方位角范围(°) | 可见率 | 类型/载荷 | 公开 |
-|---:|---|---|---:|---:|---:|---:|---|---|
-| 41194 | GF-4 | 民用 | 105.7 | 50.7–52.0 | 206.6–207.7 | 100% | GEO 光学 50 m / 400 m | 是 |
-| 46610 | GF-13 01 | 民用 | 118.4 | 54.5–54.9 | 182.3–184.7 | 100% | GEO 光学 50 m / 400 m | 是 |
-| 55912 | GF-13 02 | 民用 | 148.1 | 42.5–44.3 | 132.4–134.5 | 100% | GEO 光学 50 m / 400 m 级 | 是 |
-| 57624 | LuTan-4 01A | 民用 | 89.5 | 28.2–53.1 | 217.2–248.6 | 100% | GEO SAR，载荷未公开 | 否 |
-| 40367 | FY-2G | 气象海洋 | 99.5 | 42.3–53.8 | 212.0–222.9 | 100% | GEO 气象 1.25 km / 5 km | 是 |
-| 43491 | FY-2H | 气象海洋 | 79.1 | 31.0–35.8 | 236.7–243.4 | 100% | GEO 气象 1.25 km / 5 km | 是 |
-| 41882 | FY-4A | 气象海洋 | 123.4 | 51.6–57.6 | 173.2–174.0 | 100% | GEO 气象 AGRI 1 km / 4 km | 是 |
-| 48808 | FY-4B | 气象海洋 | 104.7 | 50.4–51.4 | 208.5–209.2 | 100% | GEO 气象 AGRI 0.5–2 km / 2–4 km | 是 |
-| 67246 | FY-4C | 气象海洋 | 133.0 | 52.0–52.1 | 155.7–155.9 | 100% | GEO 气象 AGRI 0.5–2 km / 2–4 km | 是 |
+> 2026-10-21 决策：**从数据库与展示集移除 9 颗 GEO**（GF-4、GF-13 01/02、LuTan-4 01A、FY-2G/H、FY-4A/B/C）。
+> 原因：GEO 凝视足迹模型未实现；过境接口会把常驻可见算成一条横跨整个窗口的“过境”，
+> 容易误导成像与采购判断。需要 GEO 能力时，后续以独立接口/图层重新引入（见 §11 Q5）。
+> 原始可见性数据保留在 git 历史中，不在当前展示集内。
 
 #### 4.4.4 分类统计
 
-| 类别 | LEO | GEO | 合计 | payload_public=false |
-|---|---:|---:|---:|---:|
-| 商业 | 64 | 0 | 64 | 12 |
-| 民用 | 25 | 4 | 29 | 1 |
-| 气象海洋 | 13 | 5 | 18 | 0 |
-| **合计** | **102** | **9** | **111** | **13** |
+| 类别 | LEO | 合计 | payload_public=false |
+|---|---:|---:|---:|
+| 商业 | 64 | 64 | 12 |
+| 民用 | 25 | 25 | 0 |
+| 气象海洋 | 13 | 13 | 0 |
+| **合计** | **102** | **102** | **12** |
 
-其中 `payload_public=true` 共 **98** 颗，`false` 共 **13** 颗。商业 12 颗未核实载荷为：Tianyi A–F（6）、Xingshidai 20（1）、Honghu 2（1）、Dongpo 08/09/10（3）、KX-09（1）；民用 1 颗为 LuTan-4 01A。
+其中 `payload_public=true` 共 **90** 颗，`false` 共 **12** 颗。商业 12 颗未核实载荷为：Tianyi A–F（6）、Xingshidai 20（1）、Honghu 2（1）、Dongpo 08/09/10（3）、KX-09（1）。
 
 #### 4.4.5 频次结论
 
@@ -398,34 +393,33 @@ CREATE INDEX idx_sensor_sat     ON sensor(sat_id);
 | 41335 | **排除（国外）** | 实为 Sentinel-3A（ESA），历史库误标为 Gaofen-3 |
 | 43437 | **排除（国外）** | 实为 Sentinel-3B（ESA），历史库误标为 Gaofen-5 |
 | 44312 | **排除（类型不符）** | 实为 **捕风一号A（Bufeng-1A）**，GNSS-R 海面风场星，i=45°、462 km；不是 GF-3A，也不是光学/SAR 成像星 |
-| 40143 | **排除（名称错配）** | 实为 Yaogan-21（LEO）；GF-4 是 41194（GEO） |
+| 40143 | **排除（名称错配）** | 实为 Yaogan-21（LEO）；GF-4 是 41194（GEO，已移除） |
 | GF-12 系列 | **不按光学处理** | 实为 SAR；历史库标成"光学 0.8 m/16 km"是错的 |
 | GF-8 / 9 / 10R / 11 / 12 / 14 | 排除（双用途、载荷未公开） | 无法给出可信传感器参数，避免 Agent 编造 |
 | 退役星 | 排除 | FY-1D、FY-3A/3B/3C、HJ-1A/1B、HY-1B、HY-2A、ZY-1 02C |
 | 无 TLE | 排除 | 齐鲁一号、巢湖一号、涪城一号、海南一号、南京一号、闽星等镜像无数据 |
 | 140–185 km 待再入 | 排除 | 7 个对象 7 天 0 过境，TLE 不可用于业务预报 |
 | 国外星 | 排除 | Sentinel、Landsat、WorldView 等 |
-| 13 颗 `payload_public=false` | **保留但只给轨道** | Tianyi、Xingshidai、Honghu、Dongpo、KX-09、LuTan-4；不展示分辨率/幅宽，不参与成像推荐 |
+| 12 颗 `payload_public=false` | **保留但只给轨道** | Tianyi、Xingshidai、Honghu、Dongpo、KX-09；不展示分辨率/幅宽，不参与成像推荐 |
 
 #### 4.4.7 分层与前端性能
 
 | 层 | 数量 | 用途 |
 | --- | --- | --- |
-| 重点保障集 | **30** | 默认推荐、Agent 优先查询；全部包含在 111 中 |
-| 默认展示集 | **111（102 LEO + 9 GEO）** | 左栏全量星历、过境查询 |
+| 重点保障集 | **25** | 默认推荐、Agent 优先查询；全部包含在 102 中 |
+| 默认展示集 | **102（全部 LEO）** | 左栏全量星历、过境查询 |
 | 全量目录 | 约 174 | 含军事/退役/待再入，仅高级查询，P2 |
 | 自定义集 | 用户勾选 | 落 `satellite_group` 表，P2 |
 
-**重点保障 30 颗**（全部在 111 内）：GF-2、GF-7、吉林一号宽幅01、吉林一号高分02D、四维高景 Neo-1 01、北京三号B；GF-3、GF-3 02、GF-3 03、陆探一号 A/B、HJ-2E、PIESAT-1 A；GF-1 03、GF-6、ZY-3 03、ZY-1 02D、GF-5 02、HJ-2A；FY-3D/F/G、HY-1D、HY-2D、HY-3A；GEO：GF-4、GF-13 01、FY-4B、FY-4C、FY-2H。
+**重点保障 25 颗**（全部在 102 内）：GF-2、GF-7、吉林一号宽幅01、吉林一号高分02D、四维高景 Neo-1 01、北京三号B；GF-3、GF-3 02、GF-3 03、陆探一号 A/B、HJ-2E、PIESAT-1 A；GF-1 03、GF-6、ZY-3 03、ZY-1 02D、GF-5 02、HJ-2A；FY-3D/F/G、HY-1D、HY-2D、HY-3A。
 
-**前端性能（111 颗必须按此实现）**：
+**前端性能（102 颗必须按此实现）**：
 
-1. **当前位置层（111 颗）**：每 5 s 传播一次（或前端插值），111 个点精灵；禁止 60 fps 重复传播。
+1. **当前位置层（102 颗）**：每 5 s 传播一次（或前端插值），102 个点精灵；禁止 60 fps 重复传播。
 2. **轨迹层（仅选中星）**：只算当前轨道 1 圈（约 90–100 min），10–20 s 步长 ≈ 300–600 点；最多同时 3 条，禁止全量。
 3. **TLE/对象缓存**：服务端按 NORAD 缓存 TLE 与 `EarthSatellite`；前端只取 `norad/name/lat/lon/alt` 轻量数组（<100 KB）。
 4. **过境预计算**：7 天统计在服务端算好写 `pass_window`；前端点击某星再取 TCA 列表。
-5. **GEO 单独图层**：9 颗常驻，不参与轨迹层与过境排名。
-6. **降级**：TLE >14 天标"低置信"，>30 天不画轨迹；轨迹点 >1000 时抽稀到 500。
+5. **降级**：TLE >14 天标"低置信"，>30 天不画轨迹；轨迹点 >1000 时抽稀到 500。
 
 #### 4.4.8 旧 120 颗的来源（仅供对照，不再采用）
 
@@ -563,9 +557,24 @@ CREATE INDEX idx_sensor_sat     ON sensor(sat_id);
 | `ground_track` | `sat_id`、`start/end`、`step_s` | 星下点序列 | 经度已 unwrap |
 | `next_passes` | `aoi`（code/adcode/WKT）、`start/end`、`min_elev_deg?` | 过境列表（AOS/LOS/TCA/最大仰角/云量） | 默认 5°/10° 按 §4.6.2 |
 | `sync_status` | — | 最近同步、TLE 年龄、失败项 | |
+| `list_aoi` | `level?` | 可用 AOI（adcode / 名称 / bbox / 面积） | 本版本只含浙江 11 个地级市 |
+| `plan_coverage` | `mode`、`aoi`、`max_resolution_m`、模式专属参数 | 编成方案（星数、覆盖率、重访、时间轴） | 四种模式，见下方口径 |
 | `run_command` | `command`（枚举）、`args`（schema） | stdout/结构化结果 + 审计 id | 受控命令入口，见 §5.3 |
 
-> 2026-10-19 已实现：`list_satellites`、`get_satellite`、`next_passes`、`ground_track`、`current_position`、`list_positions`、`sync_status`；其余待补。
+> 2026-10-20 已实现：`list_satellites`、`get_satellite`、`next_passes`、`ground_track`、`current_position`、`list_positions`、`sync_status`、`list_aoi`、`plan_coverage`。
+
+`plan_coverage` 的模式与必填参数（覆盖率只有"最少星达覆盖率"是输入，其余模式是输出）：
+
+| mode | 必填 | 说明 |
+| --- | --- | --- |
+| `min_sats_for_coverage` | `target_coverage_pct` | 达到目标覆盖率最少要几颗；达不到时只在此模式自动扩窗 72h→7d→14d |
+| `min_sats_for_revisit` | `target_max_gap_hours` | 达到 P95 重访上限最少要几颗；按给定窗口算，不扩窗 |
+| `max_coverage_for_n` | `n_sats`、`hours` | 给定 N 颗在时间窗内的最大覆盖；**不问覆盖率**，不扩窗 |
+| `min_wait_for_n` | `n_sats`、`hours` | 给定 N 颗在时间窗内的最小平均等待；**不问覆盖率**，不扩窗 |
+
+> 光学/高光谱访问按太阳高度 >10°（`RS_OPTICAL_SUN_MIN_DEG`，默认 10）与云量双重过滤；夜间过境不计入覆盖，SAR 不看太阳高度。
+
+> `plan_coverage` 会写 `coverage_snapshot`（覆盖率、网格间距、算法版本），风险等级 **write**；只读场景传 `persist=false`。
 
 所有工具出参统一包一层：
 
@@ -622,6 +631,19 @@ when-to-use: 用户询问某地某时的卫星过境、可见性、覆盖能力�
 | `ephemeris-query` | 查卫星、TLE、当前位置 | `list_satellites`、`get_satellite`、`propagate` |
 | `pass-planning` | 某 AOI 未来过境与可用性 | `next_passes` |
 | `tle-health` | 数据新鲜度与同步诊断 | `sync_status`、`run_command(tle.sync)` |
+| `imaging-plan` | 按覆盖率/重访/星数反推成图编成方案并出 HTML 报告 | `list_aoi`；编成求解出报告走 CLI `plan coverage --out`（与 MCP 同 service 层） |
+
+`imaging-plan` 的提问顺序是**模式相关**的，不能按固定字段表一路问下去：
+
+- 公共顺序：`mode → aoi → sensor_types → max_resolution_m`；
+- 之后只问本模式需要的字段：`min_sats_for_coverage` 问 `target_coverage_pct`；
+  `min_sats_for_revisit` 问 `target_max_gap_hours`；`max_coverage_for_n` / `min_wait_for_n`
+  问 `n_sats` 再问 `hours`（时间窗），**不问覆盖率**——那两个模式里覆盖率是输出；
+- 每次 `ask_user_question` 只放 1 个问题；用户没回答时不要原样重问，先说明缺哪个字段；
+- 给定 N 颗的结论必须带时间窗（"3 颗星、72 小时内最大覆盖 78%"），不得外推；
+- 报告分四节：卫星构成 / 覆盖与回放 / 推荐计划（逐星给出类型、分辨率、幅宽、覆盖占比、
+  CelesTrak 来源与推荐原因）/ 口径与精度；右上角可切换深/浅主题，PDF 导出强制浅色；
+  重访 P95/MRT 与网格间距仍在 API/JSON 中，报告界面不展示。
 
 ### 5.5 注册到 DSH
 
@@ -658,23 +680,23 @@ when-to-use: 用户询问某地某时的卫星过境、可见性、覆盖能力�
 ### 6.3 布局与信息架构
 
 ```text
-┌──────────────────────────────────────────────────────────────┐
-│ Header：品牌 / 同步状态 / 会话 / 连接状态 / 设置              │
-├──────────────────┬───────────────────────────────────────────┤
-│ 左 1/3           │ 右 2/3                                    │
-│ 卫星筛选列表     │ 消息流（思考块、工具卡、产物卡）          │
-│ 3D 地球          │                                           │
-│ 选中星轨迹/足迹  │                                           │
-│ 杭州定位         │                                           │
-│ 过境表           │                                           │
-│ 数据源/同步状态  │ 输入区（附件、斜杠命令、发送/停止）        │
-└──────────────────┴───────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│ Header：品牌 / 同步状态 / 会话 / 连接状态 / 设置                          │
+├───────────────┬──────────────────────────────────────┬───────────────────┤
+│ 星历（左）    │ 3D 地球（中，主视觉）                │ Agent（右）       │
+│ 卫星筛选列表  │ 102 颗实时位置                       │ 消息流（思考块、  │
+│ 选中星详情    │ 选中星轨迹 + 传感器足迹              │ 工具卡、产物卡）  │
+│ 聚焦 / 杭州   │ 相机聚焦、杭州边界闪烁定位           │                   │
+│ 未来 24h 过境 │ 颗数 · 5 s 刷新 · 轨迹状态           │ 输入区（/、发送） │
+└───────────────┴──────────────────────────────────────┴───────────────────┘
 ```
 
-- 左栏可折叠（窄屏默认折叠为图标条）。
+- 三栏固定顺序：左星历、中地球、右 Agent；中栏吃掉剩余宽度，是视觉主体。
+- 左右栏有最小宽度和上限（不随视口无限拉伸），中栏不低于 340 px。
+- 左栏不折叠：≥ 1024 保持三栏；< 1024 才按"地球 → 星历 → Agent"单列堆叠。
 - 右栏不限制话题：欢迎语只做示例，不写"只能问星历"。
 - 相机："聚焦"飞到选中星足迹；"杭州"飞到杭州并让**杭州边界多边形**闪烁约 6 秒（Amap 市界 GCJ-02→WGS84）。时间轴 UI 暂不启用，后端 `at` 参数保留。
-- 卫星列表支持按类别（商业/民用/气象海洋）/类型（光学/SAR/高光谱）/分辨率/低置信筛选，默认 111 颗展示集；列表用虚拟滚动，111 颗也能流畅。
+- 卫星列表支持按类别（商业/民用/气象海洋）/类型（光学/SAR/高光谱）/分辨率/低置信筛选，默认 102 颗展示集；列表用虚拟滚动，102 颗也能流畅。
 
 ### 6.4 视觉系统
 
@@ -688,11 +710,11 @@ when-to-use: 用户询问某地某时的卫星过境、可见性、覆盖能力�
 
 | 断点 | 行为 |
 | --- | --- |
-| ≥ 1920 | 左 1/3、右 2/3；左栏完整 |
-| 1440–1919 | 左 32%、右 68%；过境表压缩列 |
-| 1280–1439 | 左 30%、右 70%；过境表简化 |
-| 1024–1279 | 左栏可折叠；右栏全宽 |
-| < 1024 | 上下堆叠；地球高度 40vh；输入区固定底部 |
+| ≥ 1920 | 左 344、右 464；中栏占满剩余，地球为最大区域 |
+| 1440–1919 | 左 316、右 412；过境表压缩列 |
+| 1280–1439 | 左 292、右 376；过境表简化 |
+| 1024–1279 | 左 272、右 340；三栏保留，中栏不低于 340 |
+| < 1024 | 单列堆叠：地球 40vh → 星历 → Agent；整页纵向滚动 |
 
 - 浏览器矩阵：Chrome / Edge / Firefox / Safari 最近两个大版本；WebGL 不可用时显示降级提示与 2D 轨迹列表。
 - 高分屏：`devicePixelRatio` 适配，Cesium `resolutionScale` 可调；2560/4K 下不模糊。
@@ -703,11 +725,11 @@ when-to-use: 用户询问某地某时的卫星过境、可见性、覆盖能力�
 
 - 首屏（不含 Cesium 影像）：< 2.5 s（本地/香港出口，20 Mbps）。
 - Cesium 与影像按需加载；首屏先出骨架与卫星列表。
-- **111 颗只画当前位置**（点/图标，Cesium 实体或 PointPrimitive），不为每颗星预生成 1s 轨迹；轨迹仅对选中星按需计算并按 stride 降采样。
-- 卫星位置动画 ≥ 30 FPS（111 颗当前位置；轨迹模式 ≥ 30 FPS）。
+- **102 颗只画当前位置**（点/图标，Cesium 实体或 PointPrimitive），不为每颗星预生成 1s 轨迹；轨迹仅对选中星按需计算并按 stride 降采样。
+- 卫星位置动画 ≥ 30 FPS（102 颗当前位置；轨迹模式 ≥ 30 FPS）。
 - 卫星列表用虚拟滚动（只渲染可视行）；筛选/搜索在前端完成。
 - 过境窗口按日预计算并缓存（`pass_window`），前端不再逐次全量算。
-- 单次过境查询 P95 < 3 s（111 颗、24h 窗口，命中缓存）。
+- 单次过境查询 P95 < 3 s（102 颗、24h 窗口，命中缓存）。
 
 ### 6.7 前端待办
 
@@ -715,8 +737,8 @@ when-to-use: 用户询问某地某时的卫星过境、可见性、覆盖能力�
 | --- | --- | --- | --- |
 | D1 | 搭建 React+Vite+TS 工程与构建管线，`dist/` 由 Flask/FastAPI 托管 | P0 | `npm run build` 后站点可用 |
 | D2 | DSH SDK 常驻运行时 + SSE 事件桥 | P0 | 浏览器看到 token 级流式 |
-| D3 | 双栏布局 + Header + 输入区 | P0 | 三档分辨率不破 |
-| D4 | Cesium 地球 + 卫星实时位置 | P0 | 111 颗位置正确、可交互 |
+| D3 | 三栏布局（星历 / 地球 / Agent）+ Header + 输入区 | P0 | 三档分辨率不破 |
+| D4 | Cesium 地球 + 卫星实时位置 | P0 | 102 颗位置正确、可交互 |
 | D5 | 选中星轨迹、足迹、杭州闪烁定位、过境表 | P0 | 与 MCP 结果一致 |
 | D6 | 消息流：思考块、工具卡、错误态 | P0 | 工具调用实时出现 |
 | D7 | 会话恢复（刷新后续聊） | P1 | 同 session 续聊 |
@@ -763,7 +785,7 @@ when-to-use: 用户询问某地某时的卫星过境、可见性、覆盖能力�
 | B1 | 数据 | Alembic 初始迁移（10 表） | P0 | A2 |
 | B2 | 数据 | 抓取/解析（OMM + TLE） | P0 | B1 |
 | B3 | 数据 | 同步 CLI + systemd timer（每日 03:00、3 次重试、失败当天停止） | P0 | B2 |
-| B4 | 数据 | 卫星目录与 111 颗展示集入库 | P0 | B2 |
+| B4 | 数据 | 卫星目录与 102 颗展示集入库 | P0 | B2 |
 | B5 | 数据 | SGP4 传播 + 轨迹 | P0 | B4 |
 | B6 | 数据 | 过境窗口（门限/太阳角） | P0 | B5 |
 | B7 | 数据 | AOI 导入 + GCJ-02 转换 + 校验 | P0 | B1 |
@@ -778,7 +800,7 @@ when-to-use: 用户询问某地某时的卫星过境、可见性、覆盖能力�
 | C5 | Skill | 注册到 DSH（MCP + 目录） | P0 | C2、D2 |
 | D1 | 前端 | React 工程 | P0 | A1 |
 | D2 | 前端 | SDK 流式桥 | P0 | A1 |
-| D3 | 前端 | 双栏布局 | P0 | D1 |
+| D3 | 前端 | 三栏布局 | P0 | D1 |
 | D4 | 前端 | Cesium 地球 + 实时位置 | P0 | D1、C1 |
 | D5 | 前端 | 轨迹/足迹/杭州闪烁定位/过境表 | P0 | D4、C2 |
 | D6 | 前端 | 消息流与工具卡 | P0 | D2、D3 |
@@ -812,9 +834,9 @@ M5 联调上线（约 0.5 周）
 
 | 里程碑 | 状态 | 证据 |
 | --- | --- | --- |
-| M1 数据服务 | **进行中** | 两仓库已公开；12 表迁移；111 颗 seed；111 条 TLE；REST/MCP 可用；杭州 AOI 已写入 `aoi` 表（330100，16819 km²）；12 个测试通过。待补：覆盖/重访、云量写入 `pass_window` |
+| M1 数据服务 | **进行中** | 两仓库已公开；12 表迁移；102 颗 LEO seed；102 条 TLE；REST/MCP 可用；杭州 AOI 已写入 `aoi` 表（330100，16819 km²）；12 个测试通过。待补：覆盖/重访、云量写入 `pass_window` |
 | M2 Agent 可查 | **进行中** | MCP 已接入 `headless.patch.yml`（Streamable HTTP）；7 个工具可用，前端已显示工具卡；`ephemeris-query`、`pass-planning`、`tle-health` 三个 skill 已配 `SKILL.md` + `COMMANDS.md`（用途/风险/审批/示例/失败处理），`/` 菜单可直接调用；待补 `get_tle`、`propagate`、`run_command`；DSH 侧已通过 `headless.patch.yml` 的 `skill-filesystem.customSkillDirs` 注册 `skills/`（实测 Agent 能加载 `ephemeris-query` 并继续调用 MCP）；`ask_user_question` 已走 DSH 问答通道（SDK server answerer → SSE `question` → 前端卡片 → `/api/question/answer`）；第 4 个 skill 与 §2.1/§5.4 口径不一致，待决策 |
-| M3 前端骨架 | **已完成骨架** | `web/` React 19 + Vite + TS + Cesium；1/3 + 2/3；111 颗位置 5 s 刷新；选中星轨迹与过境表；SDK SSE 事件流 + 10 s 心跳 + 运行中逐条/完成后工作步骤自动折叠 + 思考预览/工具行内联命令；星历轮询单飞/超时/静默重试；生产化顶栏（API 余额）、`/` 技能菜单、DSH 式工具卡/思考态、卡片阴影；1440/900/488 无横向溢出 |
+| M3 前端骨架 | **已完成骨架** | `web/` React 19 + Vite + TS + Cesium；三栏（左星历 / 中地球 / 右 Agent）；102 颗位置 5 s 刷新；选中星轨迹与过境表；SDK SSE 事件流 + 10 s 心跳 + 运行中逐条/完成后工作步骤自动折叠 + 思考预览/工具行内联命令；星历轮询单飞/超时/静默重试；生产化顶栏（API 余额）、`/` 技能菜单、DSH 式工具卡/思考态、卡片阴影；1440/900/488 无横向溢出 |
 | M4 可视化 | **部分完成** | 地球、实时位置、轨迹、过境表、足迹圆、杭州边界闪烁定位已接；时间轴与覆盖图层按反馈移除；重访/时间覆盖率未做 |
 | 流式 | **已完成（事件级）** | `/api/chat/stream` 用 SDK 通知：`tool_call`/`tool_result` 实时，文本回合末整块；token delta 当前 SDK 不提供 |
 | M5 联调上线 | 未开始 | 待 D7–D9 与验收演示 |
@@ -825,9 +847,11 @@ M5 联调上线（约 0.5 周）
 
 | 级别 | 风险 | 触发条件 | 缓解/回滚 |
 | --- | --- | --- | --- |
+| P0 | 公网入口依赖本机 WiFi/热点，链路抖动导致 Cloudflare 1033 | 热点休眠、AP 切换、跨境丢包 | 有线/固定宽带；关闭 WiFi 省电；`cloudflared-healthcheck.timer` 在 HA 连接归零时自动重启；外部 uptime 监控 530/1033 |
 | P0 | CelesTrak 偶发不可达（2026-10-19 曾整段 TLS EOF，同日恢复） | 3 次重试用尽 → `abandoned` | 当天停止；保留上一版数据；次日 03:00 自动恢复；`sync_status` 告警 |
 | P0 | gh 未登录阻塞建仓 | `gh auth status` 失败 | 用户手动登录；或先用本地 git，远端后补 |
 | P0 | SDK 装配失败 | `dsh --profile sdk` 起不来 | 回退 headless + SSE（功能降级，不阻塞前端） |
+| P0 | 隧道抖动掐断 SSE，前端只剩“连接中断：Error in input stream” | Cloudflare 边缘断连；长连接无重连 | 回合与连接解耦：`POST /api/chat/turns` 先建回合，`GET /api/chat/turns/{id}/events?cursor=` 续读；断线不取消未答问题，前端按游标自动补发；无人续读的回合 180 s 后回收 |
 | P1 | Cesium 资产过大，隧道慢 | 首屏 > 5 s | 本地低分辨率影像 + 懒加载；必要时降级 2D |
 | P1 | npm 包与本地 React 版本冲突 | 构建失败 | 锁版本；必要时 vendor 该包源码 |
 | P1 | 区县边界 GCJ-02 偏移 | 覆盖判定偏差 > 1 km | 转换 + 面积校验；不合格则只用城市级 |
@@ -840,10 +864,11 @@ M5 联调上线（约 0.5 周）
 
 | # | 问题 | 结论 | 日期 |
 | --- | --- | --- | --- |
-| Q1 | 默认展示集 | 111 颗全部中国（102 LEO + 9 GEO，公开载荷优先），按杭州 7 天过境频次选定，见 §4.4 | 2026-10-19 |
+| Q1 | 默认展示集 | 102 颗全部中国 LEO（2026-10-21 移除 9 颗 GEO 后；原 111 颗见 §12.3） | 2026-10-19 |
 | Q2 | 星历数据源 | CelesTrak GP 直连为主；Space-Track 仅内部核对；镜像仅研究/兜底 | 2026-10-19 |
 | Q3 | 云量与 AOI | Open-Meteo 接入；AOI 做 GCJ-02→WGS84 与面积校验，见 §4.7/§4.8 | 2026-10-19 |
 | Q4 | `gh` 登录 | 已完成（`Me106y`，keyring，scopes 含 repo/workflow） | 2026-10-19 |
+| Q5 | GEO 卫星 | 2026-10-21 从库中移除 9 颗 GEO，本版本只保留 102 颗 LEO；GEO 凝视足迹模型未实现，过境接口会把常驻可见误算为整窗过境 | 2026-10-21 |
 
 > 当前无阻塞项。下一步按 §9 的 M1 开工。
 
@@ -876,6 +901,11 @@ M5 联调上线（约 0.5 周）
 
 | 日期 | 版本 | 变更 |
 | --- | --- | --- |
+| 2026-10-21 | v3.4 | 从数据库/种子/展示集移除 9 颗 GEO（GF-4、GF-13 01/02、LuTan-4 01A、FY-2G/H、FY-4A/B/C），展示集变为 102 颗 LEO：GEO 凝视足迹模型未实现，过境接口会把常驻可见误算为整窗过境；同步更新 `payload_public` 计数（90/12）、重点保障 25 颗与前端 102 颗口径 |
+| 2026-10-21 | v3.3 | 光学/高光谱覆盖补上太阳高度 >10° 门限（夜间过境不再计入，`ALGO_VERSION=plan-0.2`）；报告改为"卫星构成"，新增"推荐计划"（逐星 CelesTrak 来源/覆盖占比/必选或可选/推荐原因）与深/浅主题切换 |
+| 2026-10-20 | v3.2 | 修复 imaging-plan 流程：给定 N 颗改为问时间窗而不是覆盖率；`plan_coverage` 的 `target_coverage_pct` 只在 `min_sats_for_coverage` 必填，给定 N 颗/重访模式不扩窗；报告标题按模式生成、“未覆盖格点”改用未抽稀真实计数；同一组参数只解一次（报告走 CLI `--out`）；SSE 改为可续读回合（`/api/chat/turns` + cursor），断线不再把未答问题判成“用户没回答” |
+| 2026-10-20 | v3.1 | 补充 §10 P0 风险：公网入口依赖本机 WiFi/热点，链路抖动触发 Cloudflare 1033；新增 `cloudflared-healthcheck.timer` 自动恢复 |
+| 2026-10-20 | v3.0 | 前端布局改三栏：左星历、中 3D 地球（主视觉）、右 Agent；断点重排为 1920/1440/1280/1024；地球随容器尺寸变化 resize |
 | 2026-10-20 | v2.9 | 数据层从 SQLite 切到 PostgreSQL 18（psycopg3）；`.env` 提供 DSN，systemd 用 `EnvironmentFile`；新增 SQLite→PG 迁移脚本；备份改 `pg_dump` |
 | 2026-10-19 | v2.8 | 接入 DSH 问答通道：SDK server 增加 `userQuestion/ask` answerer；`sdk_runtime` 消费请求并经 SSE `question` 推送；新增 `/api/question/answer`；前端 `QuestionCard` 支持单选/多选/自定义并回传 |
 | 2026-10-19 | v2.7 | 通过 `headless.patch.yml` 注册 `skills/` 到 DSH（`skill-filesystem.customSkillDirs`），Agent 可直接加载 skill |

@@ -22,7 +22,7 @@ TITLE = "SIRIAgent Phase 2 需求文档"
 SUBTITLE = "范围 · 优先级 · 验收标准"
 VERSION = "v1.4"
 DATE = "2026-10-19"
-STATUS = "111 颗展示集定稿，无阻塞项"
+STATUS = "102 颗 LEO 展示集定稿，无阻塞项"
 
 
 CSS = r"""
@@ -383,7 +383,7 @@ def main() -> int:
       <div class="hero-copy">
         <p class="eyebrow">Phase 2 · 需求文档</p>
         <h1>{TITLE}</h1>
-        <p class="hero-lead">两仓库分工、星历数据服务、MCP 与命令式 skill、双栏前端改版。本文档是 Phase 2 的唯一事实源，包含 111 颗国产卫星清单、优先级、验收标准、精度口径与风险边界。</p>
+        <p class="hero-lead">两仓库分工、星历数据服务、MCP 与命令式 skill、双栏前端改版。本文档是 Phase 2 的唯一事实源，包含 102 颗国产 LEO 卫星清单、优先级、验收标准、精度口径与风险边界。</p>
         <div class="meta-row">
           <span class="meta-chip">版本 {VERSION}</span>
           <span class="meta-chip">{DATE}</span>
@@ -399,7 +399,7 @@ def main() -> int:
       <article><span class="card-index">同步</span><h3>每天 1 次 · 3 次重试</h3><p>03:00 Asia/Shanghai 触发；退避 5/15/45 分钟；三次都失败当天停止，次日自动恢复。</p></article>
       <article><span class="card-index">前端</span><h3>1/3 + 2/3</h3><p>左栏 Cesium 星历可视化，右栏 Agent；React + Vite + TypeScript，深空青绿，适配多分辨率与主流浏览器。</p></article>
       <article><span class="card-index">精度</span><h3>口径写死</h3><p>SGP4 约 1 km/天；可视化 5°、成像 10°、光学太阳角 &gt;10°；足迹 ±2–5 km；所有输出带 accuracy_note。</p></article>
-      <article><span class="card-index">卫星</span><h3>111 颗 · 全部国内</h3><p>102 LEO + 9 GEO，商业 64 / 民用 29 / 气象海洋 18，军事 0；LEO 可见 2.57–5.29 次/天。</p></article>
+      <article><span class="card-index">卫星</span><h3>102 颗 · 全部 LEO</h3><p>商业 64 / 民用 25 / 气象海洋 13，军事 0；LEO 可见 2.57–5.29 次/天。</p></article>
     </div>
 
 {body}
