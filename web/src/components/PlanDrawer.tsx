@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { api } from "../api";
 import { fileUrl } from "../lib/fileLinks";
-import type { PlanCreateBody, PlanJob, PlanOptions, PlanResult, ReportInfo } from "../types";
+import type { PlanAoi, PlanCreateBody, PlanJob, PlanOptions, PlanResult, ReportInfo } from "../types";
 import { MapDrawModal } from "./MapDrawModal";
 
 interface Props {
@@ -80,12 +80,28 @@ function formatNumber(value: number | null | undefined, digits = 1): string {
   return value.toFixed(digits);
 }
 
+function aoiDigits(item: PlanAoi): string {
+  return (item.adcode || item.code || "").replace(/\D/g, "");
+}
+
+function parentProvinceCode(item: PlanAoi): string {
+  const digits = aoiDigits(item);
+  return digits.length >= 2 ? `${digits.slice(0, 2)}0000` : "";
+}
+
+function parentCityCode(item: PlanAoi): string {
+  const digits = aoiDigits(item);
+  return digits.length >= 4 ? `${digits.slice(0, 4)}00` : "";
+}
+
 export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
   const [options, setOptions] = useState<PlanOptions | null>(null);
   const [optionsError, setOptionsError] = useState<string | null>(null);
   const [step, setStep] = useState(0);
   const [operation, setOperation] = useState("task1");
-  const [aoiCode, setAoiCode] = useState("330100");
+  const [provinceCode, setProvinceCode] = useState("330000");
+  const [cityCode, setCityCode] = useState("330100");
+  const [districtCode, setDistrictCode] = useState("");
   const [aoiWkt, setAoiWkt] = useState("");
   const [drawOpen, setDrawOpen] = useState(false);
   const [startLocal, setStartLocal] = useState(nowLocal);
@@ -102,6 +118,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
   const [jobId, setJobId] = useState<string | null>(null);
   const [job, setJob] = useState<PlanJob | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pollError, setPollError] = useState<string | null>(null);
   const [report, setReport] = useState<ReportInfo | null>(null);
   const [reporting, setReporting] = useState(false);
 
@@ -109,19 +126,25 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
     () => options?.tasks.find((item) => item.operation === operation) ?? null,
     [options, operation],
   );
+  const effectiveCode = districtCode || cityCode || provinceCode;
   const aoi = useMemo(
-    () => options?.aoi.find((item) => item.code === aoiCode) ?? null,
-    [options, aoiCode],
+    () => options?.aoi.find((item) => item.code === effectiveCode) ?? null,
+    [options, effectiveCode],
   );
-  const aoiGroups = useMemo(() => {
-    const groups = new Map<string, NonNullable<PlanOptions["aoi"]>>();
-    for (const item of options?.aoi ?? []) {
-      const level = item.level ?? "other";
-      if (!groups.has(level)) groups.set(level, []);
-      groups.get(level)!.push(item);
-    }
-    return [...groups.entries()];
-  }, [options]);
+  const cities = useMemo(
+    () =>
+      (options?.aoi ?? []).filter(
+        (item) => item.level === "city" && parentProvinceCode(item) === provinceCode,
+      ),
+    [options, provinceCode],
+  );
+  const districts = useMemo(
+    () =>
+      (options?.aoi ?? []).filter(
+        (item) => item.level === "district" && parentCityCode(item) === cityCode,
+      ),
+    [options, cityCode],
+  );
 
   useEffect(() => {
     if (!open || options) return;
@@ -132,9 +155,14 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
         if (!alive) return;
         setOptions(payload);
         setOptionsError(null);
-        const preferred = payload.aoi.find((item) => item.code === "330100");
-        if (preferred) setAoiCode(preferred.code);
-        else if (payload.aoi[0]) setAoiCode(payload.aoi[0].code);
+        const province = payload.aoi.find((item) => item.level === "province");
+        const nextProvince = province?.code ?? "";
+        const firstCity = payload.aoi.find(
+          (item) => item.level === "city" && parentProvinceCode(item) === nextProvince,
+        );
+        setProvinceCode(nextProvince);
+        setCityCode(firstCity?.code ?? "");
+        setDistrictCode("");
       })
       .catch((reason: unknown) => {
         if (alive) setOptionsError(reason instanceof Error ? reason.message : "无法读取规划选项");
@@ -159,32 +187,39 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
   }, [open, drawOpen, jobId, onClose]);
 
   useEffect(() => {
-    if (!jobId) return;
+    if (!open || !jobId) return;
     let alive = true;
     let timer: number | undefined;
+    let failures = 0;
     const poll = async () => {
       try {
         const data = await api.planJob(jobId);
         if (!alive) return;
+        failures = 0;
         setJob(data);
+        setPollError(null);
         if (data.status === "completed" || data.status === "failed") return;
       } catch (reason: unknown) {
-        if (alive) setError(reason instanceof Error ? reason.message : "任务状态读取失败");
+        failures += 1;
+        if (alive) {
+          const message = reason instanceof Error ? reason.message : "状态查询失败";
+          setPollError(failures >= 2 ? `状态查询暂时失败，正在重试（${message}）` : message);
+        }
       }
-      timer = window.setTimeout(poll, 1200);
+      timer = window.setTimeout(poll, failures > 0 ? 2000 : 1200);
     };
     void poll();
     return () => {
       alive = false;
       if (timer) window.clearTimeout(timer);
     };
-  }, [jobId]);
+  }, [open, jobId]);
 
   if (!open) return null;
 
   const stepValid = (index: number): boolean => {
     if (index === 0) return Boolean(operation);
-    if (index === 1) return Boolean(aoiCode || aoiWkt);
+    if (index === 1) return Boolean(effectiveCode || aoiWkt);
     if (index === 2) return Boolean(startLocal) && horizon > 0;
     if (index === 3) {
       if (sensors.length === 0) return false;
@@ -199,7 +234,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
   const buildBody = (): PlanCreateBody => {
     const body: PlanCreateBody = {
       operation,
-      aoi_code: aoiWkt ? null : aoiCode,
+      aoi_code: aoiWkt ? null : effectiveCode,
       aoi_wkt: aoiWkt || null,
       start_utc: new Date(startLocal).toISOString(),
       horizon_h: horizon,
@@ -209,11 +244,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
       cloud_filter: cloud,
       cloud_threshold_pct: 70,
     };
-    const names = new Set<string>([
-      ...(task?.required ?? []),
-      ...(task?.advanced ?? []),
-      ...(options?.advanced.map((item) => item.name) ?? []),
-    ]);
+    const names = new Set<string>([...(task?.required ?? [])]);
     for (const name of names) {
       const raw = (fields[name] ?? "").trim();
       if (!raw) continue;
@@ -225,6 +256,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
 
   const solve = async () => {
     setError(null);
+    setPollError(null);
     setReport(null);
     setJob(null);
     setJobId(null);
@@ -242,7 +274,14 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
     setReporting(true);
     setError(null);
     try {
-      const info = await api.renderReport(jobId);
+      let info;
+      try {
+        info = await api.renderReport(jobId);
+      } catch {
+        await new Promise((resolve) => window.setTimeout(resolve, 800));
+        info = await api.renderReport(jobId);
+      }
+      setPollError(null);
       setReport(info);
     } catch (reason: unknown) {
       setError(reason instanceof Error ? reason.message : "报告生成失败");
@@ -256,6 +295,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
     setJob(null);
     setReport(null);
     setError(null);
+    setPollError(null);
     setStep(3);
   };
 
@@ -304,29 +344,72 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
     <div className="plan-step" key="aoi">
       <header className="plan-step-head">
         <h2>框定目标范围</h2>
-        <p>本版本只支持浙江省内；可以选行政区，也可以在地图上画一个多边形。</p>
+        <p>先选市，再选这个市下的区县；只支持浙江省内，也可以在地图上画一个多边形。</p>
       </header>
-      <label className="plan-field">
-        <span>行政区</span>
-        <select
-          value={aoiCode}
-          onChange={(event) => {
-            setAoiCode(event.target.value);
-            setAoiWkt("");
-          }}
-          disabled={Boolean(aoiWkt)}
-        >
-          {aoiGroups.map(([level, items]) => (
-            <optgroup key={level} label={LEVEL_LABELS[level] ?? level}>
-              {items.map((item) => (
+      <div className="plan-grid-3">
+        <label className="plan-field">
+          <span>省</span>
+          <select
+            value={provinceCode}
+            onChange={(event) => {
+              const next = event.target.value;
+              setProvinceCode(next);
+              setAoiWkt("");
+              const first = (options?.aoi ?? []).find(
+                (item) => item.level === "city" && parentProvinceCode(item) === next,
+              );
+              setCityCode(first?.code ?? "");
+              setDistrictCode("");
+            }}
+            disabled={Boolean(aoiWkt)}
+          >
+            {(options?.aoi ?? [])
+              .filter((item) => item.level === "province")
+              .map((item) => (
                 <option key={item.code} value={item.code}>
                   {item.name}
                 </option>
               ))}
-            </optgroup>
-          ))}
-        </select>
-      </label>
+          </select>
+        </label>
+        <label className="plan-field">
+          <span>市</span>
+          <select
+            value={cityCode}
+            onChange={(event) => {
+              setCityCode(event.target.value);
+              setDistrictCode("");
+              setAoiWkt("");
+            }}
+            disabled={Boolean(aoiWkt) || cities.length === 0}
+          >
+            <option value="">全省（不选市）</option>
+            {cities.map((item) => (
+              <option key={item.code} value={item.code}>
+                {item.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="plan-field">
+          <span>区县</span>
+          <select
+            value={districtCode}
+            onChange={(event) => {
+              setDistrictCode(event.target.value);
+              setAoiWkt("");
+            }}
+            disabled={Boolean(aoiWkt) || !cityCode || districts.length === 0}
+          >
+            <option value="">全市（不选区县）</option>
+            {districts.map((item) => (
+              <option key={item.code} value={item.code}>
+                {item.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
       <div className="plan-or">
         <span>或</span>
       </div>
@@ -404,7 +487,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
     <div className="plan-step" key="constraints">
       <header className="plan-step-head">
         <h2>目标和约束</h2>
-        <p>只显示当前任务需要的字段；高级参数留空时使用引擎默认值。</p>
+        <p>只显示当前任务需要的字段；其余参数使用引擎默认值。</p>
       </header>
 
       <div className="plan-grid-2">
@@ -491,40 +574,6 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
         </span>
       </label>
 
-      <details className="plan-advanced">
-        <summary>高级参数</summary>
-        <div className="plan-grid-2">
-          {(options?.advanced ?? []).map((item) => (
-            <label className="plan-field" key={item.name}>
-              <span>
-                {item.label}
-                {FIELD_HINTS[item.name] ? <small>{FIELD_HINTS[item.name]}</small> : null}
-              </span>
-              {item.name === "exact_budget" ? (
-                <select
-                  value={fields[item.name] ?? ""}
-                  onChange={(event) =>
-                    setFields((current) => ({ ...current, [item.name]: event.target.value }))
-                  }
-                >
-                  <option value="">默认</option>
-                  <option value="true">是</option>
-                  <option value="false">否</option>
-                </select>
-              ) : (
-                <input
-                  type="number"
-                  value={fields[item.name] ?? ""}
-                  placeholder={item.default == null ? "默认" : String(item.default)}
-                  onChange={(event) =>
-                    setFields((current) => ({ ...current, [item.name]: event.target.value }))
-                  }
-                />
-              )}
-            </label>
-          ))}
-        </div>
-      </details>
     </div>
   );
 
@@ -634,7 +683,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
         </div>
         <div>
           <dt>范围</dt>
-          <dd>{aoiWkt ? "自定义多边形" : aoi?.name ?? aoiCode}</dd>
+          <dd>{aoiWkt ? "自定义多边形" : aoi?.name ?? effectiveCode}</dd>
         </div>
         <div>
           <dt>窗口</dt>
@@ -655,6 +704,10 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
         <div className="plan-error" role="alert">
           {error}
         </div>
+      ) : null}
+
+      {pollError && !error ? (
+        <p className="plan-note">状态查询暂时失败，正在重试：{pollError}</p>
       ) : null}
 
       {!jobId ? (

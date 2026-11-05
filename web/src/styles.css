@@ -2009,6 +2009,12 @@ button {
   gap: 14px;
 }
 
+.plan-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
 .plan-field {
   display: flex;
   flex-direction: column;
@@ -2635,6 +2641,7 @@ button {
   }
 
   .plan-grid-2,
+  .plan-grid-3,
   .plan-stats,
   .plan-summary {
     grid-template-columns: 1fr;
