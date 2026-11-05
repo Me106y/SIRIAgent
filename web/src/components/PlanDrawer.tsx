@@ -575,7 +575,11 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
           />
           <span>
             达不到目标时自动扩窗
-            <small>先试当前窗口，再试 72h；最多 2 次求解，报告会标注实际窗口。7 天请手动设置窗口。仅 task1。</small>
+            <small>
+              {horizon >= 72
+                ? "当前窗口已达到或超过 72h 自动上限；勾选不会改变窗口，7 天请手动设 168h。"
+                : "先试当前窗口，再试 72h；最多 2 次求解，报告会标注实际窗口。仅 task1。"}
+            </small>
           </span>
         </label>
       ) : (
@@ -734,6 +738,9 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
           <p className="plan-note">
             请求窗口 {requestedHorizon}h，实际按 {usedHorizon}h 计算；报告按实际窗口展示。
           </p>
+        ) : null}
+        {value.auto_expand?.reason ? (
+          <p className="plan-note">自动扩窗：{value.auto_expand.reason}</p>
         ) : null}
         {value.tle?.degraded ? (
           <p className="plan-warning">

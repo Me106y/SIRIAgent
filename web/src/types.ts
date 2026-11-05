@@ -296,6 +296,13 @@ export interface PlanResult {
     expanded?: boolean;
     attempts?: number;
   };
+  auto_expand?: {
+    requested?: boolean;
+    supported?: boolean;
+    expanded?: boolean;
+    attempts?: number;
+    reason?: string | null;
+  };
   tle?: {
     latest_epoch_utc?: string | null;
     max_age_hours?: number | null;
