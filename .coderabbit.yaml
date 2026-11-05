@@ -1,0 +1,31 @@
+# CodeRabbit 配置：https://docs.coderabbit.ai/reference/configuration
+language: "zh-CN"
+
+reviews:
+  profile: "chill"
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - "main"
+  path_filters:
+    - "!web/dist/**"
+    - "!reports/**"
+    - "!**/node_modules/**"
+    - "!**/.venv/**"
+    - "!web/public/data/*.geojson"
+  path_instructions:
+    - path: "app.py"
+      instructions: "重点检查 SSE 流、缓存头、/api/files 路径校验和错误处理；API 变更需保持向后兼容。"
+    - path: "sdk_runtime.py"
+      instructions: "重点检查单轮锁、问题等待/取消、abort 与 runtime 重建的并发和死锁风险。"
+    - path: "skills/**"
+      instructions: "检查 SKILL.md 与 COMMANDS.md 是否同步，命令的风险等级、审批与失败处理是否写清。"
+
+chat:
+  auto_reply: true
