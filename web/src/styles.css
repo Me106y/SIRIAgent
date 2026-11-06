@@ -74,6 +74,8 @@ button {
 /* ---------- 顶栏 ---------- */
 .topbar {
   flex: 0 0 60px;
+  position: relative;
+  z-index: 30;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -156,6 +158,153 @@ button {
   gap: 8px;
   flex-wrap: wrap;
   justify-content: flex-end;
+}
+
+/* ---------- 界面设置 ---------- */
+.settings-wrap {
+  position: relative;
+  display: flex;
+}
+
+.settings-btn {
+  display: grid;
+  place-items: center;
+  width: 31px;
+  height: 31px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: rgba(8, 20, 38, 0.8);
+  color: var(--muted);
+  transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
+}
+
+.settings-btn svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+}
+
+.settings-btn:hover,
+.settings-btn.active {
+  border-color: rgba(34, 211, 238, 0.4);
+  background: rgba(34, 211, 238, 0.08);
+  color: var(--ink);
+}
+
+.settings-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 40;
+  width: min(304px, calc(100vw - 24px));
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #081426;
+  box-shadow: 0 20px 54px rgba(0, 0, 0, 0.55);
+  animation: settings-in 140ms ease-out;
+}
+
+@keyframes settings-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.settings-head {
+  padding: 6px 9px 8px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.settings-title {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.settings-desc {
+  display: block;
+  margin-top: 2px;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.settings-options {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.settings-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+}
+
+.settings-option:hover {
+  background: rgba(34, 211, 238, 0.08);
+}
+
+.settings-option.active {
+  background: rgba(34, 211, 238, 0.12);
+}
+
+.settings-option-text {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.settings-option-label {
+  font-size: 12px;
+  color: var(--ink);
+}
+
+.settings-option.active .settings-option-label {
+  color: #bff5ff;
+  font-weight: 600;
+}
+
+.settings-option-hint {
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.settings-check {
+  display: grid;
+  flex: 0 0 14px;
+  place-items: center;
+  color: var(--accent);
+}
+
+.settings-check svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .status-pill {
@@ -835,7 +984,7 @@ button {
   font-size: 10px;
 }
 
-.work-steps[open] .tool-chevron {
+.work-steps[open] > summary .tool-chevron {
   transform: rotate(90deg);
 }
 
@@ -844,6 +993,13 @@ button {
   flex-direction: column;
   gap: 4px;
   padding: 0 7px 7px;
+}
+
+.minimal-thoughts {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 2px 2px 0;
 }
 
 .thinking-row summary {
@@ -890,8 +1046,9 @@ button {
 
 .tool-card summary {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 3px;
   padding: 7px 9px;
   cursor: pointer;
   list-style: none;
@@ -899,6 +1056,30 @@ button {
   font-family: var(--mono);
   font-size: 11px;
   color: #b9dced;
+}
+
+.tool-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.tool-result-line {
+  display: block;
+  min-width: 0;
+  padding-left: 22px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #7fa8bf;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.tool-result-line::before {
+  content: "→ ";
+  color: var(--accent);
 }
 
 .tool-card summary::-webkit-details-marker {
@@ -933,7 +1114,8 @@ button {
 }
 
 .tool-name {
-  flex: 0 1 auto;
+  flex: 0 0 auto;
+  max-width: 46%;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -959,8 +1141,10 @@ button {
 }
 
 .tool-state {
+  flex: 0 0 auto;
   font-size: 9.5px;
   letter-spacing: 0.5px;
+  white-space: nowrap;
   color: var(--muted);
 }
 
