@@ -577,9 +577,9 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
           <span>
             达不到目标时自动扩窗
             <small>
-              {horizon >= 72
-                ? "当前窗口已达到或超过 72h 自动上限；勾选不会改变窗口，7 天请手动设 168h。"
-                : "先试当前窗口，再试 72h；最多 2 次求解，报告会标注实际窗口。仅 task1。"}
+              {horizon >= 168
+                ? "当前窗口已是 7 天上限；自动扩窗不会改变窗口。"
+                : "先试当前窗口，再试 72h / 7 天；可能几分钟，报告会标注实际窗口。仅 task1。"}
             </small>
           </span>
         </label>
@@ -702,7 +702,8 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
     const sats = value.report_data?.sats ?? [];
     const areaTarget = value.targets?.area_pct;
     const temporalTarget = value.targets?.temporal_coverage_pct;
-    const isTask1 = (value.operation ?? operation) === "task1";
+    const op = value.operation ?? operation;
+    const isTask1 = op === "task1" || op.startsWith("task_1");
     const windowInfo = value.window;
     const expanded = Boolean(windowInfo?.expanded);
     const usedHorizon = windowInfo?.used_horizon_h;
