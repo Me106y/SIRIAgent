@@ -227,8 +227,9 @@ export default function App() {
 
   const selectedPosition = selected != null ? positions[selected] : undefined;
   const send = useCallback(
-    async (text: string) => {
+    async (text: string, options?: { fresh?: boolean }) => {
       if (busy) return;
+      const sessionForTurn = options?.fresh ? undefined : sessionId;
       const assistantId = crypto.randomUUID();
       setMessages((current) => [
         ...current,
@@ -401,7 +402,7 @@ export default function App() {
       try {
         // 先开回合，再按游标读事件；隧道断线时用同一个 turn_id 重连续读，
         // 服务端的回合不会跟着断，正在等回答的问题也仍然有效。
-        const turn = await startTurn(text, sessionId);
+        const turn = await startTurn(text, sessionForTurn);
         turnStarted = true;
         if (turn.session_id) setSessionId(turn.session_id);
         let cursor = 0;
@@ -430,7 +431,7 @@ export default function App() {
           update({ phase: "error" });
         } else if (!turnStarted && !sawEvent) {
           try {
-            const response = await chat(text, sessionId);
+            const response = await chat(text, sessionForTurn);
             if (!response.ok) throw new Error(response.error || "DSH 没有返回结果。");
             if (response.session_id) setSessionId(response.session_id);
             const blocks: MessageBlock[] = [];
@@ -608,11 +609,9 @@ export default function App() {
       <PlanDrawer
         open={planOpen}
         onClose={() => setPlanOpen(false)}
-        onAnalyze={(path) => {
+        onAnalyze={(summary) => {
           setPlanOpen(false);
-          void send(
-            `请分析这份成图方案：${path}。重点看覆盖薄弱区、选星是否合理、云量影响，并给出下一步建议。`,
-          );
+          void send(summary, { fresh: true });
         }}
       />
     </div>

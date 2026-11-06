@@ -8,7 +8,7 @@ import { MapDrawModal } from "./MapDrawModal";
 interface Props {
   open: boolean;
   onClose: () => void;
-  onAnalyze: (path: string) => void;
+  onAnalyze: (summary: string) => void;
 }
 
 const STEPS = ["任务", "范围", "时间窗", "约束", "求解与报告"];
@@ -171,6 +171,40 @@ function NumberStepper({ label, value, onChange, min, max, step = 1, placeholder
       </button>
     </div>
   );
+}
+
+function buildAnalysisSummary(value: PlanResult, report: ReportInfo): string {
+  const cards = value.summary_cards ?? {};
+  const targets = value.targets ?? {};
+  const windowInfo = value.window ?? {};
+  const sats = value.report_data?.sats ?? [];
+  const passes = value.city_pass_window_table ?? [];
+  const weak = value.weak_areas ?? [];
+  const sun = (value as { sun?: { min_altitude_deg?: number; dropped_windows?: number } }).sun;
+  const cloud = value.cloud;
+  const tle = value.tle;
+  const lines = [
+    "成图方案摘要（task1 是 72h 累计并集，不是单景）：",
+    `- 任务：${value.operation}；可行性：${value.feasible ? "是" : "否"}；稳定性：${value.optimality ?? "—"}`,
+    `- 面积目标：${targets.area_pct ?? "—"}%；窗口：请求 ${windowInfo.requested_horizon_h ?? "—"}h / 实际 ${windowInfo.used_horizon_h ?? "—"}h；扩窗：${windowInfo.expanded ? "是" : "否"}`,
+    `- 达标面积：${formatNumber(cards.qualified_area_pct)}%；城市平均时间覆盖：${formatNumber(cards.city_mean_temporal_coverage_pct, 2)}%；面积加权 MRT：${formatNumber(cards.area_weighted_mrt_minutes)} 分`,
+    `- 候选 ${value.candidate_count ?? "—"} 颗，未参与 ${value.blocked_count ?? 0} 颗，选中 ${sats.length} 颗。`,
+    "- 选中卫星：",
+    ...sats.map(
+      (s) =>
+        `  · ${s.name}（${s.sensor_label ?? "—"}，${s.resolution_m ?? "—"}m，幅宽 ${s.swath_km ?? "—"}km，过境 ${s.passes ?? "—"} 次，累计 ${formatNumber(s.cumulative_minutes)} 分）`,
+    ),
+    "- 过境窗口：",
+    ...passes.map(
+      (p) =>
+        `  · ${p.satellite}：${p.start_utc}–${p.end_utc}（${formatNumber(p.duration_minutes)} 分，最大瞬时 ${formatNumber(p.maximum_covered_area_pct)}%）`,
+    ),
+    `- 薄弱区 top：${weak.slice(0, 5).map((item) => `${item.grid_id} ${formatNumber(item.area_km2)}km²`).join("；") || "无"}`,
+    `- TLE：最大年龄 ${formatNumber(tle?.max_age_hours)}h${tle?.degraded ? "（degraded）" : ""}；太阳过滤：${sun ? `丢弃 ${sun.dropped_windows ?? 0} 个窗口` : "未记录"}；云量：${cloud?.filtered ? `阈值 ${cloud.threshold_pct}%，丢弃 ${cloud.dropped_windows} 个窗口` : "未启用"}`,
+    `- 报告：${report.relative_report}`,
+    "请基于以上摘要分析：覆盖薄弱区、选星是否合理、太阳/云量是否有执行风险、下一步建议。不要读取完整 plan.json（约 400KB+，会超上下文）；如需细节只读 report.html。",
+  ];
+  return lines.join("\n");
 }
 
 export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
@@ -801,7 +835,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
                 <button
                   type="button"
                   className="plan-ghost"
-                  onClick={() => onAnalyze(report.relative_plan)}
+                  onClick={() => onAnalyze(buildAnalysisSummary(value, report))}
                 >
                   让 Agent 分析
                 </button>
