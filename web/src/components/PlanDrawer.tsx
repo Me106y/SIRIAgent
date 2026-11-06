@@ -749,6 +749,11 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
         {value.auto_expand?.reason ? (
           <p className="plan-note">自动扩窗：{value.auto_expand.reason}</p>
         ) : null}
+        {isTask1 ? (
+          <p className="plan-note">
+            面积为窗口内累计并集，不是单景；成图可执行性需另看太阳/云量与同时覆盖。
+          </p>
+        ) : null}
         {value.tle?.degraded ? (
           <p className="plan-warning">
             TLE 最大年龄 {value.tle.max_age_hours}h（&gt;72h），结果按 degraded 处理。
