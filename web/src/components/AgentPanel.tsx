@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { api } from "../api";
+import type { WorkStepLevel, WorkStepsLevel } from "../lib/workSteps";
 import type { AnswerResult, ChatMessage, MessageBlock, QuestionAnswer, Skill } from "../types";
 import { Markdown } from "./Markdown";
 import { QuestionCard } from "./QuestionCard";
@@ -9,6 +10,7 @@ interface Props {
   messages: ChatMessage[];
   busy: boolean;
   sessionId?: string;
+  workStepLevel: WorkStepLevel;
   onSend: (text: string) => void;
   onReset: () => void;
   onAnswer: (blockId: string, callId: string, answers: QuestionAnswer[]) => Promise<AnswerResult>;
@@ -78,28 +80,73 @@ function inputSummary(input: unknown): string {
 
 type ToolBlock = Extract<MessageBlock, { kind: "tool" }>;
 
-function ToolRow({ block }: { block: ToolBlock }) {
+function textOf(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (value == null) return "";
+  if (Array.isArray(value)) return value.map(textOf).filter(Boolean).join("\n");
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    if (typeof record.text === "string") return record.text;
+    if (Array.isArray(record.content)) return textOf(record.content);
+    // 没有文本字段的结果用紧凑 JSON，取首行摘要时才不会只剩一个「{」。
+    return JSON.stringify(value);
+  }
+  return String(value);
+}
+
+/** 工具结果的第一行，供「标准」档在工具行下带一句摘要素描。 */
+function resultSummary(result: unknown): string {
+  const line =
+    textOf(result)
+      .split("\n")
+      .map((item) => item.trim())
+      .find(Boolean) ?? "";
+  const flat = line.replace(/\s+/g, " ");
+  return flat.length > 110 ? `${flat.slice(0, 107)}…` : flat;
+}
+
+function ToolRow({ block, level }: { block: ToolBlock; level: WorkStepsLevel }) {
   const done = block.status === "completed";
   const detail = inputSummary(block.input);
+  const result = resultSummary(block.result);
+  const showResult = level === "standard" && result.length > 0;
+  const expanded = level === "detailed" || level === "expanded";
+  const [open, setOpen] = useState(expanded);
+
+  useEffect(() => {
+    setOpen(expanded);
+  }, [expanded]);
+
   return (
-    <details className={`tool-card ${done ? "done" : "running"}`}>
+    <details
+      className={`tool-card ${done ? "done" : "running"}`}
+      open={open}
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+    >
       <summary>
-        <span className={`tool-icon ${done ? "ok" : "running"}`}>
-          {done ? <CheckIcon /> : <span className="tool-spinner" />}
-        </span>
-        <span className="tool-name" title={block.tool}>
-          {toolLabel(block.tool)}
-        </span>
-        {detail ? (
-          <span
-            className={detail.startsWith("$ ") ? "tool-detail command" : "tool-detail"}
-            title={detail}
-          >
-            {detail}
+        <span className="tool-line">
+          <span className={`tool-icon ${done ? "ok" : "running"}`}>
+            {done ? <CheckIcon /> : <span className="tool-spinner" />}
           </span>
-        ) : null}
-        <span className="tool-state">{done ? "完成" : "运行中"}</span>
-        <ChevronIcon />
+          <span className="tool-name" title={block.tool}>
+            {toolLabel(block.tool)}
+          </span>
+          {detail ? (
+            <span
+              className={detail.startsWith("$ ") ? "tool-detail command" : "tool-detail"}
+              title={detail}
+            >
+              {detail}
+            </span>
+          ) : null}
+          <span className="tool-state">{done ? "完成" : "运行中"}</span>
+          <ChevronIcon />
+        </span>
+        {showResult && (
+          <span className="tool-result-line" title={result}>
+            {result}
+          </span>
+        )}
       </summary>
       <div className="tool-body">
         {block.input != null && (
@@ -141,13 +188,16 @@ function WorkSteps({
   blocks,
   phase,
   elapsedMs,
+  level,
 }: {
   blocks: MessageBlock[];
   phase: "streaming" | "done" | "error";
   elapsedMs?: number;
+  level: WorkStepsLevel;
 }) {
   const finished = phase !== "streaming";
-  const [open, setOpen] = useState(!finished);
+  const keepOpen = level === "expanded";
+  const [open, setOpen] = useState(!finished || keepOpen);
   const [pinned, setPinned] = useState(false);
   const tools = blocks.filter((block): block is ToolBlock => block.kind === "tool");
   const current = tools[tools.length - 1];
@@ -157,8 +207,8 @@ function WorkSteps({
       setOpen(true);
       return;
     }
-    if (finished && !pinned) setOpen(false);
-  }, [phase, finished, pinned]);
+    if (finished && !pinned) setOpen(keepOpen);
+  }, [phase, finished, pinned, keepOpen]);
 
   return (
     <details
@@ -166,6 +216,8 @@ function WorkSteps({
       open={open}
       onToggle={(event) => {
         const next = event.currentTarget.open;
+        // 设置引起的程序化开合也会触发 toggle，不能当成用户手动固定。
+        if (next === open) return;
         setOpen(next);
         if (finished) setPinned(next);
       }}
@@ -192,8 +244,12 @@ function WorkSteps({
       </summary>
       <div className="work-body">
         {blocks.map((block) => {
-          if (block.kind === "tool") return <ToolRow key={block.id} block={block} />;
-          if (block.kind === "thinking") return <ThinkingRow key={block.id} block={block} />;
+          if (block.kind === "tool") {
+            return <ToolRow key={block.id} block={block} level={level} />;
+          }
+          if (block.kind === "thinking") {
+            return <ThinkingRow key={block.id} block={block} />;
+          }
           return null;
         })}
       </div>
@@ -201,7 +257,18 @@ function WorkSteps({
   );
 }
 
-export function AgentPanel({ messages, busy, sessionId, onSend, onReset, onAnswer, onRevise, onCancel, onOpenPlan }: Props) {
+export function AgentPanel({
+  messages,
+  busy,
+  sessionId,
+  workStepLevel,
+  onSend,
+  onReset,
+  onAnswer,
+  onRevise,
+  onCancel,
+  onOpenPlan,
+}: Props) {
   const [input, setInput] = useState("");
   const [skills, setSkills] = useState<Skill[]>([]);
   const [slashOpen, setSlashOpen] = useState(false);
@@ -362,6 +429,10 @@ export function AgentPanel({ messages, busy, sessionId, onSend, onReset, onAnswe
           const work = blocks.filter(
             (block) => block.kind === "thinking" || block.kind === "tool",
           );
+          const thoughts = work.filter(
+            (block): block is Extract<MessageBlock, { kind: "thinking" }> =>
+              block.kind === "thinking",
+          );
           const texts = blocks.filter((block) => block.kind === "text");
           const notices = blocks.filter((block) => block.kind === "notice");
           const questions = blocks.filter(
@@ -370,9 +441,16 @@ export function AgentPanel({ messages, busy, sessionId, onSend, onReset, onAnswe
           );
           const loading =
             message.role === "assistant" && phase === "streaming" && texts.length === 0;
+          const showProgress = blocks.some(
+            (block) => block.kind !== "tool" || workStepLevel !== "minimal",
+          );
 
           const renderLive = (block: MessageBlock) => {
-            if (block.kind === "tool") return <ToolRow key={block.id} block={block} />;
+            if (block.kind === "tool") {
+              // 极简档不渲染工具调用，只留思考摘要。
+              if (workStepLevel === "minimal") return null;
+              return <ToolRow key={block.id} block={block} level={workStepLevel} />;
+            }
             if (block.kind === "thinking") {
               return <ThinkingRow key={block.id} block={block} />;
             }
@@ -421,18 +499,29 @@ export function AgentPanel({ messages, busy, sessionId, onSend, onReset, onAnswe
                             <i />
                             <i />
                           </span>
-                          {blocks.length > 0 ? "正在整理结果" : "正在思考"}
+                          {showProgress ? "正在整理结果" : "正在思考"}
                         </div>
                       )}
                     </>
                   ) : (
                     <>
-                      {work.length > 0 && (
-                        <WorkSteps
-                          blocks={work}
-                          phase={phase}
-                          elapsedMs={message.elapsed_ms}
-                        />
+                      {workStepLevel === "minimal" ? (
+                        thoughts.length > 0 && (
+                          <div className="minimal-thoughts">
+                            {thoughts.map((block) => (
+                              <ThinkingRow key={block.id} block={block} />
+                            ))}
+                          </div>
+                        )
+                      ) : (
+                        work.length > 0 && (
+                          <WorkSteps
+                            blocks={work}
+                            phase={phase}
+                            elapsedMs={message.elapsed_ms}
+                            level={workStepLevel}
+                          />
+                        )
                       )}
                       {questions.map((block) => (
                         <QuestionCard

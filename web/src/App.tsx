@@ -11,7 +11,13 @@ import {
   TurnGoneError,
 } from "./api";
 import { readCatalogCache, writeCatalogCache } from "./lib/catalogCache";
+import {
+  readWorkStepLevel,
+  writeWorkStepLevel,
+  type WorkStepLevel,
+} from "./lib/workSteps";
 import { AgentPanel } from "./components/AgentPanel";
+import { SettingsMenu } from "./components/SettingsMenu";
 import { PlanDrawer } from "./components/PlanDrawer";
 import { Globe } from "./components/Globe";
 import { SatellitePanel } from "./components/SatellitePanel";
@@ -43,6 +49,9 @@ export default function App() {
   const [hangzhouPolygon, setHangzhouPolygon] = useState<number[][] | null>(null);
   const [balance, setBalance] = useState<Balance | null>(null);
   const [bootDone, setBootDone] = useState(false);
+  const [workStepLevel, setWorkStepLevel] = useState<WorkStepLevel>(() =>
+    readWorkStepLevel(),
+  );
 
   const bootRef = useRef<"pending" | "ok" | "failed">("pending");
   const positionsInFlight = useRef(false);
@@ -76,6 +85,11 @@ export default function App() {
     } catch {
       setBalance({ ok: false, error: "unreachable" });
     }
+  }, []);
+
+  const changeWorkStepLevel = useCallback((level: WorkStepLevel) => {
+    setWorkStepLevel(level);
+    writeWorkStepLevel(level);
   }, []);
 
   const loadPositions = useCallback(async () => {
@@ -556,6 +570,7 @@ export default function App() {
             <span className="dot" />
             API 余额 <strong>{balanceLabel}</strong>
           </button>
+          <SettingsMenu level={workStepLevel} onChange={changeWorkStepLevel} />
         </div>
       </header>
 
@@ -596,6 +611,7 @@ export default function App() {
           messages={messages}
           busy={busy}
           sessionId={sessionId}
+          workStepLevel={workStepLevel}
           onSend={send}
           onAnswer={handleAnswer}
           onRevise={(text) => void send(text)}

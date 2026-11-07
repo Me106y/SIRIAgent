@@ -840,7 +840,7 @@ M5 联调上线（约 0.5 周）
 | --- | --- | --- |
 | M1 数据服务 | **进行中** | 两仓库已公开；12 表迁移；102 颗 LEO seed；102 条 TLE；REST/MCP 可用；杭州 AOI 已写入 `aoi` 表（330100，16819 km²）；12 个测试通过。待补：覆盖/重访、云量写入 `pass_window` |
 | M2 Agent 可查 | **进行中** | MCP 已接入 `headless.patch.yml`（Streamable HTTP）；7 个工具可用，前端已显示工具卡；`ephemeris-query`、`pass-planning`、`tle-health` 三个 skill 已配 `SKILL.md` + `COMMANDS.md`（用途/风险/审批/示例/失败处理），`/` 菜单可直接调用；待补 `get_tle`、`propagate`、`run_command`；DSH 侧已通过 `headless.patch.yml` 的 `skill-filesystem.customSkillDirs` 注册 `skills/`（实测 Agent 能加载 `ephemeris-query` 并继续调用 MCP）；`ask_user_question` 已走 DSH 问答通道（SDK server answerer → SSE `question` → 前端卡片 → `/api/question/answer`）；第 4 个 skill 与 §2.1/§5.4 口径不一致，待决策 |
-| M3 前端骨架 | **已完成骨架** | `web/` React 19 + Vite + TS + Cesium；三栏（左星历 / 中地球 / 右 Agent）；102 颗位置 5 s 刷新；选中星轨迹与过境表；SDK SSE 事件流 + 10 s 心跳 + 运行中逐条/完成后工作步骤自动折叠 + 思考预览/工具行内联命令；星历轮询单飞/超时/静默重试；生产化顶栏（API 余额）、`/` 技能菜单、DSH 式工具卡/思考态、卡片阴影；1440/900/488 无横向溢出 |
+| M3 前端骨架 | **已完成骨架** | `web/` React 19 + Vite + TS + Cesium；三栏（左星历 / 中地球 / 右 Agent）；102 颗位置 5 s 刷新；选中星轨迹与过境表；SDK SSE 事件流 + 10 s 心跳 + 运行中逐条/完成后工作步骤自动折叠 + 思考预览/工具行内联命令；星历轮询单飞/超时/静默重试；生产化顶栏（API 余额）、`/` 技能菜单、DSH 式工具卡/思考态、卡片阴影；顶栏设置可切工作步骤详细度（极简只留思考摘要）；1440/900/488 无横向溢出 |
 | M4 可视化 | **部分完成** | 地球、实时位置、轨迹、过境表、足迹圆、杭州边界闪烁定位已接；时间轴与覆盖图层按反馈移除；重访/时间覆盖率未做 |
 | 流式 | **已完成（事件级）** | `/api/chat/stream` 用 SDK 通知：`tool_call`/`tool_result` 实时，文本回合末整块；token delta 当前 SDK 不提供 |
 | M5 联调上线 | 未开始 | 待 D7–D9 与验收演示 |
@@ -906,6 +906,7 @@ M5 联调上线（约 0.5 周）
 
 | 日期 | 版本 | 变更 |
 | --- | --- | --- |
+| 2026-11-06 | v3.6 | 顶栏新增界面设置：工作步骤展示分 极简/简洁/标准/详细/完全展开 五档；极简只保留思考摘要、不渲染工具调用，标准在工具行下补结果摘要，详细默认展开参数与结果，完全展开常驻展开；选择存 localStorage，默认简洁 |
 | 2026-11-05 | v3.5 | 成图规划迁到 RS-Service：5 任务 API + 后台 job + 四节报告；右栏新增全屏抽屉；目录裁剪到 65 颗；移除 imaging-plan skill 与 plan_coverage MCP/CLI |
 | 2026-10-21 | v3.4 | 从数据库/种子/展示集移除 9 颗 GEO（GF-4、GF-13 01/02、LuTan-4 01A、FY-2G/H、FY-4A/B/C），展示集变为 102 颗 LEO：GEO 凝视足迹模型未实现，过境接口会把常驻可见误算为整窗过境；同步更新 `payload_public` 计数（90/12）、重点保障 25 颗与前端 102 颗口径 |
 | 2026-10-21 | v3.3 | 光学/高光谱覆盖补上太阳高度 >10° 门限（夜间过境不再计入，`ALGO_VERSION=plan-0.2`）；报告改为"卫星构成"，新增"推荐计划"（逐星 CelesTrak 来源/覆盖占比/必选或可选/推荐原因）与深/浅主题切换 |
