@@ -132,6 +132,12 @@ git log --oneline -10
   PR 里写清这次改动是否影响运行中的服务、回滚要做什么。
 - **改需求/决策**：先改 `docs/PHASE2-REQUIREMENTS.md`（§11 决策记录、§12.3 变更记录），再改代码；不在代码里悄悄偏离文档。
 
+## 版本与发布
+
+- 每个合并到 `main` 的 PR 必须把仓库根 `VERSION` 升一级，同步 `web/package.json` 的 `version`，并在 `CHANGELOG.md` 顶部写该版本条目。
+- `0.x` 阶段：功能或口径变化走 MINOR，修复/文档走 PATCH；Phase 2 验收通过后打 `1.0.0`。`SIRIAgent` 与 `RS-Service` 各自编号，不共用平台版本。
+- 合并后打 `v<version>` tag。级别判定、并行冲突、回滚与 CHANGELOG 格式见 [`docs/VERSIONING.md`](docs/VERSIONING.md)。
+
 ## 完成定义：跑通才算完
 
 改代码不算完成，验证过才算：
@@ -142,6 +148,7 @@ git log --oneline -10
 4. 文档同步：MCP/命令变了同步 `skills/*/COMMANDS.md`；需求变了同步 §12.3；新错误补 `docs/TROUBLESHOOTING.md`。
 5. 线上验收前确认修复所在 PR 已合并、对应 unit 已重启；未合并时只能拿本地修复版生成的结果做证据，并在回复里说明线上仍是旧结果。
 6. `git status` 干净：没有 `.env`、数据库、`web/dist/`、`reports/`、临时草稿混进提交。
+7. 版本已 bump：`VERSION`、`web/package.json`、`CHANGELOG.md` 三者一致（规则见 [`docs/VERSIONING.md`](docs/VERSIONING.md)）。
 
 ## 文档导航
 
@@ -152,8 +159,9 @@ git log --oneline -10
 | REST / MCP / 字段 | `../RS-Service/docs/api.md` |
 | skill 命令与失败处理 | `skills/<slug>/COMMANDS.md` |
 | 报错与真正原因 | `docs/TROUBLESHOOTING.md` |
-| 部署、systemd、配置项 | `README.md` |
+| 部署、systemd、配置项 | 本文件「快速命令」、`docs/TROUBLESHOOTING.md` |
 | 评审与 PR 要填什么 | `.github/pull_request_template.md` |
+| 版本与发布 | `docs/VERSIONING.md`、`CHANGELOG.md` |
 
 <!-- 全文控制在 200 行内：放不下的写进 docs/，这里只加一行链接。
      每条规则只有一个真理源；新增前先确认它不是 docs 里已有内容的副本。 -->
