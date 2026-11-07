@@ -11,7 +11,7 @@
 - **形态**：Flask（`app.py`）+ DSH Python SDK（`sdk_runtime.py`）跑在 `127.0.0.1:8000`；前端 `web/` 构建产物由 Flask 托管；公网只经 Cloudflare Tunnel + Access。
 - **技术栈**：Python 3.12 · Flask/gunicorn；React 19 + Vite + TypeScript + CesiumJS（pnpm）。
 - **数据**：本仓不连数据库；运行数据都在 `RS-Service` 的 PostgreSQL `rs_service`。仓库只放源码、skills、脚本、文档。
-- **现状**：Phase 2 进行中；里程碑状态与待补项只看 `docs/PHASE2-REQUIREMENTS.md` §9.1。
+- **现状**：Phase 2 已完成（2026-11-07）；完成口径、里程碑与遗留项看 `docs/PHASE2-REQUIREMENTS.md` §1.3、§9.1、§9.2。
 
 ## 仓库里真实存在什么
 
@@ -135,7 +135,7 @@ git log --oneline -10
 ## 版本与发布
 
 - 每个合并到 `main` 的 PR 必须把仓库根 `VERSION` 升一级，同步 `web/package.json` 的 `version`，并在 `CHANGELOG.md` 顶部写该版本条目。
-- `0.x` 阶段：功能或口径变化走 MINOR，修复/文档走 PATCH；Phase 2 验收通过后打 `1.0.0`。`SIRIAgent` 与 `RS-Service` 各自编号，不共用平台版本。
+- 1.0 之后：破坏性变更 MAJOR、新能力或口径变化 MINOR、修复/文档 PATCH。`SIRIAgent` 与 `RS-Service` 各自编号，不共用平台版本。
 - 合并后打 `v<version>` tag。级别判定、并行冲突、回滚与 CHANGELOG 格式见 [`docs/VERSIONING.md`](docs/VERSIONING.md)。
 
 ## 完成定义：跑通才算完
@@ -154,7 +154,7 @@ git log --oneline -10
 
 | 想了解 | 去哪看 |
 |---|---|
-| 需求、范围、验收演示 | `docs/PHASE2-REQUIREMENTS.md` §1–§2、§9.1 |
+| 需求、范围、验收演示 | `docs/PHASE2-REQUIREMENTS.md` §1–§2、§9.1、§9.2 |
 | 星历精度与门限 | `docs/PHASE2-REQUIREMENTS.md` §4.6 |
 | REST / MCP / 字段 | `../RS-Service/docs/api.md` |
 | skill 命令与失败处理 | `skills/<slug>/COMMANDS.md` |

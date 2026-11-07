@@ -278,7 +278,7 @@ main ul li::marker { color: var(--brand); }
 <a class="depth-2" href="#sec-1">1. 现状与目标</a>
 <a class="depth-3" href="#sec-1-1">1.1 现状核对（2026-10-19）</a>
 <a class="depth-3" href="#sec-1-2">1.2 Phase 2 目标</a>
-<a class="depth-3" href="#sec-1-3">1.3 验收演示（唯一硬标准）</a>
+<a class="depth-3" href="#sec-1-3">1.3 验收演示（Phase 2 完成口径，2026-11-07）</a>
 <a class="depth-2" href="#sec-2">2. 范围与不做</a>
 <a class="depth-3" href="#sec-2-1">2.1 Phase 2 做</a>
 <a class="depth-3" href="#sec-2-2">2.2 Phase 2 明确不做</a>
@@ -291,7 +291,7 @@ main ul li::marker { color: var(--brand); }
 <a class="depth-3" href="#sec-4-1">4.1 技术栈</a>
 <a class="depth-3" href="#sec-4-2">4.2 数据库（14 张表）</a>
 <a class="depth-3" href="#sec-4-3">4.3 数据源与同步</a>
-<a class="depth-3" href="#sec-4-4">4.4 卫星集：102 颗（全部国内 LEO，2026-10-21 修订）</a>
+<a class="depth-3" href="#sec-4-4">4.4 卫星集：65 颗（运行库，2026-11-05 裁剪；102 颗为历史分析口径）</a>
 <a class="depth-3" href="#sec-4-5">4.5 计算能力</a>
 <a class="depth-3" href="#sec-4-6">4.6 精度与口径（强制章节，所有输出必须遵守）</a>
 <a class="depth-3" href="#sec-4-7">4.7 AOI 与坐标系</a>
@@ -318,7 +318,8 @@ main ul li::marker { color: var(--brand); }
 <a class="depth-3" href="#sec-7-3">7.3 Phase 3 第一项（占位）</a>
 <a class="depth-2" href="#sec-8">8. 优先级总表</a>
 <a class="depth-2" href="#sec-9">9. 依赖与里程碑</a>
-<a class="depth-3" href="#sec-9-1">9.1 实施进度（2026-10-19）</a>
+<a class="depth-3" href="#sec-9-1">9.1 实施进度（2026-11-07）</a>
+<a class="depth-3" href="#sec-9-2">9.2 Phase 2 遗留项（转 Phase 3 或维护）</a>
 <a class="depth-2" href="#sec-10">10. 风险与回滚</a>
 <a class="depth-2" href="#sec-11">11. 决策记录（已关闭）</a>
 <a class="depth-2" href="#sec-12">12. 附录</a>
@@ -444,21 +445,21 @@ main ul li::marker { color: var(--brand); }
 <li><strong>前端改版</strong>：左栏星历目录、中央 3D 地球、右栏 Agent 问答区；地球为视觉主体；深空科技风；多分辨率与主流浏览器可用。</li>
 <li><strong>Skill 命令化 + MCP 取数</strong>：CLI 为唯一实现，MCP 为薄包装，<code>COMMANDS.md</code> 说明命令与风险。</li>
 </ol>
-<h3 id="sec-1-3">1.3 验收演示（唯一硬标准）</h3>
+<h3 id="sec-1-3">1.3 验收演示（Phase 2 完成口径，2026-11-07）</h3>
+<div class="callout"><span class="callout-label">说明</span><p>Phase 2 已按本节口径验收完成。口径调整（事件级流式、会话恢复转 Phase 3、浏览器矩阵限定 Chrome）与遗留项见 §9.1、§9.2 与 §12.3。</p></div>
 <ol>
 <li>打开 <code>https://siriagent.dpdns.org</code>，通过 Cloudflare Access 登录。</li>
-<li>中央 3D 地球显示默认展示集的<strong>实时位置</strong>；选中一颗后显示星下点轨迹、传感器足迹、未来 24h 过境。</li>
-<li>右栏可<strong>任意提问</strong>（不限定话题、不加话题限制）；回答以 token 级流式出现，工具调用卡片、思考块实时呈现。</li>
+<li>中央 3D 地球显示 65 颗卫星的<strong>实时位置</strong>；选中一颗后显示星下点轨迹、传感器足迹、未来 24h 过境。</li>
+<li>右栏可<strong>任意提问</strong>（不限定话题、不加话题限制）；工具调用与思考实时呈现，正文在回合结束时整块返回（当前 SDK 不提供 token delta，见 §6.2）。</li>
 <li>问及星历/过境类问题时，Agent 经 <strong>MCP</strong> 调用 <code>RS-Service</code>，返回过境表或覆盖结论，并带精度声明。</li>
-<li>刷新页面后能恢复同一会话继续对话。</li>
-<li>在 1280 / 1920 / 2560 宽度与 Chrome / Edge / Firefox / Safari 下布局不破、不出现横向滚动。</li>
+<li>界面在 1280 / 1440 / 1920 / 2560 宽度无横向溢出，&lt; 1024 单列堆叠；本阶段实测 Chrome，Firefox / Safari / Edge 列入 §9.2 遗留。</li>
 </ol>
 <hr />
 <h2 id="sec-2">2. 范围与不做</h2>
 <h3 id="sec-2-1">2.1 Phase 2 做</h3>
 <ul>
 <li>两仓库建立、GitHub 公开托管、CI 最小集。</li>
-<li><code>RS-Service</code>：PostgreSQL 星历库、每日同步、REST、MCP、CLI、4 个 skill。</li>
+<li><code>RS-Service</code>：PostgreSQL 星历库、每日同步、REST、MCP、CLI、3 个 skill。</li>
 <li><code>SIRIAgent</code>：Python SDK 常驻运行时调用、SSE/WS 流式、React 前端、Cesium 可视化、响应式。</li>
 <li>精度口径、坐标系、云量、保留与备份策略。</li>
 </ul>
@@ -828,10 +829,10 @@ CREATE INDEX idx_sensor_sat     ON sensor(sat_id);
 <li>解析：优先 OMM/JSON；TLE 文本仅作兼容，校验行校验位；<code>sat_id</code> 用整数，接口同时接受 Alpha-5。</li>
 <li>幂等：<code>UNIQUE(sat_id, epoch_utc, source_id)</code>，重复抓取只更新 <code>fetched_at</code>。</li>
 </ul>
-<h3 id="sec-4-4">4.4 卫星集：102 颗（全部国内 LEO，2026-10-21 修订）</h3>
+<h3 id="sec-4-4">4.4 卫星集：65 颗（运行库，2026-11-05 裁剪；102 颗为历史分析口径）</h3>
 <div class="callout"><span class="callout-label">说明</span><p><strong>2026-11-05 运行库裁剪</strong>：目录保留 <strong>65 颗</strong>（61 光学 + 4 高光谱）。SAR 19 颗（缺原生入射角带）、光学 12 颗（幅宽“未公开”）、微波 6 颗（非成像）已移出运行库并归档到 RS-Service 的 <code>data/satellites_retired.json</code>；同步按库中 <code>satellite</code> 行取星，不会重新加回。下方 102 颗表保留为历史分析口径，当前接口、展示与成图以 65 颗为准。</p>
 <p>2026-10-19 决策：<strong>不使用历史 120 颗名单</strong>，改为按"杭州 7 天真实过境频次 + 全部国内公开轨道"重新计算。方法：杭州 30.27°N / 120.16°E；2026-10-19T00:00Z 起 7 天；可见门限 5°；光学成像 = 最大仰角 ≥10° 且 TCA 太阳高度 &gt;10°；SAR/微波 = ≥10°（不看太阳）；30 s 扫描 + 峰值抛物线插值；TLE 历元 2026-10-18/19。研究用镜像取 TLE，<strong>生产仍用 CelesTrak GP</strong>。7 天 SGP4 的 TCA 误差约数秒至 1 分钟。</p></div>
-<p><strong>结果：102 颗全部为 LEO；商业 64、民用 25、气象海洋 13；军事/双用途 0 颗。</strong> 其中 <code>payload_public=true</code> 90 颗，<code>false</code> 12 颗（仅给轨道/可见性，不做成像承诺）。2026-10-21 已移除 9 颗 GEO，见 §4.4.3。</p>
+<p><strong>结果：102 颗全部为 LEO；商业 64、民用 25、气象海洋 13；军事/双用途 0 颗。</strong> 其中 <code>payload_public=true</code> 90 颗，<code>false</code> 12 颗。以上为 2026-10-21 的历史分析；2026-11-05 运行库裁剪到 65 颗且全部 <code>payload_public=true</code>，见本节开头。</p>
 <h4>4.4.1 口径与阈值</h4>
 <p>纳入阈值（同时满足）：</p>
 <ol>
@@ -845,7 +846,7 @@ CREATE INDEX idx_sensor_sat     ON sensor(sat_id);
 </ol>
 <p><strong>为什么 0 军事</strong>：Yaogan、Yunhai、Ningxia、GF-8/9/10R/11/12/14 无公开载荷参数；本轮按要求把 110–120 全部限定在公开载荷的商业/民用/气象海洋，军事 0 颗。</p>
 <p><strong>数量差异</strong>：若把退役星、140–185 km 待再入、44312 别名和 GF-8/9/10R/11/12/14 双用途也算入，会得到约 121 颗；按上述硬性排除后为 <strong>111 颗</strong>，再移除 9 颗 GEO 后为 <strong>102 颗</strong>。</p>
-<h4>4.4.2 LEO 展示集（102 颗，按可见过境/天降序）</h4>
+<h4>4.4.2 历史 LEO 展示集（102 颗，2026-10-21，按可见过境/天降序）</h4>
 <div class="callout"><span class="callout-label">说明</span><p>该表较宽，可横向滚动查看 TLE 年龄与置信度列。</p></div>
 <div class="table-wrap wide"><table>
 <thead>
@@ -2430,9 +2431,9 @@ CREATE INDEX idx_sensor_sat     ON sensor(sat_id);
 <td>默认推荐、Agent 优先查询；全部包含在 102 中</td>
 </tr>
 <tr>
-<td>默认展示集</td>
+<td>历史展示集</td>
 <td><strong>102（全部 LEO）</strong></td>
-<td>左栏全量星历、过境查询</td>
+<td>2026-10-21 口径；2026-11-05 起运行库 65 颗，见 §4.4</td>
 </tr>
 <tr>
 <td>全量目录</td>
@@ -2447,9 +2448,9 @@ CREATE INDEX idx_sensor_sat     ON sensor(sat_id);
 </tbody>
 </table></div>
 <p><strong>重点保障 25 颗</strong>（全部在 102 内）：GF-2、GF-7、吉林一号宽幅01、吉林一号高分02D、四维高景 Neo-1 01、北京三号B；GF-3、GF-3 02、GF-3 03、陆探一号 A/B、HJ-2E、PIESAT-1 A；GF-1 03、GF-6、ZY-3 03、ZY-1 02D、GF-5 02、HJ-2A；FY-3D/F/G、HY-1D、HY-2D、HY-3A。</p>
-<p><strong>前端性能（102 颗必须按此实现）</strong>：</p>
+<p><strong>前端性能（按运行库 65 颗实现；以下为 2026-10-21 的 102 颗历史口径）</strong>：</p>
 <ol>
-<li><strong>当前位置层（102 颗）</strong>：每 5 s 传播一次（或前端插值），102 个点精灵；禁止 60 fps 重复传播。</li>
+<li><strong>当前位置层（65 颗）</strong>：每 5 s 传播一次（或前端插值），65 个点精灵；禁止 60 fps 重复传播。</li>
 <li><strong>轨迹层（仅选中星）</strong>：只算当前轨道 1 圈（约 90–100 min），10–20 s 步长 ≈ 300–600 点；最多同时 3 条，禁止全量。</li>
 <li><strong>TLE/对象缓存</strong>：服务端按 NORAD 缓存 TLE 与 <code>EarthSatellite</code>；前端只取 <code>norad/name/lat/lon/alt</code> 轻量数组（&lt;100 KB）。</li>
 <li><strong>过境预计算</strong>：7 天统计在服务端算好写 <code>pass_window</code>；前端点击某星再取 TCA 列表。</li>
@@ -2777,12 +2778,6 @@ CREATE INDEX idx_sensor_sat     ON sensor(sat_id);
 <td>本版本只含浙江 11 个地级市</td>
 </tr>
 <tr>
-<td><code>plan_coverage</code></td>
-<td><code>mode</code>、<code>aoi</code>、<code>max_resolution_m</code>、模式专属参数</td>
-<td>编成方案（星数、覆盖率、重访、时间轴）</td>
-<td>四种模式，见下方口径</td>
-</tr>
-<tr>
 <td><code>run_command</code></td>
 <td><code>command</code>（枚举）、<code>args</code>（schema）</td>
 <td>stdout/结构化结果 + 审计 id</td>
@@ -2790,8 +2785,8 @@ CREATE INDEX idx_sensor_sat     ON sensor(sat_id);
 </tr>
 </tbody>
 </table></div>
-<div class="callout"><span class="callout-label">说明</span><p>2026-10-20 已实现：<code>list_satellites</code>、<code>get_satellite</code>、<code>next_passes</code>、<code>ground_track</code>、<code>current_position</code>、<code>list_positions</code>、<code>sync_status</code>、<code>list_aoi</code>、<code>plan_coverage</code>。</p></div>
-<p><code>plan_coverage</code> 的模式与必填参数（覆盖率只有"最少星达覆盖率"是输入，其余模式是输出）：</p>
+<div class="callout"><span class="callout-label">说明</span><p>2026-11-05 起 <code>plan_coverage</code> 随 <code>imaging-plan</code> 移除；当前可用 8 个工具：<code>list_satellites</code>、<code>get_satellite</code>、<code>next_passes</code>、<code>ground_track</code>、<code>current_position</code>、<code>list_positions</code>、<code>sync_status</code>、<code>list_aoi</code>。</p>
+<p>以下为已移除的 <code>plan_coverage</code> 历史口径，保留备查（现由成图抽屉 + <code>/api/v1/plans</code> 承担）：</p></div>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -2977,11 +2972,11 @@ when-to-use: 用户询问某地某时的卫星过境、可见性、覆盖能力�
 </table></div>
 <h3 id="sec-6-2">6.2 DSH 调用与流式</h3>
 <ul>
-<li>后端使用 <strong>Python SDK</strong>（<code>deepseek_harness</code>），常驻 <code>dsh --profile sdk</code> 进程，通过 <code>session.event</code> 通知拿到 <code>text-delta / reasoning-delta / tool-call-delta</code>。</li>
+<li>后端使用 <strong>Python SDK</strong>（<code>deepseek_harness</code>），常驻 <code>dsh --profile sdk</code> 进程；工具调用与思考通过 <code>session.event</code> 实时推送，正文在回合结束时整块返回（SDK 当前不提供 text delta）。</li>
 <li>独立 <code>DSH_HOME=~/.dsh-siriagent</code>：复制 <code>~/.dsh/.credentials.yaml</code>，加 <code>sdk.patch.yml</code>（凭据启用、<code>approval: never</code>、MCP 与 skill 目录）。</li>
 <li>每个浏览器会话映射一个 DSH session；后端把通知归一化为 SSE 事件：<code>session</code>、<code>text</code>、<code>reasoning</code>、<code>tool_call</code>、<code>tool_result</code>、<code>status</code>、<code>error</code>、<code>done</code>。</li>
 <li>降级：SDK 装配失败时前端回退 <code>/api/chat</code>（headless 一次性返回），工具卡不再实时。</li>
-<li>端点：<code>POST /api/chat</code>（发送）、<code>GET /api/stream/&lt;session&gt;</code>（SSE）、<code>POST /api/session/reset</code>、<code>GET /api/health</code>。</li>
+<li>端点：<code>POST /api/chat/turns</code>（建回合）、<code>GET /api/chat/turns/{id}/events?cursor=N</code>（SSE 续读）、<code>POST /api/question/answer</code>、<code>GET /api/health</code>；断线续读语义见 <code>AGENTS.md</code>。</li>
 <li>审批：Phase 2 不做；<code>approval: never</code>。</li>
 </ul>
 <h3 id="sec-6-3">6.3 布局与信息架构</h3>
@@ -2989,7 +2984,7 @@ when-to-use: 用户询问某地某时的卫星过境、可见性、覆盖能力�
 │ Header：品牌 / 同步状态 / 会话 / 连接状态 / 设置                          │
 ├───────────────┬──────────────────────────────────────┬───────────────────┤
 │ 星历（左）    │ 3D 地球（中，主视觉）                │ Agent（右）       │
-│ 卫星筛选列表  │ 102 颗实时位置                       │ 消息流（思考块、  │
+│ 卫星筛选列表  │ 65 颗实时位置                        │ 消息流（思考块、  │
 │ 选中星详情    │ 选中星轨迹 + 传感器足迹              │ 工具卡、产物卡）  │
 │ 聚焦 / 杭州   │ 相机聚焦、杭州边界闪烁定位           │                   │
 │ 未来 24h 过境 │ 颗数 · 5 s 刷新 · 轨迹状态           │ 输入区（/、发送） │
@@ -3000,8 +2995,8 @@ when-to-use: 用户询问某地某时的卫星过境、可见性、覆盖能力�
 <li>左右栏有最小宽度和上限（不随视口无限拉伸），中栏不低于 340 px。</li>
 <li>左栏不折叠：≥ 1024 保持三栏；&lt; 1024 才按"地球 → 星历 → Agent"单列堆叠。</li>
 <li>右栏不限制话题：欢迎语只做示例，不写"只能问星历"。</li>
-<li>相机："聚焦"飞到选中星足迹；"杭州"飞到杭州并让<strong>杭州边界多边形</strong>闪烁约 6 秒（Amap 市界 GCJ-02→WGS84）。时间轴 UI 暂不启用，后端 <code>at</code> 参数保留。</li>
-<li>卫星列表支持按类别（商业/民用/气象海洋）/类型（光学/SAR/高光谱）/分辨率/低置信筛选，默认 102 颗展示集；列表用虚拟滚动，102 颗也能流畅。</li>
+<li>相机："聚焦"飞到选中星足迹；"杭州"飞到杭州并让<strong>杭州边界多边形</strong>闪烁约 6 秒（Amap 市界 GCJ-02→WGS84）。时间轴 UI 已移除，后端 <code>at</code> 参数保留。</li>
+<li>卫星列表支持按名称 / NORAD 搜索与类别（商业/民用/气象海洋）筛选；当前 65 颗直接渲染，暂未做虚拟滚动。类型 / 分辨率 / 低置信筛选与虚拟滚动列入 §9.2 遗留。</li>
 </ul>
 <h3 id="sec-6-4">6.4 视觉系统</h3>
 <ul>
@@ -3046,17 +3041,17 @@ when-to-use: 用户询问某地某时的卫星过境、可见性、覆盖能力�
 <li>浏览器矩阵：Chrome / Edge / Firefox / Safari 最近两个大版本；WebGL 不可用时显示降级提示与 2D 轨迹列表。</li>
 <li>高分屏：<code>devicePixelRatio</code> 适配，Cesium <code>resolutionScale</code> 可调；2560/4K 下不模糊。</li>
 <li>无横向滚动；长文本/长卫星名省略号 + tooltip；触控目标 ≥ 44px。</li>
-<li>验收：Playwright 在 1280×800、1920×1080、2560×1440 三档截图对比，无溢出、无遮挡。</li>
+<li>验收：Chrome 实测 1280/1440/1920/2560 无横向溢出、1024 三栏、900 单列；Playwright 三档截图与 Firefox / Safari / Edge 矩阵列入 §9.2 遗留。</li>
 </ul>
 <h3 id="sec-6-6">6.6 性能预算</h3>
 <ul>
 <li>首屏（不含 Cesium 影像）：&lt; 2.5 s（本地/香港出口，20 Mbps）。</li>
 <li>Cesium 与影像按需加载；首屏先出骨架与卫星列表。</li>
-<li><strong>102 颗只画当前位置</strong>（点/图标，Cesium 实体或 PointPrimitive），不为每颗星预生成 1s 轨迹；轨迹仅对选中星按需计算并按 stride 降采样。</li>
-<li>卫星位置动画 ≥ 30 FPS（102 颗当前位置；轨迹模式 ≥ 30 FPS）。</li>
-<li>卫星列表用虚拟滚动（只渲染可视行）；筛选/搜索在前端完成。</li>
+<li><strong>65 颗只画当前位置</strong>（点/图标，Cesium 实体或 PointPrimitive），不为每颗星预生成 1s 轨迹；轨迹仅对选中星按需计算并按 stride 降采样。</li>
+<li>卫星位置动画 ≥ 30 FPS（65 颗当前位置；轨迹模式 ≥ 30 FPS）。</li>
+<li>卫星列表当前 65 颗直接渲染；虚拟滚动列入 §9.2 遗留，筛选/搜索在前端完成。</li>
 <li>过境窗口按日预计算并缓存（<code>pass_window</code>），前端不再逐次全量算。</li>
-<li>单次过境查询 P95 &lt; 3 s（102 颗、24h 窗口，命中缓存）。</li>
+<li>单次过境查询 P95 &lt; 3 s（65 颗、24h 窗口，命中缓存）。</li>
 </ul>
 <h3 id="sec-6-7">6.7 前端待办</h3>
 <div class="table-wrap"><table>
@@ -3079,7 +3074,7 @@ when-to-use: 用户询问某地某时的卫星过境、可见性、覆盖能力�
 <td>D2</td>
 <td>DSH SDK 常驻运行时 + SSE 事件桥</td>
 <td><span class="tag warn">P0</span></td>
-<td>浏览器看到 token 级流式</td>
+<td>工具/思考事件级实时，正文回合末整块</td>
 </tr>
 <tr>
 <td>D3</td>
@@ -3091,7 +3086,7 @@ when-to-use: 用户询问某地某时的卫星过境、可见性、覆盖能力�
 <td>D4</td>
 <td>Cesium 地球 + 卫星实时位置</td>
 <td><span class="tag warn">P0</span></td>
-<td>102 颗位置正确、可交互</td>
+<td>65 颗位置正确、可交互</td>
 </tr>
 <tr>
 <td>D5</td>
@@ -3107,7 +3102,7 @@ when-to-use: 用户询问某地某时的卫星过境、可见性、覆盖能力�
 </tr>
 <tr>
 <td>D7</td>
-<td>会话恢复（刷新后续聊）</td>
+<td>会话恢复（刷新后续聊）→ Phase 3 遗留</td>
 <td><span class="tag">P1</span></td>
 <td>同 session 续聊</td>
 </tr>
@@ -3252,7 +3247,7 @@ when-to-use: 用户询问某地某时的卫星过境、可见性、覆盖能力�
 <tr>
 <td>B4</td>
 <td>数据</td>
-<td>卫星目录与 102 颗展示集入库</td>
+<td>卫星目录与 65 颗运行库入库</td>
 <td><span class="tag warn">P0</span></td>
 <td>B2</td>
 </tr>
@@ -3315,7 +3310,7 @@ when-to-use: 用户询问某地某时的卫星过境、可见性、覆盖能力�
 <tr>
 <td>C2</td>
 <td>MCP</td>
-<td>MCP server + 9 工具</td>
+<td>MCP server + 8 工具</td>
 <td><span class="tag warn">P0</span></td>
 <td>C1</td>
 </tr>
@@ -3329,7 +3324,7 @@ when-to-use: 用户询问某地某时的卫星过境、可见性、覆盖能力�
 <tr>
 <td>C4</td>
 <td>Skill</td>
-<td>4 个 skill + COMMANDS.md</td>
+<td>3 个 skill + COMMANDS.md</td>
 <td><span class="tag warn">P0</span></td>
 <td>C2</td>
 </tr>
@@ -3385,7 +3380,7 @@ when-to-use: 用户询问某地某时的卫星过境、可见性、覆盖能力�
 <tr>
 <td>D7</td>
 <td>前端</td>
-<td>会话恢复</td>
+<td>会话恢复（Phase 3 遗留）</td>
 <td><span class="tag">P1</span></td>
 <td>D2</td>
 </tr>
@@ -3440,7 +3435,7 @@ M5 联调上线（约 0.5 周）
   D7/D8/D9 + 验收演示
 </code></pre>
 <p>关键路径：<strong>A3（gh 登录）→ A1/A2 → B2（数据源）→ B4（卫星集）→ B6（过境）→ C2（MCP）→ D5（可视化联调）</strong>。</p>
-<h3 id="sec-9-1">9.1 实施进度（2026-10-19）</h3>
+<h3 id="sec-9-1">9.1 实施进度（2026-11-07）</h3>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -3452,33 +3447,95 @@ M5 联调上线（约 0.5 周）
 <tbody>
 <tr>
 <td>M1 数据服务</td>
-<td><strong>进行中</strong></td>
-<td>两仓库已公开；12 表迁移；102 颗 LEO seed；102 条 TLE；REST/MCP 可用；杭州 AOI 已写入 <code>aoi</code> 表（330100，16819 km²）；12 个测试通过。待补：覆盖/重访、云量写入 <code>pass_window</code></td>
+<td><strong>已完成</strong></td>
+<td>运行库 65 颗（61 光学 + 4 高光谱）、14 张业务表（另 1 张 <code>alembic_version</code>）；TLE 每日 03:00 同步、最多 3 次重试；REST / MCP / CLI 可用；AOI 102 条（浙江省级 / 市级 / 区县）；覆盖与重访由成图任务承担。过境结果暂未回填云量，见 §9.2。</td>
 </tr>
 <tr>
 <td>M2 Agent 可查</td>
-<td><strong>进行中</strong></td>
-<td>MCP 已接入 <code>headless.patch.yml</code>（Streamable HTTP）；7 个工具可用，前端已显示工具卡；<code>ephemeris-query</code>、<code>pass-planning</code>、<code>tle-health</code> 三个 skill 已配 <code>SKILL.md</code> + <code>COMMANDS.md</code>（用途/风险/审批/示例/失败处理），<code>/</code> 菜单可直接调用；待补 <code>get_tle</code>、<code>propagate</code>、<code>run_command</code>；DSH 侧已通过 <code>headless.patch.yml</code> 的 <code>skill-filesystem.customSkillDirs</code> 注册 <code>skills/</code>（实测 Agent 能加载 <code>ephemeris-query</code> 并继续调用 MCP）；<code>ask_user_question</code> 已走 DSH 问答通道（SDK server answerer → SSE <code>question</code> → 前端卡片 → <code>/api/question/answer</code>）；第 4 个 skill 与 §2.1/§5.4 口径不一致，待决策</td>
+<td><strong>已完成</strong></td>
+<td>8 个 MCP 工具；<code>ephemeris-query</code>、<code>pass-planning</code>、<code>tle-health</code> 三个 skill（<code>SKILL.md</code> + <code>COMMANDS.md</code>）；<code>ask_user_question</code> 走 SDK 问答通道；<code>imaging-plan</code> 已移除，改由成图抽屉承担。</td>
 </tr>
 <tr>
 <td>M3 前端骨架</td>
-<td><strong>已完成骨架</strong></td>
-<td><code>web/</code> React 19 + Vite + TS + Cesium；三栏（左星历 / 中地球 / 右 Agent）；102 颗位置 5 s 刷新；选中星轨迹与过境表；SDK SSE 事件流 + 10 s 心跳 + 运行中逐条/完成后工作步骤自动折叠 + 思考预览/工具行内联命令；星历轮询单飞/超时/静默重试；生产化顶栏（API 余额）、<code>/</code> 技能菜单、DSH 式工具卡/思考态、卡片阴影；顶栏设置可切工作步骤详细度（极简只留思考摘要）；1440/900/488 无横向溢出</td>
+<td><strong>已完成</strong></td>
+<td>三栏布局；65 颗位置 5 s 刷新；选中星轨迹与 24h 过境；SSE 事件级流式 + 断线续读；工作步骤五档；<code>/</code> 技能菜单；API 余额。</td>
 </tr>
 <tr>
 <td>M4 可视化</td>
-<td><strong>部分完成</strong></td>
-<td>地球、实时位置、轨迹、过境表、足迹圆、杭州边界闪烁定位已接；时间轴与覆盖图层按反馈移除；重访/时间覆盖率未做</td>
+<td><strong>已完成</strong></td>
+<td>地球、实时位置、轨迹、足迹、杭州边界闪烁；时间轴按反馈移除；覆盖 / 重访由成图抽屉与四节报告承担。</td>
 </tr>
 <tr>
 <td>流式</td>
 <td><strong>已完成（事件级）</strong></td>
-<td><code>/api/chat/stream</code> 用 SDK 通知：<code>tool_call</code>/<code>tool_result</code> 实时，文本回合末整块；token delta 当前 SDK 不提供</td>
+<td>工具调用与思考实时；正文回合末整块（SDK 不提供 token delta）；断线用同一 <code>turn_id</code> + 游标续读。</td>
 </tr>
 <tr>
 <td>M5 联调上线</td>
-<td>未开始</td>
-<td>待 D7–D9 与验收演示</td>
+<td><strong>已完成</strong></td>
+<td>站点经 Cloudflare Access 运行；Chrome 在 1280 / 1440 / 1920 / 2560 无横向溢出、1024 三栏、900 单列；版本见两仓 <code>VERSION</code>。</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="sec-9-2">9.2 Phase 2 遗留项（转 Phase 3 或维护）</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项</th>
+<th>现状</th>
+<th>去向</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>会话恢复（D7）</td>
+<td>刷新后开始新会话，<code>session_id</code> 未持久化</td>
+<td>Phase 3 第一项</td>
+</tr>
+<tr>
+<td>token 级流式</td>
+<td>工具 / 思考事件级实时，正文整块</td>
+<td>待 SDK 提供 delta 或自研；不阻塞 Phase 2</td>
+</tr>
+<tr>
+<td>浏览器矩阵</td>
+<td>仅 Chrome 实测</td>
+<td>Phase 3 补 Playwright + Firefox / Safari / Edge</td>
+</tr>
+<tr>
+<td>CI（A7）</td>
+<td>两仓仅 Gitee 镜像 workflow</td>
+<td>维护项，优先补 PR 版本校验</td>
+</tr>
+<tr>
+<td>备份（B10）</td>
+<td>无脚本 / 定时器，只有手工 <code>pg_dump</code> 口径</td>
+<td>维护项</td>
+</tr>
+<tr>
+<td>过境云量</td>
+<td><code>pass_window.cloud_cover_pct</code> 未写入，<code>/passes</code> 未返回</td>
+<td>维护项；成图流程已按云量过滤</td>
+</tr>
+<tr>
+<td>MCP <code>get_tle</code> / <code>propagate</code></td>
+<td>由 <code>get_satellite</code> / <code>positions</code> 部分覆盖</td>
+<td>维护项</td>
+</tr>
+<tr>
+<td><code>run_command</code> + 审计（C3）</td>
+<td>未实现</td>
+<td>Phase 3 门禁一起做</td>
+</tr>
+<tr>
+<td>首屏性能 / 无障碍（D10 / D11）</td>
+<td>未做量化验收</td>
+<td>Phase 3</td>
+</tr>
+<tr>
+<td>连续 7 天同步证据</td>
+<td><code>sync_run</code> 记录不连续（10-19、11-06、11-07）</td>
+<td>维护项，观察一周后补记</td>
 </tr>
 </tbody>
 </table></div>
@@ -3667,6 +3724,11 @@ M5 联调上线（约 0.5 周）
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>2026-11-07</td>
+<td>v3.9</td>
+<td>Phase 2 完成收尾：按实测更新 §1.3 验收口径（事件级流式、会话恢复转 Phase 3、浏览器矩阵限定 Chrome）、§9.1 里程碑，新增 §9.2 遗留项；同步 §4.4 / §5.2 / §6.2 / §6.3 / §6.5 / §6.6 / §8 的 65 颗、8 工具、3 skill 口径；两仓版本升至 1.0.0（阶段跃迁）</td>
+</tr>
 <tr>
 <td>2026-11-07</td>
 <td>v3.8</td>
