@@ -93,8 +93,9 @@ Phase 2 已于 2026-11-07 按 `docs/PHASE2-REQUIREMENTS.md` §1.3 的完成口�
 
 ## 6. tag 与回滚
 
-- 合并后打 `v<version>`（如 `v0.2.0`），两个仓库各自打。合并即部署，tag 标记“线上跑过这个版本”，不是发布许可。
-- CI 自动打 tag 落地前，由合并者手工执行：
+- 合并后由 `.github/workflows/tag-release.yml` 读取 `VERSION` 自动打 `v<version>`（两个仓库各自），并双推 GitHub 与 Gitee；tag 已存在则跳过，不覆盖。
+- 合并即部署，tag 标记“线上跑过这个版本”，不是发布许可。
+- Actions 失败或需要补打时，可手动执行：
 
   ```bash
   git tag -a v0.2.0 -m "v0.2.0"
@@ -133,4 +134,4 @@ Phase 2 已于 2026-11-07 按 `docs/PHASE2-REQUIREMENTS.md` §1.3 的完成口�
 
 ## 11. 自动化现状
 
-脚本与 CI 校验尚未落地（`scripts/version.py`、PR 检查与自动 tag 计划随 A7 的最小 CI 一起补）。在自动化就位前，上述检查靠 PR 自检与评审兜底；规则本身不变。
+tag 自动化已落地：`.github/workflows/tag-release.yml` 在 `main` push 后按 `VERSION` 打 tag 并双推 Gitee。版本 bump 的 PR 校验（是否只升一级、CHANGELOG 是否齐）仍未落地，计划随 A7 的最小 CI 一起补；当前靠 PR 自检与评审兜底。
