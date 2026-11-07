@@ -424,7 +424,7 @@ LEO 卫星在 72 h 内对单个 5 km 网格的累计覆盖通常不到 1%，90% 
 **修复**：`plan_api.PlanCreate.to_spec()` 对 task1 固定 0.001% 时间阈值、面积目标
 默认 90%（旧客户端传的 `temporal_coverage_target_pct` 直接忽略）；
 `adapter._annotate_result()` 对 task1 不再暴露内部时间阈值，只返回 `area_pct`；
-报告与抽屉改为面积口径，task1 不再显示时间覆盖率与薄弱区。
+报告与抽屉改为面积口径，task1 只保留「选中卫星」「达标面积」，不再显示时间覆盖率、面积加权 MRT 与薄弱区（薄弱区表本身也带 MRT/时间覆盖率）。
 
 **回归**
 
