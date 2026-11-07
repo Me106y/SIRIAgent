@@ -69,6 +69,12 @@ git log --oneline -10
 - TLE >72h 标 `degraded`，>7d 拒绝过境计算。
 - `payload_public=false` 的卫星只给轨道与可见性，不给分辨率、幅宽，不参与成像推荐。
 
+### 成图规划口径
+
+- `task1` 是**面积口径**：目标区域至少成像一次即达标（内部时间阈值固定 0.001%），面积目标默认 90%。`targets.temporal_coverage_pct` 对 task1 必须为 `null`，报告与抽屉只认 `targets.area_pct`；单格时间覆盖率只用于 `task3`。
+- 禁止用 90% 单格时间阈值算 task1：72 h 内单格覆盖率通常 <1%，达标面积会恒为 0.0%。改口径后先查 `reports/imaging-plan/latest/plan.json` 的 `selection.recommended_result.temporal_coverage_target_pct`（task1 必须是 0.001）与 `summary_cards.qualified_area_pct`；回归测试 `test_task1_is_area_only_regardless_of_temporal_target`、`test_task1_report_uses_area_target_and_hides_temporal_strip` 不得删改。
+- 出现“达标面积 0.0%”先按 `docs/TROUBLESHOOTING.md` E15 查，不要靠调低目标凑非 0。
+
 ### 交互与安全
 
 - 追问一次一问：`ask_user_question` 的 `questions` 只放 1 项，等用户回答后再决定下一问。
@@ -95,6 +101,7 @@ git log --oneline -10
 - **起分支**：先 `git fetch origin`，从 `origin/main` 开 `<type>/<kebab-slug>`（如 `docs/agents-md`、`fix/answer-submit-409`）；agent 建的分支用 `agent/<slug>-<hash>`。
 - **开 PR**：`gh pr create --base main --fill`，再按模板补正文。
 - **一个 PR 只做一件事**：跨仓改动拆成两个 PR（本仓 + `RS-Service`），先合接口/后端，再合前端；两边正文互相链接。
+- **合并后追加的提交不会进 `main`**：PR 合并后再往同一分支推的提交只留在分支上（如 `agent/plan-tle-auto-e547316` 上的 `a76060d`）。声称某修复“已在 main”前，用 `git merge-base --is-ancestor <sha> origin/main`（退出 0 才算进了）或 `git log origin/main --grep '<关键词>'` 验证；不要只看开着的分支/PR。
 - **提交信息**：Conventional Commits；**标题英文**、祈使句、小写开头、不加句号；**正文中文**说清为什么。类型：`feat` `fix` `docs` `test` `refactor` `perf` `ci` `build` `chore`。
   - 例：`fix(web): keep SSE alive across tunnel drops`
   - 一个提交只做一件事；重构与行为变更不混。
