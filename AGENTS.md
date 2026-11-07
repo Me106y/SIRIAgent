@@ -73,6 +73,8 @@ git log --oneline -10
 
 - `task1` 是**面积口径**：目标区域至少成像一次即达标（内部时间阈值固定 0.001%），面积目标默认 90%。`targets.temporal_coverage_pct` 对 task1 必须为 `null`，报告与抽屉只认 `targets.area_pct`；单格时间覆盖率只用于 `task3`。
 - 禁止用 90% 单格时间阈值算 task1：72 h 内单格覆盖率通常 <1%，达标面积会恒为 0.0%。改口径后先查 `reports/imaging-plan/latest/plan.json` 的 `selection.recommended_result.temporal_coverage_target_pct`（task1 必须是 0.001）与 `summary_cards.qualified_area_pct`；回归测试 `test_task1_is_area_only_regardless_of_temporal_target`、`test_task1_report_uses_area_target_and_hides_temporal_strip` 不得删改。
+- `task1` 的“求解并生成报告”结果卡与报告只保留「选中卫星 + 达标面积」；禁止显示「时间覆盖率」「面积加权 MRT」「薄弱区」（薄弱区表同样带 MRT/时间覆盖率）。
+- 改 task1/报告后，必须用修改后的代码实际生成一份报告并核对：标题里的达标面积与 `targets.area_pct` 一致且不为 0.0%，报告与结果卡没有时间覆盖率、面积加权 MRT、薄弱区；只跑单测或看旧报告不算验收。
 - 出现“达标面积 0.0%”先按 `docs/TROUBLESHOOTING.md` E15 查，不要靠调低目标凑非 0。
 
 ### 交互与安全
@@ -137,7 +139,8 @@ git log --oneline -10
 2. 验收项可复现：需求文档 §1.3 对应场景实跑一遍，PR 里写怎么复现。
 3. 界面改动：三档宽度无横向溢出；WebGL 不可用时 2D 列表能开。
 4. 文档同步：MCP/命令变了同步 `skills/*/COMMANDS.md`；需求变了同步 §12.3；新错误补 `docs/TROUBLESHOOTING.md`。
-5. `git status` 干净：没有 `.env`、数据库、`web/dist/`、`reports/`、临时草稿混进提交。
+5. 线上验收前确认修复所在 PR 已合并、对应 unit 已重启；未合并时只能拿本地修复版生成的结果做证据，并在回复里说明线上仍是旧结果。
+6. `git status` 干净：没有 `.env`、数据库、`web/dist/`、`reports/`、临时草稿混进提交。
 
 ## 文档导航
 
