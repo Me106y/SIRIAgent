@@ -696,7 +696,12 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
   const renderResult = (value: PlanResult) => {
     const cards = value.summary_cards ?? {};
     const sats = value.report_data?.sats ?? [];
-    const target = value.targets?.temporal_coverage_pct;
+    // task1 是面积口径：达标面积对应 targets.area_pct，时间覆盖率不是它的 KPI。
+    const isTask1 =
+      value.operation === "task1" || value.operation === "task_1_min_satellites_temporal";
+    const target = isTask1
+      ? value.targets?.area_pct
+      : value.targets?.temporal_coverage_pct;
     const windowInfo = value.window;
     const expanded = Boolean(windowInfo?.expanded);
     const usedHorizon = windowInfo?.used_horizon_h;
@@ -720,16 +725,23 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
             <span>{target != null ? `达标面积（目标 ${target}%）` : "达标面积"}</span>
             <strong>{formatNumber(cards.qualified_area_pct)}%</strong>
           </div>
-          <div>
-            <span>时间覆盖率</span>
-            <strong>{formatNumber(cards.city_mean_temporal_coverage_pct, 2)}%</strong>
-          </div>
+          {!isTask1 && (
+            <div>
+              <span>时间覆盖率</span>
+              <strong>{formatNumber(cards.city_mean_temporal_coverage_pct, 2)}%</strong>
+            </div>
+          )}
           <div>
             <span>面积加权 MRT</span>
             <strong>{formatNumber(cards.area_weighted_mrt_minutes, 0)} 分</strong>
           </div>
         </div>
 
+        {isTask1 ? (
+          <p className="plan-note">
+            面积口径：目标区域至少成像一次即视为达标，不使用单格时间覆盖率。
+          </p>
+        ) : null}
         {expanded ? (
           <p className="plan-note">
             请求窗口 {requestedHorizon}h，实际按 {usedHorizon}h 计算；报告按实际窗口展示。

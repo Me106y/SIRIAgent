@@ -2651,7 +2651,7 @@ button {
 
 .plan-stats {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
   border: 1px solid var(--line);
   border-radius: 12px;
   overflow: hidden;

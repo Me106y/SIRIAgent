@@ -36,6 +36,7 @@
 | 光学覆盖出现在 23:xx / 夜间，覆盖率异常高 | 缺太阳高度门限 | [E12](#e12-光学覆盖里出现夜间过境) |
 | 给定 N 颗也报 `target_unreachable`、`best_coverage_pct=0.0` | 窗口内云量/太阳过滤后无可用访问 | [E14](#e14-给定-n-颗也报-target_unreachablebest_coverage_pct00) |
 | 报告链接点击报错，但文件确实存在 | linkify 二次嵌套 / href 不是 /api/files | [E13](#e13-报告链接点击报错文件其实存在) |
+| 报告“达标面积”恒为 `0.0%`，时间覆盖率只有零点几 | task1 面积口径被 90% 单格时间阈值顶掉 | [E15](#e15-报告达标面积恒为-00) |
 | `rs-service: command not found`、`uv: command not found` | 不在 PATH | [E9](#e9-command-not-found) |
 | `530`、`1033`、`502`、`503` | 隧道 / 本机服务 | [E10](#e10-隧道与网关错误) |
 
@@ -394,6 +395,48 @@ PY
 
 **注意**：`--no-cloud-filter` 只用于定位"几何可达性"，不能当业务方案；
 给定 N 颗模式里的 `target_unreachable` 不等于"目标定得太高"。
+
+## E15. 报告“达标面积”恒为 0.0%
+
+**现象**：task1（最少星达到覆盖率）报告首屏显示“达标面积（目标 90%）0.0%”，
+旁边的“时间覆盖率”只有 0.5% 左右；换卫星、换窗口仍是 0。抽屉里的结果卡同样是 0.0%。
+
+**确认**
+
+```bash
+# 1) 看这次求解用的单格时间阈值；90 就是踩到此条
+jq '.selection.recommended_result.temporal_coverage_target_pct,
+    .summary_cards.qualified_area_pct,
+    .summary_cards.city_mean_temporal_coverage_pct' reports/imaging-plan/latest/plan.json
+
+# 2) 看逐格时间覆盖率的上限（LEO 72 h 通常 <1%）
+jq '[.coverage_map.geojson.features[].properties.temporal_coverage_pct] | max' \
+  reports/imaging-plan/latest/plan.json
+```
+
+**真正原因**：task1 是**面积口径**——目标区域至少成像一次（内部时间阈值 0.001%），
+用面积加权算“达标面积”；单格时间覆盖率 ≥90% 是 task3 的门槛，不是 task1 的。
+LEO 卫星在 72 h 内对单个 5 km 网格的累计覆盖通常不到 1%，90% 在物理上不可达，
+所以 `qualified_area_pct` 必然是 0。让 task1 改回面积口径的修复提交在
+`agent/plan-tle-auto-e547316` 分支上、PR #7 合并之后才推上去，没进 main，
+于是旧行为又回来了。
+
+**修复**：`plan_api.PlanCreate.to_spec()` 对 task1 固定 0.001% 时间阈值、面积目标
+默认 90%（旧客户端传的 `temporal_coverage_target_pct` 直接忽略）；
+`adapter._annotate_result()` 对 task1 不再暴露内部时间阈值，只返回 `area_pct`；
+报告与抽屉改为面积口径，task1 不再显示时间覆盖率与薄弱区。
+
+**回归**
+
+```bash
+# 提交 task1 后：targets.temporal_coverage_pct 为 null，area_pct=90
+curl -s http://127.0.0.1:8766/api/v1/plans/<job_id> | \
+  jq '.result.targets, .result.summary_cards.qualified_area_pct'
+# 杭州 72 h、默认 90% 面积目标应得到 nonzero（全城至少成像一次时 100%）
+```
+
+**注意**：不要让用户把“目标覆盖率”调到 10% 来凑非 0——那会改变 task1 的含义，
+而且结果仍然不是面积口径。单格时间覆盖率只适用于 task3。
 
 ## 新增条目模板
 
