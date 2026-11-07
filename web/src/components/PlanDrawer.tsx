@@ -37,7 +37,7 @@ const FIELD_HINTS: Record<string, string> = {
   temporal_coverage_target_pct: "%",
   mrt_target_minutes: "分钟",
   n_budget: "颗",
-  area_target_pct: "%",
+  area_target_pct: "%，至少成像一次",
   fallback_area_target_pct: "%",
   grid_size_km: "km",
   detection_step_s: "秒",
@@ -194,6 +194,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
     temporal_coverage_target_pct: "10",
     mrt_target_minutes: "24",
     n_budget: "3",
+    area_target_pct: "90",
   });
   const [jobId, setJobId] = useState<string | null>(null);
   const [job, setJob] = useState<PlanJob | null>(null);
@@ -206,6 +207,12 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
     () => options?.tasks.find((item) => item.operation === operation) ?? null,
     [options, operation],
   );
+  // task1 的约束是面积目标；后端把它放在 advanced 里，前端需要显式补进表单。
+  const constraintFields = useMemo(() => {
+    const names = new Set<string>(task?.required ?? []);
+    if (operation === "task1") names.add("area_target_pct");
+    return [...names];
+  }, [task, operation]);
   const effectiveCode = districtCode || cityCode || provinceCode;
   const aoi = useMemo(
     () => options?.aoi.find((item) => item.code === effectiveCode) ?? null,
@@ -304,7 +311,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
     if (index === 2) return Boolean(startLocal) && horizon > 0;
     if (index === 3) {
       if (sensors.length === 0) return false;
-      return (task?.required ?? []).every((name) => (fields[name] ?? "").trim() !== "");
+      return constraintFields.every((name) => (fields[name] ?? "").trim() !== "");
     }
     return true;
   };
@@ -326,7 +333,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
       cloud_filter: cloud,
       cloud_threshold_pct: 70,
     };
-    const names = new Set<string>([...(task?.required ?? [])]);
+    const names = new Set<string>(constraintFields);
     for (const name of names) {
       const raw = (fields[name] ?? "").trim();
       if (!raw) continue;
@@ -592,7 +599,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
       </header>
 
       <div className="plan-grid-2">
-        {(task?.required ?? []).map((name) => (
+        {constraintFields.map((name) => (
           <div className="plan-field" key={name}>
             <span>
               {FIELD_LABELS[name] ?? name}
@@ -605,20 +612,26 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
                 setFields((current) => ({ ...current, [name]: value }))
               }
               min={name === "mrt_target_minutes" ? 0 : 1}
-              max={name === "n_budget" ? 500 : name === "temporal_coverage_target_pct" ? 100 : 10_000}
-              placeholder={name === "n_budget" ? "3" : name === "mrt_target_minutes" ? "24" : "10"}
+              max={
+                name === "n_budget"
+                  ? 500
+                  : name === "temporal_coverage_target_pct" || name === "area_target_pct"
+                    ? 100
+                    : 10_000
+              }
+              placeholder={
+                name === "n_budget"
+                  ? "3"
+                  : name === "mrt_target_minutes"
+                    ? "24"
+                    : name === "area_target_pct"
+                      ? "90"
+                      : "10"
+              }
             />
           </div>
         ))}
       </div>
-
-      {operation === "task1" &&
-      Number(fields.temporal_coverage_target_pct || 0) > 50 &&
-      horizon <= 72 ? (
-        <p className="plan-warning">
-          目标时间覆盖率超过 50%；72 小时内通常不可达，建议 10% 左右或更长窗口。
-        </p>
-      ) : null}
 
       <fieldset className="plan-fieldset">
         <legend>传感器</legend>
