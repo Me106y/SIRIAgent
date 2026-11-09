@@ -116,7 +116,10 @@ export function PurchasePage({ purchaseId }: { purchaseId: string }) {
               </div>
               <div>
                 <span>数据目录</span>
-                <b>{record.source_dir}</b>
+                <b>
+                  {record.source_dir}
+                  {record.extras?.length ? ` + ${record.extras.join("、")}` : ""}
+                </b>
               </div>
               <div>
                 <span>图像数量</span>

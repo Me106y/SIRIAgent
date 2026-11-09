@@ -2,6 +2,12 @@
 
 SIRIAgent 的用户可见变化。版本规则见 [docs/VERSIONING.md](docs/VERSIONING.md)。
 
+## [1.3.0] - 2026-11-09
+
+### Changed
+
+- 每次购买在随机主题之外固定附带 `建筑变化` 的前后两张图（`image1.png` / `image2.png`），保证演示时总有一对变化明显的前后图；购买记录新增 `extras`。
+
 ## [1.2.1] - 2026-11-09
 
 ### Added
