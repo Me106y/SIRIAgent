@@ -1,5 +1,6 @@
 import type {
   Balance,
+  ChatModelSettings,
   ChatUsage,
   HangzhouBoundary,
   PassItem,
@@ -102,6 +103,7 @@ export const api = {
   balance: (refresh = false) =>
     getJson<Balance>(`/api/balance${refresh ? "?refresh=1" : ""}`),
   skills: () => getJson<{ items: Skill[] }>("/api/skills"),
+  models: () => getJson<ChatModelSettings>("/api/models"),
   planOptions: () => getJson<PlanOptions>("/api/rs/plan-options", 20_000),
   createPlan: (body: PlanCreateBody) => postJson<PlanJob>("/api/rs/plans", body, 30_000),
   planJob: (jobId: string) => getJson<PlanJob>(`/api/rs/plans/${jobId}`, 30_000),
@@ -154,11 +156,17 @@ export class TurnBusyError extends Error {}
 export async function startTurn(
   message: string,
   sessionId: string | undefined,
+  selection?: { model?: string; reasoning_effort?: string },
 ): Promise<TurnHandle> {
   const response = await fetch("/api/chat/turns", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message, session_id: sessionId }),
+    body: JSON.stringify({
+      message,
+      session_id: sessionId,
+      model: selection?.model,
+      reasoning_effort: selection?.reasoning_effort,
+    }),
   });
   const payload = (await response.json().catch(() => null)) as
     | { ok?: boolean; turn_id?: string; session_id?: string; error?: string }

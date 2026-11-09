@@ -1,8 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { api } from "../api";
+import type { ChatSelection } from "../lib/chatSettings";
 import type { WorkStepLevel, WorkStepsLevel } from "../lib/workSteps";
-import type { AnswerResult, ChatMessage, MessageBlock, QuestionAnswer, Skill } from "../types";
+import type {
+  AnswerResult,
+  ChatMessage,
+  ChatModelSettings,
+  MessageBlock,
+  ModelOption,
+  QuestionAnswer,
+  ReasoningEffortOption,
+  Skill,
+} from "../types";
 import { Markdown } from "./Markdown";
 import { QuestionCard } from "./QuestionCard";
 
@@ -17,12 +27,26 @@ interface Props {
   onRevise: (text: string) => void;
   onCancel: () => void;
   onOpenPlan: () => void;
+  chatSelection: ChatSelection;
+  onChatSelectionChange: (next: ChatSelection) => void;
 }
 
 const EXAMPLES = [
   "杭州明天有哪些卫星过境？",
   "GF-2 现在在什么位置？",
   "帮我看看这 65 颗星里，哪些是 SAR。",
+];
+
+// /api/models 未返回前的兜底，避免下拉闪烁；真实选项以接口为准。
+const FALLBACK_MODELS: ModelOption[] = [
+  { id: "deepseek-flash", name: "DeepSeek-V4.1-Flash", short: "Flash" },
+  { id: "deepseek-v4-pro", name: "DeepSeek-V4-Pro", short: "V4 Pro" },
+];
+const FALLBACK_EFFORTS: ReasoningEffortOption[] = [
+  { id: "off", name: "关闭" },
+  { id: "low", name: "低" },
+  { id: "high", name: "高" },
+  { id: "max", name: "最高" },
 ];
 
 function CheckIcon() {
@@ -268,13 +292,52 @@ export function AgentPanel({
   onRevise,
   onCancel,
   onOpenPlan,
+  chatSelection,
+  onChatSelectionChange,
 }: Props) {
   const [input, setInput] = useState("");
   const [skills, setSkills] = useState<Skill[]>([]);
+  const [modelSettings, setModelSettings] = useState<ChatModelSettings | null>(null);
   const [slashOpen, setSlashOpen] = useState(false);
   const [slashIndex, setSlashIndex] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    let alive = true;
+    api
+      .models()
+      .then((payload) => {
+        if (alive) setModelSettings(payload);
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // 本地存的选择可能来自旧版本或被下线；选项到位后校正到默认值。
+  useEffect(() => {
+    if (!modelSettings) return;
+    const modelOk = modelSettings.models.some((item) => item.id === chatSelection.model);
+    const effortOk = modelSettings.reasoning_efforts.some(
+      (item) => item.id === chatSelection.reasoningEffort,
+    );
+    if (modelOk && effortOk) return;
+    onChatSelectionChange({
+      model: modelOk ? chatSelection.model : modelSettings.defaults.model,
+      reasoningEffort: effortOk
+        ? chatSelection.reasoningEffort
+        : modelSettings.defaults.reasoning_effort,
+    });
+  }, [modelSettings, chatSelection, onChatSelectionChange]);
+
+  const currentModel = (modelSettings?.models ?? FALLBACK_MODELS).find(
+    (item) => item.id === chatSelection.model,
+  );
+  const modelHint = currentModel?.description
+    ? `${currentModel.name}：${currentModel.description}`
+    : currentModel?.name || "模型";
 
   const filteredSkills = useMemo(() => {
     if (!input.startsWith("/")) return [];
@@ -630,6 +693,48 @@ export function AgentPanel({
                 /
               </button>
               <span className="composer-hint">Enter 发送 · Shift+Enter 换行</span>
+              <div className="composer-selects">
+                <label className="composer-select" title={modelHint}>
+                  <span>模型</span>
+                  <select
+                    aria-label="模型"
+                    value={chatSelection.model}
+                    onChange={(event) =>
+                      onChatSelectionChange({
+                        ...chatSelection,
+                        model: event.target.value,
+                      })
+                    }
+                  >
+                    {(modelSettings?.models ?? FALLBACK_MODELS).map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.short || item.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="composer-select" title="推理程度">
+                  <span>推理</span>
+                  <select
+                    aria-label="推理程度"
+                    value={chatSelection.reasoningEffort}
+                    onChange={(event) =>
+                      onChatSelectionChange({
+                        ...chatSelection,
+                        reasoningEffort: event.target.value,
+                      })
+                    }
+                  >
+                    {(modelSettings?.reasoning_efforts ?? FALLBACK_EFFORTS).map(
+                      (item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.name}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                </label>
+              </div>
               <button
                 type="submit"
                 className="send"

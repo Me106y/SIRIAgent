@@ -29,7 +29,31 @@ DSH_ROOT = Path(
 DSH_BIN = Path(os.environ.get("DSH_CLI", str(DSH_ROOT / "apps" / "cli" / "lib" / "bin.js")))
 NODE_DIR = Path(os.environ.get("NODE_BIN", "/home/siri/local/node-v22.20.0-linux-x64/bin/node")).parent
 PROVIDER = os.environ.get("DSH_PROVIDER", "deepseek-official")
-MODEL = os.environ.get("DSH_MODEL", "deepseek-flash")
+DEFAULT_MODEL = os.environ.get("DSH_MODEL", "deepseek-flash")
+DEFAULT_REASONING_EFFORT = os.environ.get("DSH_REASONING_EFFORT", "high")
+
+# 来自 DSH 的 DeepSeek 默认模型目录（packages/llm/llm-deepseek/src/models.ts）
+# 与推理档位（model-info.ts）；部署换目录时同步这里。
+AVAILABLE_MODELS = (
+    {
+        "id": "deepseek-flash",
+        "name": "DeepSeek-V4.1-Flash",
+        "short": "Flash",
+        "description": "日常任务，速度优先",
+    },
+    {
+        "id": "deepseek-v4-pro",
+        "name": "DeepSeek-V4-Pro",
+        "short": "V4 Pro",
+        "description": "复杂推理与高质量任务，成本更高",
+    },
+)
+REASONING_EFFORTS = (
+    {"id": "off", "name": "关闭"},
+    {"id": "low", "name": "低"},
+    {"id": "high", "name": "高"},
+    {"id": "max", "name": "最高"},
+)
 
 log = logging.getLogger("siriagent.turns")
 log.setLevel(logging.INFO)
@@ -137,6 +161,7 @@ class HarnessManager:
 
     def __init__(self) -> None:
         self._harness: DeepSeekHarness | None = None
+        self._selection: tuple[str, str] | None = None
         self._lock = threading.Lock()
         self._start_lock = threading.Lock()
         self._turn: Turn | None = None
@@ -155,8 +180,13 @@ class HarnessManager:
         if not credentials.exists() and source.exists():
             shutil.copy2(source, credentials)
 
-    def _ensure(self) -> DeepSeekHarness:
-        if self._harness is not None:
+    def _ensure(
+        self, model: str | None = None, effort: str | None = None
+    ) -> DeepSeekHarness:
+        model = model or DEFAULT_MODEL
+        effort = effort or DEFAULT_REASONING_EFFORT
+        selection = (model, effort)
+        if self._harness is not None and self._selection == selection:
             return self._harness
         if DeepSeekHarness is None:
             raise RuntimeError(
@@ -164,6 +194,14 @@ class HarnessManager:
             )
         if not DSH_BIN.is_file():
             raise RuntimeError(f"找不到 DSH CLI：{DSH_BIN}")
+        if self._harness is not None:
+            # 模型与推理档位只在 initialize 时生效，切换只能重建 runtime。
+            try:
+                self._harness.close()
+            except Exception:  # noqa: BLE001 - 旧 runtime 关闭失败不阻塞新 runtime
+                pass
+            self._harness = None
+            self._pump = None
         self._ensure_home()
         env = os.environ.copy()
         env.pop("ALL_PROXY", None)
@@ -176,9 +214,11 @@ class HarnessManager:
             dsh_bin=str(DSH_BIN),
             patches=(str(PATCH_FILE),),
             provider=PROVIDER,
-            model=MODEL,
+            model=model,
+            reasoning_effort=effort,
             env=env,
         )
+        self._selection = selection
         self._start_pump()
         return self._harness
 
@@ -268,6 +308,7 @@ class HarnessManager:
         self.cancel_questions(turn)
         harness = self._harness
         self._harness = None
+        self._selection = None
         self._pump = None
         if harness is None:
             return
@@ -301,12 +342,19 @@ class HarnessManager:
             if self._harness is not None:
                 self._harness.close()
                 self._harness = None
+            self._selection = None
 
     def turn(self, turn_id: str) -> Turn | None:
         with self._start_lock:
             return self._turns.get(turn_id)
 
-    def start(self, message: str, session_id: str | None = None) -> Turn:
+    def start(
+        self,
+        message: str,
+        session_id: str | None = None,
+        model: str | None = None,
+        reasoning_effort: str | None = None,
+    ) -> Turn:
         """开一轮对话并把首事件（session）写进回合；调用方随后按游标读取。"""
         with self._start_lock:
             current = self._turn
@@ -316,22 +364,25 @@ class HarnessManager:
                 # 没有客户端在读：上一轮已被放弃，回收它再开新回合。
                 self.abort()
             self._prune_turns()
-            # runtime 已被取消/重建时，旧 sessionId 在新进程里可能已持久化，
-            # 继续复用会报 "session already exists"；此时开新会话。
-            runtime_alive = self._harness is not None
-            session = (
-                session_id
-                if runtime_alive and session_id
-                else f"siriagent-{uuid.uuid4()}"
-            )
+            # runtime 冷启动或切换模型后，旧 session 可能已持久化在 DSH_HOME；
+            # 先按原 id 复用，_run_turn 里 resume 失败再换新会话。
+            resume = session_id is not None
+            session = session_id or f"siriagent-{uuid.uuid4()}"
             turn = Turn(f"turn-{uuid.uuid4().hex[:12]}", session)
             self._turn = turn
             self._turns[turn.id] = turn
             turn.publish({"type": "session", "session_id": session})
-            log.info("turn start id=%s session=%s chars=%d", turn.id, session, len(message))
+            log.info(
+                "turn start id=%s session=%s model=%s effort=%s chars=%d",
+                turn.id,
+                session,
+                model or DEFAULT_MODEL,
+                reasoning_effort or DEFAULT_REASONING_EFFORT,
+                len(message),
+            )
             threading.Thread(
                 target=self._run_turn,
-                args=(turn, message, session),
+                args=(turn, message, session, resume, model, reasoning_effort),
                 name="dsh-sdk-turn",
                 daemon=True,
             ).start()
@@ -355,11 +406,29 @@ class HarnessManager:
         finally:
             turn.detach()
 
-    def _run_turn(self, turn: Turn, message: str, session: str) -> None:
+    def _run_turn(
+        self,
+        turn: Turn,
+        message: str,
+        session: str,
+        resume: bool = False,
+        model: str | None = None,
+        reasoning_effort: str | None = None,
+    ) -> None:
         started = time.time()
         try:
             with self._lock:
-                harness = self._ensure()
+                previous = self._selection
+                harness = self._ensure(model, reasoning_effort)
+                selection = (model or DEFAULT_MODEL, reasoning_effort or DEFAULT_REASONING_EFFORT)
+                if resume and session and previous != selection:
+                    # 冷启动或切换模型后，把旧会话历史接回新 runtime；失败才换新会话。
+                    try:
+                        harness.resume_session(session)
+                    except Exception as exc:  # noqa: BLE001 - 会话不存在/不兼容时降级
+                        log.warning("resume session %s failed: %s", session, exc)
+                        session = f"siriagent-{uuid.uuid4()}"
+                        turn.publish({"type": "session", "session_id": session})
                 result = harness.run(
                     message,
                     session_id=session,

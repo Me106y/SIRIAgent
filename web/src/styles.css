@@ -1377,6 +1377,48 @@ button {
   color: #7890a8;
 }
 
+.composer-selects {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.composer-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  color: #7890a8;
+  white-space: nowrap;
+}
+
+.composer-select select {
+  appearance: none;
+  max-width: 96px;
+  padding: 2px 18px 2px 6px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background-color: rgba(8, 20, 38, 0.9);
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M1 1l3 3 3-3' fill='none' stroke='%237890a8' stroke-width='1.2'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.composer-select select:hover,
+.composer-select select:focus-visible {
+  border-color: rgba(34, 211, 238, 0.45);
+  outline: none;
+}
+
+.composer-select option {
+  background: #081426;
+  color: var(--ink);
+}
+
 .send {
   width: 30px;
   height: 30px;
