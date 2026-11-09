@@ -26,6 +26,15 @@ export function PurchasePage({ purchaseId }: { purchaseId: string }) {
   const [loading, setLoading] = useState(true);
   const started = useRef(false);
 
+  // 全局 body 是 overflow:hidden（主界面用），购买页内容更长，单独放开滚动。
+  useEffect(() => {
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "auto";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, []);
+
   useEffect(() => {
     if (started.current) return;
     started.current = true;
