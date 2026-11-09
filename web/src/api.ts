@@ -17,6 +17,7 @@ import type {
   PlanCreateBody,
   PlanJob,
   PlanOptions,
+  PurchaseRecord,
   ReportInfo,
 } from "./types";
 
@@ -109,6 +110,17 @@ export const api = {
   planJob: (jobId: string) => getJson<PlanJob>(`/api/rs/plans/${jobId}`, 30_000),
   renderReport: (jobId: string) =>
     postJson<ReportInfo>(`/api/rs/plans/${jobId}/report`, {}, 60_000),
+  createPurchase: (runId: string) =>
+    postJson<{ ok: boolean; purchase: PurchaseRecord }>(
+      "/api/purchases",
+      { run_id: runId },
+      120_000,
+    ),
+  purchase: (purchaseId: string) =>
+    getJson<{ ok: boolean; purchase: PurchaseRecord }>(
+      `/api/purchases/${encodeURIComponent(purchaseId)}`,
+      30_000,
+    ),
 };
 
 export interface ChatResponse {

@@ -3001,3 +3001,224 @@ button {
   font-size: 12px;
   line-height: 1.6;
 }
+
+
+.purchase-page {
+  min-height: 100vh;
+  padding: 28px 20px 64px;
+  background:
+    radial-gradient(900px 500px at 50% -10%, rgba(34, 211, 238, 0.08), transparent 70%),
+    var(--bg);
+  color: var(--ink);
+}
+
+.purchase-brand {
+  max-width: 980px;
+  margin: 0 auto 22px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.purchase-brand strong {
+  font-size: 15px;
+  letter-spacing: 0.02em;
+}
+
+.purchase-brand span {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.purchase-card {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 36px 40px 30px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(8, 20, 38, 0.92);
+  box-shadow: var(--shadow-card);
+}
+
+.purchase-success {
+  text-align: center;
+}
+
+.purchase-success svg {
+  width: 64px;
+  height: 64px;
+}
+
+.purchase-success circle {
+  fill: rgba(45, 212, 191, 0.1);
+  stroke: var(--accent-2);
+  stroke-width: 2;
+}
+
+.purchase-success path {
+  fill: none;
+  stroke: var(--accent-2);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.purchase-success h1 {
+  margin: 14px 0 6px;
+  font-size: 26px;
+}
+
+.purchase-success p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.purchase-success code {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--accent);
+}
+
+.purchase-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 28px 0;
+}
+
+.purchase-meta div {
+  padding: 10px 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.purchase-meta span {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.purchase-meta b {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.purchase-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.purchase-primary,
+.purchase-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 18px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  text-decoration: none;
+}
+
+.purchase-primary {
+  background: var(--accent);
+  color: #03121a;
+  font-weight: 600;
+}
+
+.purchase-ghost {
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+
+.purchase-note {
+  margin: 22px 0 0;
+  text-align: center;
+  font-size: 11px;
+  color: var(--warn);
+}
+
+.purchase-images {
+  margin-top: 34px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.purchase-images h2 {
+  margin: 0 0 14px;
+  font-size: 15px;
+}
+
+.purchase-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.purchase-item {
+  display: block;
+  overflow: hidden;
+  border: 1px solid var(--line-soft);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  text-decoration: none;
+}
+
+.purchase-item img {
+  display: block;
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  background: #0a1524;
+}
+
+.purchase-item span {
+  display: block;
+  padding: 8px 10px 2px;
+  font-size: 11px;
+  line-height: 1.4;
+  word-break: break-all;
+  color: var(--ink);
+}
+
+.purchase-item small {
+  display: block;
+  padding: 0 10px 9px;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.purchase-loading {
+  padding: 80px 0;
+  text-align: center;
+  color: var(--muted);
+}
+
+.purchase-error {
+  padding: 40px 0;
+  text-align: center;
+}
+
+.purchase-error h1 {
+  margin: 0 0 8px;
+  font-size: 22px;
+}
+
+.purchase-error p {
+  margin: 0 0 18px;
+  color: var(--muted);
+}
+
+@media (max-width: 720px) {
+  .purchase-card {
+    padding: 26px 18px;
+  }
+
+  .purchase-meta,
+  .purchase-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

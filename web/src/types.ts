@@ -378,3 +378,31 @@ export interface ChatModelSettings {
   models: ModelOption[];
   reasoning_efforts: ReasoningEffortOption[];
 }
+
+export interface PurchaseFile {
+  name: string;
+  bytes: number;
+  width?: number;
+  height?: number;
+}
+
+export interface PurchaseSummary {
+  city?: string | null;
+  window_start?: string | null;
+  window_end?: string | null;
+  sat_count?: number | null;
+  qualified_area_pct?: number | null;
+  area_target_pct?: number | null;
+  operation?: string | null;
+}
+
+export interface PurchaseRecord {
+  purchase_id: string;
+  run_id: string;
+  source_dir: string;
+  workspace_dir: string;
+  summary: PurchaseSummary;
+  files: PurchaseFile[];
+  created_at: string;
+  simulated: boolean;
+}
