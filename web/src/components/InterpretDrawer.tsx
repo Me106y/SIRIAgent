@@ -191,12 +191,19 @@ export function InterpretDrawer({ open, onClose }: Props) {
                 ["after", "后图", after],
               ] as const
             ).map(([slot, label, value]) => (
-              <button
-                type="button"
+              <div
                 key={slot}
                 className={`interpret-slot ${activeSlot === slot ? "active" : ""}`}
+                role="button"
+                tabIndex={0}
                 onClick={() => setActiveSlot(slot)}
                 onDoubleClick={() => chooseFile(slot)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    setActiveSlot(slot);
+                  }
+                }}
               >
                 <span>{label}</span>
                 {value ? (
@@ -207,11 +214,25 @@ export function InterpretDrawer({ open, onClose }: Props) {
                         ? `${value.width} × ${value.height}`
                         : "已选择"}
                     </em>
+                    <button
+                      type="button"
+                      className="interpret-clear"
+                      aria-label={`清除${label}`}
+                      title={`清除${label}`}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        if (slot === "before") setBefore(null);
+                        else setAfter(null);
+                        setActiveSlot(slot);
+                      }}
+                    >
+                      ×
+                    </button>
                   </>
                 ) : (
                   <em>点击选中后，从下方挑选；双击上传</em>
                 )}
-              </button>
+              </div>
             ))}
           </div>
 

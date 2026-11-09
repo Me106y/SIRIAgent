@@ -23,7 +23,7 @@ export const WORK_STEP_LEVELS: readonly WorkStepLevelOption[] = [
   { value: "expanded", label: "完全展开", hint: "工作步骤常驻展开，全部内容可见" },
 ];
 
-export const DEFAULT_WORK_STEP_LEVEL: WorkStepLevel = "concise";
+export const DEFAULT_WORK_STEP_LEVEL: WorkStepLevel = "minimal";
 
 const STORAGE_KEY = "siria:work-steps:v1";
 

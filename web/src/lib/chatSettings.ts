@@ -5,7 +5,7 @@ export interface ChatSelection {
 
 export const DEFAULT_CHAT_SELECTION: ChatSelection = {
   model: "deepseek-flash",
-  reasoningEffort: "high",
+  reasoningEffort: "low",
 };
 
 const STORAGE_KEY = "siria:chat-selection:v1";

@@ -3286,6 +3286,7 @@ button {
 }
 
 .interpret-slot {
+  position: relative;
   display: grid;
   gap: 4px;
   padding: 12px;
@@ -3310,6 +3311,29 @@ button {
 .interpret-slot b {
   font-size: 12px;
   word-break: break-all;
+}
+
+.interpret-clear {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: rgba(8, 20, 38, 0.9);
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.interpret-clear:hover {
+  border-color: var(--danger);
+  color: var(--danger);
 }
 
 .interpret-slot em {
