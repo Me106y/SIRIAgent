@@ -73,6 +73,23 @@ export function InterpretDrawer({ open, onClose }: Props) {
     setActiveSlot(slot === "before" ? "after" : "before");
   };
 
+  // 从列表点选不依赖 activeSlot：先填前图，再填后图，两个都满时替换后图。
+  // 避免连续点击时 React 批处理拿到同一个旧 activeSlot。
+  const assignFromGallery = (image: WorkspaceImage) => {
+    const value = slotFromImage(image);
+    if (!before) {
+      setBefore(value);
+      setActiveSlot("after");
+      return;
+    }
+    if (!after) {
+      setAfter(value);
+      setActiveSlot("before");
+      return;
+    }
+    setAfter(value);
+  };
+
   const chooseFile = (slot: "before" | "after") => {
     uploadTarget.current = slot;
     fileInput.current?.click();
@@ -144,7 +161,10 @@ export function InterpretDrawer({ open, onClose }: Props) {
         <header className="interpret-head">
           <div>
             <h2>遥感解译</h2>
-            <p>本版只做变化检测；前后图可从工作区选择，也可拖拽或上传。</p>
+            <p>
+              本版只做变化检测；前后图可从工作区选择，也可拖拽或上传。模型为
+              WHU-CD 建筑变化权重，模拟影像可能没有超过阈值的变化。
+            </p>
           </div>
           <button
             type="button"
@@ -232,7 +252,7 @@ export function InterpretDrawer({ open, onClose }: Props) {
                   type="button"
                   className="interpret-item"
                   key={image.path}
-                  onClick={() => assign(activeSlot, slotFromImage(image))}
+                  onClick={() => assignFromGallery(image)}
                   title={`放入${activeSlot === "before" ? "前图" : "后图"}`}
                 >
                   <img src={fileUrl(image.path)} alt={image.name} loading="lazy" />
@@ -274,6 +294,12 @@ export function InterpretDrawer({ open, onClose }: Props) {
               <span>{result.device === "cuda" ? "GPU" : "CPU"}</span>
               {result.resized && <span>已缩放到 2048</span>}
             </div>
+            {result.changed_px === 0 && (
+              <p className="interpret-empty">
+                未检测到超过 0.5 阈值的变化。可换一组差异更明显的图，例如沥青
+                2014 / 2018，或火灾“灾前 / 灾中热红外”。
+              </p>
+            )}
             <p className="interpret-note">{result.accuracy_note}</p>
           </section>
         )}
