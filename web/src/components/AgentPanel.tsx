@@ -27,7 +27,6 @@ interface Props {
   onRevise: (text: string) => void;
   onCancel: () => void;
   onOpenPlan: () => void;
-  onOpenInterpret: () => void;
   chatSelection: ChatSelection;
   onChatSelectionChange: (next: ChatSelection) => void;
 }
@@ -293,7 +292,6 @@ export function AgentPanel({
   onRevise,
   onCancel,
   onOpenPlan,
-  onOpenInterpret,
   chatSelection,
   onChatSelectionChange,
 }: Props) {
@@ -461,12 +459,6 @@ export function AgentPanel({
               <path d="M3 3h10v10H3zM3 8h10M8 3v10" />
             </svg>
             卫星成图
-          </button>
-          <button type="button" className="plan-entry" onClick={onOpenInterpret}>
-            <svg viewBox="0 0 16 16" aria-hidden="true">
-              <path d="M3 3h4v4H3zM9 3h4v4H9zM3 9h4v4H3zM9 9h4v4H9z" />
-            </svg>
-            遥感解译
           </button>
           <button type="button" className="ghost" onClick={onReset}>
             新会话

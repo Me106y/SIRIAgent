@@ -21,7 +21,6 @@ PATCH_FILE = PROJECT_ROOT / "headless.patch.yml"
 SKILLS_DIR = PROJECT_ROOT / "skills"
 RS_SERVICE_BASE = os.environ.get("RS_SERVICE_BASE", "http://127.0.0.1:8766/api/v1")
 
-from purchase import purchase_bp  # noqa: E402  (项目根模块)
 from sdk_runtime import (  # noqa: E402  (项目根模块)
     AVAILABLE_MODELS,
     DEFAULT_MODEL,
@@ -77,7 +76,6 @@ DSH_TIMEOUT = int(os.environ.get("DSH_TIMEOUT", "240"))
 MAX_MESSAGE_CHARS = int(os.environ.get("MAX_MESSAGE_CHARS", "12000"))
 
 app = Flask(__name__, static_folder=None)
-app.register_blueprint(purchase_bp)
 # gunicorn 只把 WARNING 以上的 root 日志放出来；回合/答复日志是排查依据，显式开到 INFO。
 app.logger.setLevel(logging.INFO)
 logging.getLogger("siriagent.turns").setLevel(logging.INFO)
@@ -447,8 +445,7 @@ def serve_generated_file() -> Response:
         resolved = candidate.resolve(strict=True)
     except (OSError, RuntimeError):
         return jsonify({"error": "not found"}), 404
-    allowed_roots = (PROJECT_ROOT / "reports", PROJECT_ROOT / "workspace")
-    if not any(resolved.is_relative_to(root) for root in allowed_roots):
+    if not resolved.is_relative_to(PROJECT_ROOT):
         return jsonify({"error": "forbidden"}), 403
     if not resolved.is_file():
         return jsonify({"error": "not found"}), 404

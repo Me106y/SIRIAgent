@@ -23,7 +23,6 @@ import {
 } from "./lib/chatSettings";
 import { AgentPanel } from "./components/AgentPanel";
 import { SettingsMenu } from "./components/SettingsMenu";
-import { InterpretDrawer } from "./components/InterpretDrawer";
 import { PlanDrawer } from "./components/PlanDrawer";
 import { Globe } from "./components/Globe";
 import { SatellitePanel } from "./components/SatellitePanel";
@@ -49,7 +48,6 @@ export default function App() {
   const [sessionId, setSessionId] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
   const [planOpen, setPlanOpen] = useState(false);
-  const [interpretOpen, setInterpretOpen] = useState(false);
   const [swathKm, setSwathKm] = useState<number | null>(null);
   const [focusToken, setFocusToken] = useState(0);
   const [hangzhouToken, setHangzhouToken] = useState(0);
@@ -636,16 +634,10 @@ export default function App() {
           onCancel={handleCancel}
           onReset={reset}
           onOpenPlan={() => setPlanOpen(true)}
-          onOpenInterpret={() => setInterpretOpen(true)}
           chatSelection={chatSelection}
           onChatSelectionChange={changeChatSelection}
         />
       </main>
-
-      <InterpretDrawer
-        open={interpretOpen}
-        onClose={() => setInterpretOpen(false)}
-      />
 
       <PlanDrawer
         open={planOpen}

@@ -2,18 +2,6 @@
 
 SIRIAgent 的用户可见变化。版本规则见 [docs/VERSIONING.md](docs/VERSIONING.md)。
 
-## [1.2.0] - 2026-11-09
-
-### Added
-
-- 方案购买（模拟）：报告新增「购买本方案」，`/purchase/<id>` 展示成功页、方案摘要与图像列表；购买记录写入 `workspace/purchases.json`，图像复制到 `workspace/images/<purchase_id>/`。
-- 遥感解译：右栏新增全屏抽屉，支持变化检测、工作区选图、拖拽或文件夹上传（PNG/JPG、≤20MB），同步检测后展示前图 / 后图 / 掩膜三联图与统计。
-- 图像上传 `POST /api/uploads`，保存到 `workspace/uploads/<upload_id>/`。
-
-### Changed
-
-- `/api/files` 白名单收紧到 `reports/` 与 `workspace/`，`.env`、源码等不再可读。
-
 ## [1.1.0] - 2026-11-09
 
 ### Added

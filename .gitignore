@@ -30,5 +30,3 @@ data/*.sqlite3
 
 # 运行期生成的成像报告
 reports/
-
-workspace/

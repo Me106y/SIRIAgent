@@ -10,7 +10,6 @@ const PLACEHOLDER_RE = /\u0000(\d+)\u0000/g;
 function isLocalTarget(target: string): boolean {
   return (
     target.startsWith("reports/") ||
-    target.startsWith("workspace/") ||
     target.startsWith("/home/") ||
     target.startsWith("file://")
   );
