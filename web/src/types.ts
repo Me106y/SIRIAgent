@@ -378,3 +378,58 @@ export interface ChatModelSettings {
   models: ModelOption[];
   reasoning_efforts: ReasoningEffortOption[];
 }
+
+export interface PurchaseFile {
+  name: string;
+  bytes: number;
+  width?: number;
+  height?: number;
+}
+
+export interface PurchaseSummary {
+  city?: string | null;
+  window_start?: string | null;
+  window_end?: string | null;
+  sat_count?: number | null;
+  qualified_area_pct?: number | null;
+  area_target_pct?: number | null;
+  operation?: string | null;
+}
+
+export interface PurchaseRecord {
+  purchase_id: string;
+  run_id: string;
+  source_dir: string;
+  workspace_dir: string;
+  summary: PurchaseSummary;
+  files: PurchaseFile[];
+  created_at: string;
+  simulated: boolean;
+}
+
+export interface WorkspaceImage {
+  kind: "purchase" | "upload";
+  group: string;
+  name: string;
+  path: string;
+  bytes: number;
+  width?: number;
+  height?: number;
+}
+
+export interface DetectionResult {
+  ok: boolean;
+  run_id: string;
+  mask_path: string;
+  before_path: string;
+  after_path: string;
+  width: number;
+  height: number;
+  changed_px: number;
+  changed_ratio: number;
+  components: number;
+  elapsed_ms: number;
+  resized: boolean;
+  device: string;
+  accuracy_note: string;
+}
