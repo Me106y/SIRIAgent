@@ -762,12 +762,6 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
             请求窗口 {requestedHorizon}h，实际按 {usedHorizon}h 计算；报告按实际窗口展示。
           </p>
         ) : null}
-        {value.tle?.degraded ? (
-          <p className="plan-warning">
-            TLE 最大年龄 {value.tle.max_age_hours}h（&gt;72h），结果按 degraded 处理。
-          </p>
-        ) : null}
-
         {sats.length > 0 ? (
           <table className="plan-table">
             <thead>
@@ -976,10 +970,6 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
                 <code> rs-service sync</code> 再规划。
               </p>
             </div>
-          ) : options && tle?.degraded ? (
-            <p className="plan-warning">
-              TLE 最大年龄 {tleAge}h（&gt;72h）；本次结果会标 degraded。
-            </p>
           ) : null}
           {options ? stepContent() : null}
 

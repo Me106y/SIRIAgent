@@ -2,6 +2,12 @@
 
 SIRIAgent 的用户可见变化。版本规则见 [docs/VERSIONING.md](docs/VERSIONING.md)。
 
+## [1.4.1] - 2026-11-09
+
+### Changed
+
+- 卫星成图抽屉不再显示“TLE 最大年龄 >72h / 结果标 degraded”的提示，按正常处理；超过 7 天仍拒绝规划。
+
 ## [1.4.0] - 2026-11-09
 
 ### Changed
