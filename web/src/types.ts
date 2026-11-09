@@ -400,6 +400,7 @@ export interface PurchaseRecord {
   purchase_id: string;
   run_id: string;
   source_dir: string;
+  extras?: string[];
   workspace_dir: string;
   summary: PurchaseSummary;
   files: PurchaseFile[];

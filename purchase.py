@@ -30,6 +30,8 @@ POOL = (
     "沥青路面老化评估",
     "洪水检测",
 )
+# 每次购买都附带这一组，保证演示时总有一对变化明显的前后图。
+ALWAYS_INCLUDE = "建筑变化"
 SIMULATED = True
 BJ = timezone(timedelta(hours=8))
 
@@ -86,17 +88,36 @@ def _plan_summary(run_id: str) -> dict[str, Any]:
     }
 
 
-def _png_size(path: Path) -> tuple[int, int] | None:
-    """只读 PNG 的 IHDR，避免为列文件引入图像库。"""
+def _image_size(path: Path) -> tuple[int, int] | None:
+    """按文件内容读 PNG/JPEG 尺寸，避免为列文件引入图像库。"""
     try:
         with path.open("rb") as handle:
-            head = handle.read(24)
+            head = handle.read(65536)
     except OSError:
         return None
-    if len(head) < 24 or head[:8] != b"\x89PNG\r\n\x1a\n" or head[12:16] != b"IHDR":
+    if head[:8] == b"\x89PNG\r\n\x1a\n":
+        if len(head) >= 24 and head[12:16] == b"IHDR":
+            width, height = struct.unpack(">II", head[16:24])
+            return int(width), int(height)
         return None
-    width, height = struct.unpack(">II", head[16:24])
-    return int(width), int(height)
+    if head[:2] == b"\xff\xd8":
+        index = 2
+        while index + 9 < len(head):
+            if head[index] != 0xFF:
+                index += 1
+                continue
+            marker = head[index + 1]
+            if marker in (0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7, 0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF):
+                height, width = struct.unpack(">HH", head[index + 5 : index + 9])
+                return int(width), int(height)
+            if marker in (0xD8, 0xD9) or 0xD0 <= marker <= 0xD7:
+                index += 2
+                continue
+            if index + 4 > len(head):
+                break
+            length = struct.unpack(">H", head[index + 2 : index + 4])[0]
+            index += 2 + length
+    return None
 
 
 def _collect_files(directory: Path) -> list[dict[str, Any]]:
@@ -105,11 +126,28 @@ def _collect_files(directory: Path) -> list[dict[str, Any]]:
         if not item.is_file():
             continue
         entry: dict[str, Any] = {"name": item.name, "bytes": item.stat().st_size}
-        size = _png_size(item)
+        size = _image_size(item)
         if size is not None:
             entry["width"], entry["height"] = size
         files.append(entry)
     return files
+
+
+def _copy_extras(destination: Path) -> list[str]:
+    """把固定附带的目录复制到同一个购买目录；返回复制后的文件名。"""
+    root = DATA_ROOT / ALWAYS_INCLUDE
+    if not root.is_dir():
+        return []
+    copied: list[str] = []
+    for item in sorted(root.iterdir()):
+        if not item.is_file():
+            continue
+        target = destination / item.name
+        if target.exists():
+            target = destination / f"{item.stem}_{ALWAYS_INCLUDE}{item.suffix}"
+        shutil.copy2(item, target)
+        copied.append(target.name)
+    return copied
 
 
 def _pick_source() -> Path:
@@ -148,6 +186,7 @@ def create_purchase() -> Any:
         destination.parent.mkdir(parents=True, exist_ok=True)
         try:
             shutil.copytree(source, destination)
+            extras = _copy_extras(destination)
         except Exception as exc:  # noqa: BLE001 - 复制失败不留半套目录
             shutil.rmtree(destination, ignore_errors=True)
             return jsonify({"ok": False, "error": f"复制失败：{exc}"}), 500
@@ -155,6 +194,7 @@ def create_purchase() -> Any:
             "purchase_id": purchase_id,
             "run_id": run_id,
             "source_dir": source.name,
+            "extras": [ALWAYS_INCLUDE] if extras else [],
             "workspace_dir": destination.relative_to(PROJECT_ROOT).as_posix(),
             "summary": _plan_summary(run_id),
             "files": _collect_files(destination),
