@@ -19,6 +19,8 @@ import type {
   PlanOptions,
   PurchaseRecord,
   ReportInfo,
+  DetectionResult,
+  WorkspaceImage,
 } from "./types";
 
 async function postJson<T>(
@@ -120,6 +122,14 @@ export const api = {
     getJson<{ ok: boolean; purchase: PurchaseRecord }>(
       `/api/purchases/${encodeURIComponent(purchaseId)}`,
       30_000,
+    ),
+  workspaceImages: () =>
+    getJson<{ ok: boolean; items: WorkspaceImage[] }>("/api/rs/interpret/images"),
+  detectChange: (beforePath: string, afterPath: string) =>
+    postJson<DetectionResult>(
+      "/api/rs/interpret/change-detection",
+      { before_path: beforePath, after_path: afterPath },
+      70_000,
     ),
 };
 
@@ -317,4 +327,20 @@ export async function answerQuestion(
 
 export async function cancelChat(): Promise<void> {
   await fetch("/api/chat/cancel", { method: "POST" }).catch(() => undefined);
+}
+
+
+export async function uploadImage(
+  file: File,
+): Promise<{ path: string; name: string; bytes: number }> {
+  const body = new FormData();
+  body.append("file", file);
+  const response = await fetch("/api/uploads", { method: "POST", body });
+  const payload = (await response.json().catch(() => null)) as
+    | { ok?: boolean; path?: string; name?: string; bytes?: number; error?: string }
+    | null;
+  if (!response.ok || !payload?.ok || !payload.path) {
+    throw new Error(payload?.error || `HTTP ${response.status}`);
+  }
+  return { path: payload.path, name: payload.name || file.name, bytes: payload.bytes || file.size };
 }

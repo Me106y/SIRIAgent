@@ -34,6 +34,9 @@ SIMULATED = True
 BJ = timezone(timedelta(hours=8))
 
 purchase_bp = Blueprint("purchase", __name__)
+UPLOAD_ROOT = WORKSPACE / "uploads"
+MAX_UPLOAD_BYTES = 20 * 1024 * 1024
+_ALLOWED_SUFFIXES = {".png", ".jpg", ".jpeg"}
 _lock = threading.Lock()
 _RUN_ID_RE = re.compile(r"^[A-Za-z0-9._-]{1,128}$")
 _PURCHASE_ID_RE = re.compile(r"^pur-[0-9]{8}-[0-9a-f]{6}$")
@@ -176,6 +179,34 @@ def get_purchase(purchase_id: str) -> Any:
         if record.get("purchase_id") == purchase_id:
             return jsonify({"ok": True, "purchase": _public(record)})
     return jsonify({"ok": False, "error": "购买记录不存在。"}), 404
+
+
+@purchase_bp.post("/api/uploads")
+def upload_image() -> Any:
+    """接收解译输入图，保存到 workspace/uploads/<upload_id>/。"""
+    uploaded = request.files.get("file")
+    if uploaded is None:
+        return jsonify({"ok": False, "error": "缺少文件。"}), 400
+    raw_name = Path(uploaded.filename or "").name.strip()
+    suffix = Path(raw_name).suffix.lower()
+    if not raw_name or suffix not in _ALLOWED_SUFFIXES:
+        return jsonify({"ok": False, "error": "只支持 PNG / JPG。"}), 415
+    safe_name = re.sub(r'[\\/:*?"<>|\x00-\x1f]', "_", raw_name)[:120]
+    data = uploaded.read(MAX_UPLOAD_BYTES + 1)
+    if len(data) > MAX_UPLOAD_BYTES:
+        return jsonify({"ok": False, "error": "文件不能超过 20MB。"}), 413
+    upload_id = f"upl-{datetime.now(BJ):%Y%m%d}-{secrets.token_hex(3)}"
+    directory = UPLOAD_ROOT / upload_id
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / safe_name).write_bytes(data)
+    return jsonify(
+        {
+            "ok": True,
+            "path": (directory / safe_name).relative_to(PROJECT_ROOT).as_posix(),
+            "name": safe_name,
+            "bytes": len(data),
+        }
+    )
 
 
 @purchase_bp.get("/api/purchases")

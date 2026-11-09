@@ -406,3 +406,30 @@ export interface PurchaseRecord {
   created_at: string;
   simulated: boolean;
 }
+
+export interface WorkspaceImage {
+  kind: "purchase" | "upload";
+  group: string;
+  name: string;
+  path: string;
+  bytes: number;
+  width?: number;
+  height?: number;
+}
+
+export interface DetectionResult {
+  ok: boolean;
+  run_id: string;
+  mask_path: string;
+  before_path: string;
+  after_path: string;
+  width: number;
+  height: number;
+  changed_px: number;
+  changed_ratio: number;
+  components: number;
+  elapsed_ms: number;
+  resized: boolean;
+  device: string;
+  accuracy_note: string;
+}
