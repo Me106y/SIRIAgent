@@ -2,6 +2,12 @@
 
 SIRIAgent 的用户可见变化。版本规则见 [docs/VERSIONING.md](docs/VERSIONING.md)。
 
+## [1.4.2] - 2026-11-09
+
+### Changed
+
+- task3 达标面积 0.0% 时，结果卡隐藏时间覆盖率与面积加权 MRT，改为显示“目标时间覆盖率不可达”的提示；task3 的达标判定口径不变。
+
 ## [1.4.1] - 2026-11-09
 
 ### Changed
