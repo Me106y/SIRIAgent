@@ -360,3 +360,21 @@ export interface PlanCreateBody {
   cloud_threshold_pct?: number;
   [key: string]: unknown;
 }
+
+export interface ModelOption {
+  id: string;
+  name: string;
+  short?: string;
+  description?: string;
+}
+
+export interface ReasoningEffortOption {
+  id: string;
+  name: string;
+}
+
+export interface ChatModelSettings {
+  defaults: { model: string; reasoning_effort: string };
+  models: ModelOption[];
+  reasoning_efforts: ReasoningEffortOption[];
+}

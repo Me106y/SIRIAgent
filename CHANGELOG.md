@@ -2,6 +2,12 @@
 
 SIRIAgent 的用户可见变化。版本规则见 [docs/VERSIONING.md](docs/VERSIONING.md)。
 
+## [1.1.0] - 2026-11-09
+
+### Added
+
+- 对话输入区可选择模型（DeepSeek-V4.1-Flash / DeepSeek-V4-Pro）与推理程度（关闭 / 低 / 高 / 最高）；切换模型时重建 DSH runtime 并恢复当前会话，上下文不丢。
+
 ## [1.0.0] - 2026-11-07
 
 ### Added

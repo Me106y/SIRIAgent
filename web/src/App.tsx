@@ -16,6 +16,11 @@ import {
   writeWorkStepLevel,
   type WorkStepLevel,
 } from "./lib/workSteps";
+import {
+  readChatSelection,
+  writeChatSelection,
+  type ChatSelection,
+} from "./lib/chatSettings";
 import { AgentPanel } from "./components/AgentPanel";
 import { SettingsMenu } from "./components/SettingsMenu";
 import { PlanDrawer } from "./components/PlanDrawer";
@@ -51,6 +56,9 @@ export default function App() {
   const [bootDone, setBootDone] = useState(false);
   const [workStepLevel, setWorkStepLevel] = useState<WorkStepLevel>(() =>
     readWorkStepLevel(),
+  );
+  const [chatSelection, setChatSelection] = useState<ChatSelection>(() =>
+    readChatSelection(),
   );
 
   const bootRef = useRef<"pending" | "ok" | "failed">("pending");
@@ -90,6 +98,11 @@ export default function App() {
   const changeWorkStepLevel = useCallback((level: WorkStepLevel) => {
     setWorkStepLevel(level);
     writeWorkStepLevel(level);
+  }, []);
+
+  const changeChatSelection = useCallback((next: ChatSelection) => {
+    setChatSelection(next);
+    writeChatSelection(next);
   }, []);
 
   const loadPositions = useCallback(async () => {
@@ -415,7 +428,10 @@ export default function App() {
       try {
         // 先开回合，再按游标读事件；隧道断线时用同一个 turn_id 重连续读，
         // 服务端的回合不会跟着断，正在等回答的问题也仍然有效。
-        const turn = await startTurn(text, sessionId);
+        const turn = await startTurn(text, sessionId, {
+          model: chatSelection.model,
+          reasoning_effort: chatSelection.reasoningEffort,
+        });
         turnStarted = true;
         if (turn.session_id) setSessionId(turn.session_id);
         let cursor = 0;
@@ -494,7 +510,7 @@ export default function App() {
         setBusy(false);
       }
     },
-    [sessionId, busy],
+    [sessionId, busy, chatSelection],
   );
 
   const reset = useCallback(() => {
@@ -618,6 +634,8 @@ export default function App() {
           onCancel={handleCancel}
           onReset={reset}
           onOpenPlan={() => setPlanOpen(true)}
+          chatSelection={chatSelection}
+          onChatSelectionChange={changeChatSelection}
         />
       </main>
 

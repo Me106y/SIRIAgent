@@ -21,7 +21,18 @@ PATCH_FILE = PROJECT_ROOT / "headless.patch.yml"
 SKILLS_DIR = PROJECT_ROOT / "skills"
 RS_SERVICE_BASE = os.environ.get("RS_SERVICE_BASE", "http://127.0.0.1:8766/api/v1")
 
-from sdk_runtime import Turn, TurnBusy, manager  # noqa: E402  (项目根模块)
+from sdk_runtime import (  # noqa: E402  (项目根模块)
+    AVAILABLE_MODELS,
+    DEFAULT_MODEL,
+    DEFAULT_REASONING_EFFORT,
+    REASONING_EFFORTS,
+    Turn,
+    TurnBusy,
+    manager,
+)
+
+_VALID_MODELS = {item["id"] for item in AVAILABLE_MODELS}
+_VALID_EFFORTS = {item["id"] for item in REASONING_EFFORTS}
 _RS_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
 
@@ -514,15 +525,42 @@ def _turn_cursor() -> int:
     return 0
 
 
+@app.get("/api/models")
+def chat_models():
+    """对话可选的模型与推理档位；前端据此渲染下拉。"""
+    response = jsonify(
+        {
+            "ok": True,
+            "defaults": {
+                "model": DEFAULT_MODEL,
+                "reasoning_effort": DEFAULT_REASONING_EFFORT,
+            },
+            "models": list(AVAILABLE_MODELS),
+            "reasoning_efforts": list(REASONING_EFFORTS),
+        }
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
 @app.post("/api/chat/turns")
 def chat_turn_start():
     """开一轮对话，立刻返回 turn_id；事件走 SSE，断线可用 cursor 续读。"""
     body = request.get_json(silent=True) or {}
     message = str(body.get("message", "")).strip()
     session_id = str(body.get("session_id") or "").strip() or None
+    model = str(body.get("model") or "").strip() or None
+    reasoning_effort = str(body.get("reasoning_effort") or "").strip() or None
 
     if not message:
         return jsonify({"ok": False, "error": "消息不能为空。"}), 400
+    if model is not None and model not in _VALID_MODELS:
+        return jsonify({"ok": False, "error": f"不支持的模型：{model}"}), 400
+    if reasoning_effort is not None and reasoning_effort not in _VALID_EFFORTS:
+        return (
+            jsonify({"ok": False, "error": f"不支持的推理程度：{reasoning_effort}"}),
+            400,
+        )
     if len(message) > MAX_MESSAGE_CHARS:
         return (
             jsonify(
@@ -534,7 +572,12 @@ def chat_turn_start():
             413,
         )
     try:
-        turn = manager.start(message, session_id)
+        turn = manager.start(
+            message,
+            session_id,
+            model=model,
+            reasoning_effort=reasoning_effort,
+        )
     except TurnBusy as exc:
         return jsonify({"ok": False, "busy": True, "error": str(exc)}), 409
 
