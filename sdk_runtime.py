@@ -30,7 +30,7 @@ DSH_BIN = Path(os.environ.get("DSH_CLI", str(DSH_ROOT / "apps" / "cli" / "lib" /
 NODE_DIR = Path(os.environ.get("NODE_BIN", "/home/siri/local/node-v22.20.0-linux-x64/bin/node")).parent
 PROVIDER = os.environ.get("DSH_PROVIDER", "deepseek-official")
 DEFAULT_MODEL = os.environ.get("DSH_MODEL", "deepseek-flash")
-DEFAULT_REASONING_EFFORT = os.environ.get("DSH_REASONING_EFFORT", "high")
+DEFAULT_REASONING_EFFORT = os.environ.get("DSH_REASONING_EFFORT", "low")
 
 # 来自 DSH 的 DeepSeek 默认模型目录（packages/llm/llm-deepseek/src/models.ts）
 # 与推理档位（model-info.ts）；部署换目录时同步这里。
