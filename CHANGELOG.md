@@ -2,6 +2,12 @@
 
 SIRIAgent 的用户可见变化。版本规则见 [docs/VERSIONING.md](docs/VERSIONING.md)。
 
+## [1.2.1] - 2026-11-09
+
+### Added
+
+- 新增 `docs/PRD-v1.2.0.md`：购买与遥感解译（变化检测）的产品需求文档。
+
 ## [1.2.0] - 2026-11-09
 
 ### Added
