@@ -34,7 +34,7 @@ const FIELD_LABELS: Record<string, string> = {
   selection_time_limit_s: "选星时限",
 };
 const FIELD_HINTS: Record<string, string> = {
-  temporal_coverage_target_pct: "%",
+  temporal_coverage_target_pct: "%，单格覆盖率，72h 通常 <1%",
   mrt_target_minutes: "分钟",
   n_budget: "颗",
   area_target_pct: "%，至少成像一次",
@@ -191,7 +191,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
   const [pointing, setPointing] = useState<"nadir" | "targeted">("nadir");
   const [cloud, setCloud] = useState(true);
   const [fields, setFields] = useState<Record<string, string>>({
-    temporal_coverage_target_pct: "10",
+    temporal_coverage_target_pct: "0.3",
     mrt_target_minutes: "24",
     n_budget: "3",
     area_target_pct: "90",
