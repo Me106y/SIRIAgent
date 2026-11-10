@@ -37,6 +37,7 @@
 | 给定 N 颗也报 `target_unreachable`、`best_coverage_pct=0.0` | 窗口内云量/太阳过滤后无可用访问 | [E14](#e14-给定-n-颗也报-target_unreachablebest_coverage_pct00) |
 | 报告链接点击报错，但文件确实存在 | linkify 二次嵌套 / href 不是 /api/files | [E13](#e13-报告链接点击报错文件其实存在) |
 | 报告“达标面积”恒为 `0.0%`，时间覆盖率只有零点几 | task1 面积口径被 90% 单格时间阈值顶掉 | [E15](#e15-报告达标面积恒为-00) |
+| task4 只选一颗、没有 MRT、标题是达标面积 | `n_budget` 被当成最多 N + 复用 task1/task3 KPI | [E18](#e18-task4-报告只选一颗没有-mrt标题却是达标面积) |
 | `rs-service: command not found`、`uv: command not found` | 不在 PATH | [E9](#e9-command-not-found) |
 | `530`、`1033`、`502`、`503` | 隧道 / 本机服务 | [E10](#e10-隧道与网关错误) |
 
@@ -492,6 +493,41 @@ jq '[.report_data.playback.events[].sat_id] | unique | length' reports/imaging-p
 ```
 
 **注意**：不要再用“降低目标覆盖率”来凑面积；task3 已没有目标覆盖率字段。
+
+## E18. task4 报告只选一颗、没有 MRT、标题却是达标面积
+
+**现象**：task4 设了 3 颗预算，报告只选中 1 颗；标题写“达标面积 97.6%”，覆盖回放终值 96.7%；报告里找不到面积分位 MRT 是多少。
+
+**确认**
+
+```bash
+jq '.selection.result | {n_budget, selected_sat_names, area_quantile_mrt_s, mrt_threshold_s}' \
+  reports/imaging-plan/latest/plan.json
+jq '.summary_cards.satellite_count, .selection.result.n_budget' \
+  reports/imaging-plan/latest/plan.json
+```
+
+**真正原因**（两层）
+
+1. 引擎把 task4 的 `n_budget` 当成“最多 N 颗、达到 90% 面积目标的最少星数”，不是“固定 N 颗最小化面积分位 MRT”；1 颗已满足 90% 面积，所以只返回 1 颗。
+2. 报告复用 task1/task3 的通用 KPI，把 `qualified_area_pct` 写成“达标面积”，没有读 `selection.result.area_quantile_mrt_s`，所以没有 MRT。
+
+**修复**
+
+- task4 默认 `exact_budget=True`，新增固定 N 的面积分位 MRT 贪心，补满到 N 颗；显式 `exact_budget=False` 才回旧行为。
+- 报告首屏 KPI 改为「N% 面积分位 MRT」+「星数预算 / 实际」，不出现「达标面积」「时间覆盖率」；薄弱区只列位置/面积/MRT。
+- 报告口径说明“覆盖与回放是至少覆盖一次的联合面积，不是 MRT KPI”。
+
+**回归**
+
+```bash
+# 杭州 72h、3 颗、90% 面积：应为 3/3 颗，标题有面积分位 MRT
+jq '.selection.result | {n_budget, selected_sat_names, area_quantile_mrt_s}' \
+  reports/imaging-plan/latest/plan.json
+grep -c '时间覆盖率\|达标面积' reports/imaging-plan/latest/report.html  # 期望 0
+```
+
+**注意**：不要再用 task1/task3 的“达标面积”KPI 套 task4；task4 的主指标是面积分位 MRT。
 
 ## 新增条目模板
 

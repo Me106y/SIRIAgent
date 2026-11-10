@@ -82,6 +82,7 @@ git log --oneline -10
 - `task3` 的“求解并生成报告”结果卡与报告只保留「选中卫星 + 覆盖面积」；禁止出现「达标面积」「时间覆盖率」「面积加权 MRT」；薄弱区只保留网格与面积，禁止出现时间覆盖率/MRT 列。task3 约束步骤只有「星数预算」，禁止再出现「目标覆盖率」。
 - 改 task3/报告后，必须用修改后的代码实际生成一份报告并核对：标题与结果卡写“覆盖面积”且与回放终值一致、没有时间覆盖率/面积加权 MRT、薄弱区没有这两列、至少两颗选中卫星的颜色可见；只跑单测或看旧报告不算验收。
 - 成像门限是五个 task 共用的：`adapter._payload` 必须给非 SAR 传 `min_elevation_deg=10` 和 `SunGroundElevAngle Min 10`（`RS_OPTICAL_SUN_MIN_DEG` 默认 10），SAR 豁免；改门限后必须重跑 task3 n=2/n=3，报告不得再出现夜航星。
+- `task4` 报告首屏 KPI 必须是 `area_quantile_mrt_s` 的「N% 面积分位 MRT」，并显示「星数预算 / 实际」，禁止出现「达标面积」「时间覆盖率」；`task4` 默认 `exact_budget=True`，覆盖回放只是联合覆盖，不能当 MRT KPI。
 
 ### 交互与安全
 
