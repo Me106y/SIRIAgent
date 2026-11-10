@@ -253,6 +253,7 @@ export interface PlanOptions {
 export interface PlanSummaryCards {
   satellite_count?: number;
   qualified_area_pct?: number;
+  covered_area_pct?: number;
   city_mean_temporal_coverage_pct?: number;
   city_mean_observable_duration_minutes?: number;
   area_weighted_mrt_minutes?: number;

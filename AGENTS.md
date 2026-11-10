@@ -71,13 +71,16 @@ git log --oneline -10
 
 ### 成图规划口径
 
-- `task1` 是**面积口径**：目标区域至少成像一次即达标（内部时间阈值固定 0.001%），面积目标默认 90%。`targets.temporal_coverage_pct` 对 task1 必须为 `null`，报告与抽屉只认 `targets.area_pct`；单格时间覆盖率只用于 `task3`。
+- `task1` 是**面积口径**：目标区域至少成像一次即达标（内部时间阈值固定 0.001%），面积目标默认 90%。`targets.temporal_coverage_pct` 对 task1 必须为 `null`，报告与抽屉只认 `targets.area_pct`；单格时间覆盖率不是对外 KPI，task3 也一样按覆盖面积口径。
 - 禁止用 90% 单格时间阈值算 task1：72 h 内单格覆盖率通常 <1%，达标面积会恒为 0.0%。改口径后先查 `reports/imaging-plan/latest/plan.json` 的 `selection.recommended_result.temporal_coverage_target_pct`（task1 必须是 0.001）与 `summary_cards.qualified_area_pct`；回归测试 `test_task1_is_area_only_regardless_of_temporal_target`、`test_task1_report_uses_area_target_and_hides_temporal_strip` 不得删改。
 - `task1` 的“求解并生成报告”结果卡与报告只保留「选中卫星 + 达标面积」；禁止显示「时间覆盖率」「面积加权 MRT」「薄弱区」（薄弱区表同样带 MRT/时间覆盖率）。
-- `task1` 的约束步骤必须提供可编辑的「面积目标 %」（默认 90，1–100）；不要重新加回「目标覆盖率 / 时间覆盖率」——那是 task3 的字段。约束步骤为空就是字段映射漏了，先查 `PlanDrawer` 的 `constraintFields`。
+- `task1` 的约束步骤必须提供可编辑的「面积目标 %」（默认 90，1–100）；不要重新加回「目标覆盖率 / 时间覆盖率」——task3 也已取消这个字段。约束步骤为空就是字段映射漏了，先查 `PlanDrawer` 的 `constraintFields`。
 - 改 task1/报告后，必须用修改后的代码实际生成一份报告并核对：标题里的达标面积与 `targets.area_pct` 一致且不为 0.0%，报告与结果卡没有时间覆盖率、面积加权 MRT、薄弱区；只跑单测或看旧报告不算验收。
 - 出现“达标面积 0.0%”先按 `docs/TROUBLESHOOTING.md` E15 查，不要靠调低目标凑非 0。
-- `task3` 的达标面积按“单格时间覆盖率 ≥ 目标”计算；目标在窗口内不可达时返回 0.0% 是合法结果，不是求解失败。此时结果卡与报告只保留「选中卫星 + 达标面积」与“目标不可达”提示；禁止显示「时间覆盖率」「面积加权 MRT」「薄弱区」，并提示降低目标覆盖率、延长窗口或改用 task1 面积口径。不要用 task1 的面积口径替换 task3。 前端 task3 的默认目标覆盖率是 `0.3%`（72h 单格通常 <1%），不要设 10% 这类窗口内不可达的默认值。
+- `task3` 是**给定星数最大化覆盖面积**：星数固定，在时间窗内求“至少被选中卫星覆盖一次”的面积最大。它**不是达标面积**，不设单格时间覆盖率门槛，`targets.temporal_coverage_pct` 对 task3 必须为 `null`；内部固定 0.001% 的“至少成像一次”阈值，`summary_cards.covered_area_pct`（兼容 `qualified_area_pct`）就是覆盖面积。
+- `task3` 的覆盖面积必须与报告“覆盖与回放”的终值一致，且回放的每个选中卫星都要有颜色：按“覆盖该网格总时长最多的卫星”着色，不能只按最先覆盖的卫星着色（否则最早那顆会吞掉所有网格）。
+- `task3` 的“求解并生成报告”结果卡与报告只保留「选中卫星 + 覆盖面积」；禁止出现「达标面积」「时间覆盖率」「面积加权 MRT」；薄弱区只保留网格与面积，禁止出现时间覆盖率/MRT 列。task3 约束步骤只有「星数预算」，禁止再出现「目标覆盖率」。
+- 改 task3/报告后，必须用修改后的代码实际生成一份报告并核对：标题与结果卡写“覆盖面积”且与回放终值一致、没有时间覆盖率/面积加权 MRT、薄弱区没有这两列、至少两颗选中卫星的颜色可见；只跑单测或看旧报告不算验收。
 
 ### 交互与安全
 

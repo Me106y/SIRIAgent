@@ -191,6 +191,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
   const [pointing, setPointing] = useState<"nadir" | "targeted">("nadir");
   const [cloud, setCloud] = useState(true);
   const [fields, setFields] = useState<Record<string, string>>({
+    // 仅用于旧后端（task3 还要求目标覆盖率时）的过渡；新 task3 不再发送该字段。
     temporal_coverage_target_pct: "0.3",
     mrt_target_minutes: "24",
     n_budget: "3",
@@ -712,23 +713,23 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
     // task1 是面积口径：达标面积对应 targets.area_pct，时间覆盖率/MRT 不是它的 KPI。
     const isTask1 =
       value.operation === "task1" || value.operation === "task_1_min_satellites_temporal";
-    // task3 按“单格时间覆盖率 ≥ 目标”算达标面积；目标不可达时 0.0% 是合法结果。
+    // task3 是面积口径：给定星数最大化时间窗内覆盖面积，不再有“达标面积”。
     const isTask3 =
       value.operation === "task3" || value.operation === "task_3_max_qualified_area";
-    const zeroArea = isTask3 && Number(cards.qualified_area_pct ?? 0) === 0;
-    const hideTemporal = isTask1 || zeroArea;
-    const target = isTask1
-      ? value.targets?.area_pct
-      : value.targets?.temporal_coverage_pct;
-    const targetLabel = isTask1
-      ? target != null
-        ? `达标面积（目标 ${target}%）`
-        : "达标面积"
-      : isTask3 && target != null
-        ? `达标面积（单格覆盖率 ≥ ${target}%）`
+    const hideTemporal = isTask1 || isTask3;
+    const target = isTask1 ? value.targets?.area_pct : value.targets?.temporal_coverage_pct;
+    const targetLabel = isTask3
+      ? "覆盖面积"
+      : isTask1
+        ? target != null
+          ? `达标面积（目标 ${target}%）`
+          : "达标面积"
         : target != null
           ? `达标面积（目标 ${target}%）`
           : "达标面积";
+    const areaValue = isTask3
+      ? (cards.covered_area_pct ?? cards.qualified_area_pct)
+      : cards.qualified_area_pct;
     const windowInfo = value.window;
     const expanded = Boolean(windowInfo?.expanded);
     const usedHorizon = windowInfo?.used_horizon_h;
@@ -736,7 +737,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
     return (
       <div className="plan-result">
         <div className={`plan-verdict ${value.feasible ? "ok" : "warn"}`}>
-          <strong>{value.feasible ? "目标可行" : "目标未达成"}</strong>
+          <strong>{isTask3 ? "求解完成" : value.feasible ? "目标可行" : "目标未达成"}</strong>
           <span>
             {value.optimality ?? "—"} · 窗口 {usedHorizon ?? "—"}h
             {expanded ? `（请求 ${requestedHorizon}h，已扩窗）` : ""} · 候选{" "}
@@ -750,7 +751,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
           </div>
           <div>
             <span>{targetLabel}</span>
-            <strong>{formatNumber(cards.qualified_area_pct)}%</strong>
+            <strong>{formatNumber(areaValue)}%</strong>
           </div>
           {!hideTemporal && (
             <>
@@ -770,10 +771,9 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
           <p className="plan-note">
             面积口径：目标区域至少成像一次即视为达标，不展示时间覆盖率与面积加权 MRT。
           </p>
-        ) : zeroArea ? (
-          <p className="plan-warning">
-            达标面积 0.0%：目标单格覆盖率在窗口内不可达。可降低目标覆盖率、延长窗口，或改用
-            task1 的面积口径。
+        ) : isTask3 ? (
+          <p className="plan-note">
+            覆盖面积：时间窗内至少被选中卫星覆盖一次。
           </p>
         ) : null}
         {expanded ? (
