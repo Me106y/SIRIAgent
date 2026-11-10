@@ -436,8 +436,48 @@ curl -s http://127.0.0.1:8766/api/v1/plans/<job_id> | \
 ```
 
 **注意**：不要让用户把“目标覆盖率”调到 10% 来凑非 0——那会改变 task1 的含义，
-而且结果仍然不是面积口径。单格时间覆盖率只适用于 task3。task1 约束步骤里可编辑的
-是「面积目标 %」（默认 90），不是时间覆盖率；看不到这个字段就是前端字段映射漏了。
+而且结果仍然不是面积口径。task3 也已改为面积口径（覆盖面积），单格时间覆盖率
+不再对外展示。task1 约束步骤里可编辑的是「面积目标 %」（默认 90），不是时间覆盖率；
+看不到这个字段就是前端字段映射漏了。
+
+## E16. task3 报告叫“达标面积”、与回放终值不一致、地图只有一颗星颜色
+
+**现象**：task3 报告顶部写“达标面积 39.1%”并带“时间覆盖率”，但“覆盖与回放”终值是 96.9%；
+地图图例有 3 颗星，画布上只看到 BEIJING-3B 的紫色；薄弱区表还带时间覆盖率/MRT。
+
+**确认**
+
+```bash
+jq '.targets, .summary_cards.covered_area_pct, .summary_cards.qualified_area_pct,
+    .summary_cards.city_mean_temporal_coverage_pct' reports/imaging-plan/latest/plan.json
+jq '[.report_data.playback.events[].sat_id] | unique' reports/imaging-plan/latest/plan.json
+jq '.report_data.playback.colors' reports/imaging-plan/latest/plan.json
+```
+
+**真正原因**（两层）
+
+1. task3 仍按“单格时间覆盖率 ≥ 目标”算达标面积，顶部 KPI 与“至少覆盖一次”的回放终值不是同一个量；
+   默认目标不可达时就是 0.0%。这是口径问题，不是求解失败。
+2. 回放按“该网格最先被哪颗星覆盖”着色：最早过境的那颗星会吞掉所有格子，其余选中卫星只在图例里有颜色，
+   地图上永远不出现。
+
+**修复**
+
+- task3 改为**给定星数最大化时间窗内覆盖面积**：内部固定 0.001% 的“至少覆盖一次”阈值，忽略客户端目标覆盖率；
+  `summary_cards.covered_area_pct`（兼容 `qualified_area_pct`）就是覆盖面积，与回放终值一致。
+- 报告/结果卡只写“覆盖面积”，不展示时间覆盖率、面积加权 MRT；薄弱区只保留网格与面积。
+- 回放按“覆盖该网格总时长最多的卫星”着色，每个有贡献的选中卫星都能出现颜色；每格只归属一颗星，回放百分比不会重复计数。
+
+**回归**
+
+```bash
+# 生成 task3 后：覆盖面积应与回放终值一致，且没有时间覆盖率/MRT 字样
+curl -s http://127.0.0.1:8766/api/v1/plans/<job_id> | jq '.result.summary_cards'
+grep -c '时间覆盖率\|面积加权 MRT\|达标面积' reports/imaging-plan/<job_id>/report.html  # 期望 0
+jq '[.report_data.playback.events[].sat_id] | unique | length' reports/imaging-plan/<job_id>/plan.json
+```
+
+**注意**：不要再用“降低目标覆盖率”来凑面积；task3 已没有目标覆盖率字段。
 
 ## 新增条目模板
 
