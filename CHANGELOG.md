@@ -2,6 +2,13 @@
 
 SIRIAgent 的用户可见变化。版本规则见 [docs/VERSIONING.md](docs/VERSIONING.md)。
 
+## [1.5.2] - 2026-11-10
+
+### Changed
+
+- task4 报告改为自己的 KPI：首屏显示「N% 面积分位 MRT」和「星数预算 / 实际」，不再把达标面积/时间覆盖率当标题。
+- task4 默认按给定星数补满预算；覆盖与回放明确是联合覆盖，不是 MRT KPI。
+
 ## [1.5.1] - 2026-11-10
 
 ### Changed
