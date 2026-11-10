@@ -2,6 +2,13 @@
 
 SIRIAgent 的用户可见变化。版本规则见 [docs/VERSIONING.md](docs/VERSIONING.md)。
 
+## [1.5.1] - 2026-11-10
+
+### Changed
+
+- 文档与验收同步覆盖引擎成像门限：非 SAR 最小仰角 ≥10°；光学/高光谱另要求目标地面太阳高度 ≥10°（`RS_OPTICAL_SUN_MIN_DEG`，默认 10）；SAR 不看太阳。
+- task3 在门限下重跑 n=2/n=3：n=2 已覆盖 100%；n=3 的第三颗星改为白天过境的 ZY-1 02E，不再选夜航 HJ-2B。
+
 ## [1.5.0] - 2026-11-10
 
 ### Changed

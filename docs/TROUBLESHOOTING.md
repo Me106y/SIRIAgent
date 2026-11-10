@@ -310,18 +310,32 @@ PY
 # MCP next_passes 或 passes.find_passes 查看
 ```
 
-**真正原因**：`planner.solve` 只做了云量过滤（`_apply_cloud`），**从未调用 `sun_altitude_deg`**；白天过境被 95–100% 云量剔除，夜间低云过境反而留下，于是"夜间光学"成了唯一可用访问，覆盖率被高估。
+**真正原因**（两层，2026-11-10 再次确认）
+
+1. 旧 `planner.solve` 只做云量过滤，从未调用太阳高度；当时用 `_apply_sun` 修过。
+2. 迁到 RS-Service 覆盖引擎后，`adapter._payload` 又把每颗星的 `min_elevation_deg` 硬编码回 `0.0`，且没有传 `constraints`；旧的 `_apply_sun` 没有跟着迁过来。过境列表仍会算 `optical_imaging_ok`，造成"列表标了光学不可用，但覆盖引擎照样算"的假象。task3 因此选中了 HJ-2B 22:21 北京时间的夜航过境。
+
+**确认**
+
+```bash
+# 结果里必须有成像门限；没有就是旧代码
+jq '.imaging_constraints, (.assumptions[] | select(contains("成像门限")))'   reports/imaging-plan/latest/plan.json
+# 看选中星过境的太阳高度；光学应 >10°
+curl -s 'http://127.0.0.1:8766/api/v1/satellites/46479/passes?hours=72&lat=30.27&lon=120.16&min_elev=5'   | jq '.passes[] | [.tca_utc,.sun_elev_deg,.optical_imaging_ok]'
+```
 
 **修复**
 
-- `_apply_sun`：optical / hyperspectral 的每个 hit 按"该时刻 + 该格点"的太阳高度过滤，门限取 `settings.optical_sun_min_deg`（默认 10°，环境变量 `RS_OPTICAL_SUN_MIN_DEG`）；
-- `ALGO_VERSION` 升到 `plan-0.2`；notes 写明"夜间过境不计入覆盖"；
-- MCP 增 `optical_sun_min_deg`，CLI 增 `--sun-min`；
-- 修复后：1 m 光学、90%、14 天上限 **78.27%**（不可达）；同 AOI/窗口的 5 m 光学 90% 需 **5 颗**。
+- `adapter._payload` 给非 SAR 传 `min_elevation_deg=10`，并加约束
+  `{"name":"SunGroundElevAngle","params":"Min 10"}`（地面太阳高度，不是卫星处太阳高度）；
+  门限可用 `RS_OPTICAL_SUN_MIN_DEG` 覆盖，默认 10°；SAR 豁免。
+- `PROFILE_SPECS["rs_service_db_v1"]` 的默认 `min_elevation_deg` 同步改 10，避免将来漏 override。
+- 结果新增 `imaging_constraints`，assumptions 写明“夜间/低仰角不计入覆盖”。
+- 修复后 task3：n=2（ZIYUAN 3-03 + BEIJING-3B）已覆盖 100%；n=3 第三颗改为白天 ZY-1 02E（10:47，二次覆盖），不再选 HJ-2B。
 
-**回归**：`uv run pytest tests/test_planner_filters.py`（夜间 hit 必须被剔除）；重算报告看时间轴不再出现 23:xx 的光学覆盖。
+**回归**：`pytest tests/test_coverage_adapter.py`（payload 必须带 10° 与 SunGroundElevAngle，SAR 豁免）；重跑 task3 n=2/n=3，报告 assumptions 有成像门限，选中星过境 `sun_elev_deg > 10`。
 
-**注意**：不要用"关掉云量过滤"或"降低目标"来掩盖夜间覆盖；先看时间轴时刻的太阳高度。
+**注意**：不要只看过境列表的 `optical_imaging_ok`；覆盖引擎的 `imaging_constraints` 和报告 assumptions 才是实际生效的门限。
 
 ## E13. 报告链接点击报错（文件其实存在）
 
