@@ -583,7 +583,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
           />
           <span>
             达不到目标时自动扩窗
-            <small>先试当前窗口，再试 72h；最多 2 次求解，报告会标注实际窗口。7 天请手动设置窗口。仅 task1。</small>
+            <small>先试当前窗口，再按 72h → 7 天扩窗；最多 3 次求解，报告会标注实际窗口。仅 task1。</small>
           </span>
         </label>
       ) : (
@@ -898,7 +898,9 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
           <span className="plan-spinner" />
           <div>
             <strong>{job?.status === "queued" ? "排队中…" : "正在传播与选星…"}</strong>
-            <p>任务 {jobId}；可以关闭抽屉，稍后回来不会保留这个页面的进度。</p>
+            <p>
+              任务 {jobId}；自动扩窗到 7 天时求解可能需要几分钟。可以关闭抽屉，稍后回来不会保留这个页面的进度。
+            </p>
           </div>
         </div>
       ) : null}
