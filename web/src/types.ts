@@ -469,3 +469,26 @@ export interface ObjectDetectionResult {
   device: string;
   accuracy_note: string;
 }
+
+export interface SemanticClassStat {
+  id: number;
+  name: string;
+  en: string;
+  color: number[];
+  px: number;
+  ratio: number;
+}
+
+export interface SemanticSegmentationResult {
+  ok: boolean;
+  run_id: string;
+  image_path: string;
+  color_map_path: string;
+  overlay_path: string;
+  width: number;
+  height: number;
+  classes: SemanticClassStat[];
+  class_count: number;
+  elapsed_ms: number;
+  accuracy_note: string;
+}

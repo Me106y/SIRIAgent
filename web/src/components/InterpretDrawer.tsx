@@ -2,7 +2,12 @@ import { useEffect, useRef, useState } from "react";
 
 import { api, uploadImage } from "../api";
 import { fileUrl } from "../lib/fileLinks";
-import type { DetectionResult, ObjectDetectionResult, WorkspaceImage } from "../types";
+import type {
+  DetectionResult,
+  ObjectDetectionResult,
+  SemanticSegmentationResult,
+  WorkspaceImage,
+} from "../types";
 
 interface SlotValue {
   path: string;
@@ -16,7 +21,7 @@ interface Props {
   onClose: () => void;
 }
 
-type FuncKey = "change" | "object";
+type FuncKey = "change" | "object" | "semantic";
 
 interface FuncSpec {
   key: FuncKey;
@@ -36,6 +41,12 @@ const FUNCS: FuncSpec[] = [
     key: "object",
     label: "目标检测",
     hint: "单图：YOLOX-S COCO 80 类预训练",
+    dual: false,
+  },
+  {
+    key: "semantic",
+    label: "语义分割",
+    hint: "单图：SparseMask OpenEarthMap 8 类",
     dual: false,
   },
 ];
@@ -66,6 +77,7 @@ export function InterpretDrawer({ open, onClose }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [changeResult, setChangeResult] = useState<DetectionResult | null>(null);
   const [objectResult, setObjectResult] = useState<ObjectDetectionResult | null>(null);
+  const [semanticResult, setSemanticResult] = useState<SemanticSegmentationResult | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const uploadTarget = useRef<"before" | "after" | "single">("before");
@@ -103,6 +115,7 @@ export function InterpretDrawer({ open, onClose }: Props) {
   const resetResult = () => {
     setChangeResult(null);
     setObjectResult(null);
+    setSemanticResult(null);
     setError(null);
   };
 
@@ -196,8 +209,10 @@ export function InterpretDrawer({ open, onClose }: Props) {
     try {
       if (spec.dual && before && after) {
         setChangeResult(await api.detectChange(before.path, after.path));
-      } else if (!spec.dual && single) {
+      } else if (func === "object" && single) {
         setObjectResult(await api.detectObjects(single.path));
+      } else if (func === "semantic" && single) {
+        setSemanticResult(await api.segmentSemantics(single.path));
       }
     } catch (exc) {
       setError(exc instanceof Error ? exc.message : "解译失败");
@@ -476,6 +491,48 @@ export function InterpretDrawer({ open, onClose }: Props) {
               </details>
             )}
             <p className="interpret-note">{objectResult.accuracy_note}</p>
+          </section>
+        )}
+
+        {semanticResult && (
+          <section className="interpret-result">
+            <h3>语义分割结果</h3>
+            <div className="interpret-triple">
+              <figure>
+                <img src={fileUrl(semanticResult.image_path)} alt="原图" />
+                <figcaption>原图</figcaption>
+              </figure>
+              <figure>
+                <img src={fileUrl(semanticResult.color_map_path)} alt="分类专题图" />
+                <figcaption>分类专题图</figcaption>
+              </figure>
+              <figure>
+                <img src={fileUrl(semanticResult.overlay_path)} alt="分类叠加图" />
+                <figcaption>分类叠加图</figcaption>
+              </figure>
+            </div>
+            <div className="interpret-stats">
+              <span>类别数 {semanticResult.class_count} / 8</span>
+              <span>耗时 {(semanticResult.elapsed_ms / 1000).toFixed(1)} s</span>
+              <span>CPU</span>
+            </div>
+            <ul className="interpret-legend">
+              {semanticResult.classes
+                .filter((item) => item.ratio > 0)
+                .sort((a, b) => b.ratio - a.ratio)
+                .map((item) => (
+                  <li key={item.id}>
+                    <i
+                      style={{
+                        background: `rgb(${item.color[0]}, ${item.color[1]}, ${item.color[2]})`,
+                      }}
+                    />
+                    <b>{item.name}</b>
+                    <span>{(item.ratio * 100).toFixed(1)}%</span>
+                  </li>
+                ))}
+            </ul>
+            <p className="interpret-note">{semanticResult.accuracy_note}</p>
           </section>
         )}
 
