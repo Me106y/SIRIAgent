@@ -3419,6 +3419,101 @@ button {
   border-top: 1px solid var(--line-soft);
 }
 
+.interpret-funcs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(8, 20, 38, 0.55);
+  justify-self: start;
+}
+
+.interpret-func {
+  padding: 5px 14px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.interpret-func.active {
+  background: rgba(34, 211, 238, 0.16);
+  color: var(--ink);
+}
+
+.interpret-func:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.interpret-slots.single {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 50%;
+}
+
+.interpret-single {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 560px;
+}
+
+.interpret-single figure {
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  background: #0a1524;
+}
+
+.interpret-single img {
+  display: block;
+  width: 100%;
+  max-height: 380px;
+  object-fit: contain;
+}
+
+.interpret-single figcaption {
+  padding: 5px 8px;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.interpret-detections {
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.interpret-detections summary {
+  cursor: pointer;
+  color: var(--ink);
+}
+
+.interpret-detections ul {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 4px;
+  max-height: 180px;
+  overflow: auto;
+}
+
+.interpret-detections li {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+}
+
+.interpret-detections li em {
+  font-style: normal;
+  color: var(--muted);
+}
+
 .interpret-triple {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

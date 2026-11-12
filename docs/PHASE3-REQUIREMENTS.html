@@ -293,7 +293,7 @@ main ul li::marker { color: var(--brand); }
 <a class="depth-3" href="#sec-4-5">4.5 演示图源</a>
 <a class="depth-2" href="#sec-5">5. MCP 工具契约（DSH Agent 可直接调用）</a>
 <a class="depth-2" href="#sec-6">6. 「让 Agent 分析」语义</a>
-<a class="depth-2" href="#sec-7">7. 界面（解译抽屉重设计，impeccable 回填）</a>
+<a class="depth-2" href="#sec-7">7. 界面（解译抽屉重设计，impeccable v0.3 回填）</a>
 <a class="depth-2" href="#sec-8">8. 里程碑</a>
 <a class="depth-2" href="#sec-9">9. 决策记录（已关闭）</a>
 <a class="depth-2" href="#sec-10">10. 风险与对策</a>
@@ -308,9 +308,9 @@ main ul li::marker { color: var(--brand); }
         <h1>SIRIAgent Phase 3 需求文档</h1>
         <p class="hero-lead">购买与工作区收敛、按钮语义切换、复刻 SIRIGeo 现役解译能力并全量 MCP 工具化。本文档是 Phase 3 的唯一事实源，包含四能力规格、四里程碑与六条验收剧本。</p>
         <div class="meta-row">
-          <span class="meta-chip">版本 v0.2</span>
+          <span class="meta-chip">版本 v0.3</span>
           <span class="meta-chip">2026-11-12</span>
-          <span class="meta-chip">M1 已落地，M2~M4 待实施</span>
+          <span class="meta-chip">M1/M2 已落地，M3~M4 待实施</span>
           <span class="meta-chip">源文件 docs/PHASE3-REQUIREMENTS.md</span>
         </div>
       </div>
@@ -339,7 +339,7 @@ main ul li::marker { color: var(--brand); }
 </tr>
 <tr>
 <td>版本</td>
-<td>v0.2</td>
+<td>v0.3</td>
 </tr>
 <tr>
 <td>状态</td>
@@ -622,8 +622,8 @@ main ul li::marker { color: var(--brand); }
 <h3 id="sec-4-5">4.5 演示图源</h3>
 <ul>
 <li>从 SIRIGeo 复制对口样例到 <code>SIRIAgent/demo/images/</code>（git 入库、只读、不参与购买重置）：</li>
-<li>目标检测：<code>test_cars_01~03.jpg</code>（尾矿/车辆航拍，厘米级，可实际检出）；</li>
-<li>语义分割：OpenEarthMap 航拍 3 张（如 <code>aachen_1.jpg</code> 等）。</li>
+<li>目标检测：<code>object_02.jpg</code>、<code>object_05.jpg</code>、<code>test_cars_02.jpg</code>、<code>test_cars_03.jpg</code>（车辆 / 人员航拍，YOLOX-S 实测可检出 <code>car</code> / <code>person</code> / <code>truck</code>；<code>test_cars_01</code> 与 <code>object_01</code> 同一张且检出异常，已弃用）；</li>
+<li>语义分割：OpenEarthMap 航拍 3 张（<code>aachen_1.jpg</code>、<code>accra_1.jpg</code>、<code>abancay_1.jpg</code>）。</li>
 <li>解译抽屉图源 = 工作区图像（购买 + 上传）+ 示例图两个分区；用户上传通道保留（<code>workspace/uploads/</code>，单文件 ≤ 20MB，PNG/JPG）。</li>
 </ul>
 <hr />
@@ -685,13 +685,16 @@ main ul li::marker { color: var(--brand); }
 <li>覆盖薄弱区 / 选星 / 云量分析<strong>不保留按钮入口</strong>；用户可直接在对话里问，Agent 仍能读 <code>reports/imaging-plan/latest/plan.json</code> 与报告。</li>
 </ul>
 <hr />
-<h2 id="sec-7">7. 界面（解译抽屉重设计，impeccable 回填）</h2>
+<h2 id="sec-7">7. 界面（解译抽屉重设计，impeccable v0.3 回填）</h2>
 <ul>
 <li>范围：只重设计「遥感解译」抽屉（功能选择、输入槽位随功能自适应、结果展示）；不碰星历主界面、购买页与整体视觉体系（响应式三档与色系沿用既有规范）。</li>
-<li>功能选择：变化检测（双图）/ 目标检测（单图）/ 语义分割（单图）/ 图像处理（单图 + 算子 + 档位）。</li>
-<li>输入：双/单图槽位随功能自适应；图源分区 = 工作区 + 示例图，另保留上传。</li>
-<li>结果：抽屉内联展示（结果图 + 指标 + <code>accuracy_note</code>）；不搬 SIRIGeo 的 HTML 报告链路。</li>
-<li><strong>时机</strong>：M2 开工前先跑 impeccable 设计访谈与产出，设计结论回填本节；M1 不动解译抽屉版式。</li>
+<li>功能选择：抽屉顶部一行<strong>功能分段控件</strong>四选一（变化检测 / 目标检测 / 语义分割 / 图像处理）；沿用现有 <code>plan-ghost</code> / <code>plan-primary</code> 视觉词汇，不做新色系。</li>
+<li>输入：双图功能两个槽位（变化前 / 变化后），单图功能一个槽位；<strong>切换功能时清空不兼容的槽位</strong>；图像处理额外给「算子 + 档位」下拉。</li>
+<li>图源：两段列表——「工作区」（购买 + 上传）、「示例图」（<code>demo/images/</code>），另保留「从文件夹上传」。</li>
+<li>结果：抽屉内联展示（结果图 + 指标 + <code>accuracy_note</code>）；目标检测结果带<strong>可折叠检测框列表</strong>；无检测结果时给空态提示换图。</li>
+<li>状态：空态（提示先购买/上传）、执行中（按钮禁用 + 阶段文案）、错误（内联红条）、成功（结果卡）、无结果（空态）。</li>
+<li>交互：保留 ESC 关闭与既有键盘聚焦；不生成 HTML 报告。</li>
+<li><strong>时机</strong>：M2 开工前先跑 impeccable 设计访谈与产出，设计结论回填本节；M1 不动解译抽屉版式（已完成）。</li>
 </ul>
 <hr />
 <h2 id="sec-8">8. 里程碑</h2>
@@ -715,7 +718,7 @@ main ul li::marker { color: var(--brand); }
 <td>M2 目标检测</td>
 <td>YOLOX-S 推理模块 + 权重下载校验 + REST + MCP + 抽屉功能选择（先跑 impeccable 设计）</td>
 <td>§1.3 第 4、5、6 条（目标检测部分）</td>
-<td>RS-Service + SIRIAgent</td>
+<td>RS-Service + SIRIAgent（<strong>已落地</strong>：RS-Service PR #26；抽屉重设计 + 目标检测 UI + 示例图；<code>pnpm build</code> 绿）</td>
 </tr>
 <tr>
 <td>M3 语义分割</td>
@@ -884,6 +887,11 @@ main ul li::marker { color: var(--brand); }
 <tbody>
 <tr>
 <td>2026-11-12</td>
+<td>v0.3</td>
+<td>M2 落地（§8）：impeccable 设计访谈回填 §7（功能分段控件 / 自适应槽位 / 工作区+示例图两段 / 目标检测可折叠框列表）；解译抽屉重设计并接入目标检测；示例图入库 <code>demo/images/</code>（目标检测 4 张 + 语义分割 3 张）；RS-Service 侧 YOLOX-S 推理 + REST + MCP <code>detect_objects</code>（PR #26）</td>
+</tr>
+<tr>
+<td>2026-11-12</td>
 <td>v0.2</td>
 <td>M1 落地（§8）：工作区一次性重置；<code>purchase.py</code> 购买改为固定对图单份引用（<code>workspace/images/building-change/</code>），新增 <code>GET /api/purchases/building-change</code>；购买页只展示变化前/后两张图；「让 Agent 分析」改解译语义（把固定对图交给 Agent 跑变化检测），固定图不存在时按钮禁用</td>
 </tr>
@@ -896,7 +904,7 @@ main ul li::marker { color: var(--brand); }
 </table></div>
 
     <div class="document-control">
-      <span>SIRIAgent Phase 3 需求文档 · v0.2 · 2026-11-12</span>
+      <span>SIRIAgent Phase 3 需求文档 · v0.3 · 2026-11-12</span>
       <span>SIRIAgent / docs/PHASE3-REQUIREMENTS.md</span>
     </div>
   </main>

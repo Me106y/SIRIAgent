@@ -21,6 +21,7 @@ import type {
   FixedPairFile,
   ReportInfo,
   DetectionResult,
+  ObjectDetectionResult,
   WorkspaceImage,
 } from "./types";
 
@@ -135,6 +136,12 @@ export const api = {
     postJson<DetectionResult>(
       "/api/rs/interpret/change-detection",
       { before_path: beforePath, after_path: afterPath },
+      70_000,
+    ),
+  detectObjects: (imagePath: string) =>
+    postJson<ObjectDetectionResult>(
+      "/api/rs/interpret/object-detection",
+      { image_path: imagePath },
       70_000,
     ),
 };

@@ -2,6 +2,18 @@
 
 SIRIAgent 的用户可见变化。版本规则见 [docs/VERSIONING.md](docs/VERSIONING.md)。
 
+## [1.7.0] - 2026-11-12
+
+### Added
+
+- Phase 3 M2：遥感解译抽屉重设计（impeccable）——顶部功能分段控件（变化检测 / 目标检测），输入槽位随功能自适应（双图 / 单图），图源分「工作区」「示例图」两段，结果内联展示。
+- 目标检测接入：标注图 + 目标数 / 类别数 / 置信度 + 可折叠检测框列表 + `accuracy_note`，经 `/api/rs/interpret/object-detection`。
+- 示例图入库 `demo/images/`：目标检测 4 张（车辆 / 人员航拍）、语义分割 3 张（OpenEarthMap），解译抽屉可直接选用。
+
+### Changed
+
+- 解译抽屉切换功能时清空不兼容槽位；列表演示标签新增「示例」。
+
 ## [1.6.0] - 2026-11-12
 
 ### Added
