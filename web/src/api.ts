@@ -23,6 +23,7 @@ import type {
   DetectionResult,
   ObjectDetectionResult,
   SemanticSegmentationResult,
+  ImageProcessResult,
   WorkspaceImage,
 } from "./types";
 
@@ -137,6 +138,12 @@ export const api = {
     postJson<DetectionResult>(
       "/api/rs/interpret/change-detection",
       { before_path: beforePath, after_path: afterPath },
+      70_000,
+    ),
+  processImage: (imagePath: string, operator: string, level?: string) =>
+    postJson<ImageProcessResult>(
+      "/api/rs/interpret/process-image",
+      { image_path: imagePath, operator, level },
       70_000,
     ),
   segmentSemantics: (imagePath: string) =>

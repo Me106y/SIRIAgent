@@ -492,3 +492,18 @@ export interface SemanticSegmentationResult {
   elapsed_ms: number;
   accuracy_note: string;
 }
+
+export interface ImageProcessResult {
+  ok: boolean;
+  run_id: string;
+  image_path: string;
+  output_path: string;
+  operator: string;
+  operator_name: string;
+  level: string | null;
+  level_name: string;
+  width: number;
+  height: number;
+  elapsed_ms: number;
+  accuracy_note: string;
+}
