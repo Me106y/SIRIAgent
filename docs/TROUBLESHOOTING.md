@@ -37,6 +37,7 @@
 | 给定 N 颗也报 `target_unreachable`、`best_coverage_pct=0.0` | 窗口内云量/太阳过滤后无可用访问 | [E14](#e14-给定-n-颗也报-target_unreachablebest_coverage_pct00) |
 | 报告链接点击报错，但文件确实存在 | linkify 二次嵌套 / href 不是 /api/files | [E13](#e13-报告链接点击报错文件其实存在) |
 | 报告“达标面积”恒为 `0.0%`，时间覆盖率只有零点几 | task1 面积口径被 90% 单格时间阈值顶掉 | [E15](#e15-报告达标面积恒为-00) |
+| task2 报告“达标面积”恒为 `0.0%`、选中几十颗星也没用 | 最长重访目标低于光学夜间空档 | [E19](#e19-task2-报告达标面积恒为-00) |
 | task4 只选一颗、没有 MRT、标题是达标面积 | `n_budget` 被当成最多 N + 复用 task1/task3 KPI | [E18](#e18-task4-报告只选一颗没有-mrt标题却是达标面积) |
 | `rs-service: command not found`、`uv: command not found` | 不在 PATH | [E9](#e9-command-not-found) |
 | `530`、`1033`、`502`、`503` | 隧道 / 本机服务 | [E10](#e10-隧道与网关错误) |
@@ -528,6 +529,54 @@ grep -c '时间覆盖率\|达标面积' reports/imaging-plan/latest/report.html 
 ```
 
 **注意**：不要再用 task1/task3 的“达标面积”KPI 套 task4；task4 的主指标是面积分位 MRT。
+
+## E19. task2 报告“达标面积”恒为 0.0%
+
+**现象**：task2（最少星达到重访）报告首屏「达标面积（目标 90%）0.0%」，选中 42 颗星仍然 0.0%；
+抽屉结果卡同样 0.0%，看起来像选星坏了。
+
+**确认**
+
+```bash
+# 1) 看目标（秒）与达标面积；mrt_target_s=1440 就是 24 分钟
+jq '.selection.recommended_result | {mrt_target_s, achieved_area_pct, status}' \
+  reports/imaging-plan/latest/plan.json
+jq '.summary_cards | {satellite_count, qualified_area_pct, area_weighted_mrt_minutes}' \
+  reports/imaging-plan/latest/plan.json
+
+# 2) 看有没有整窗未覆盖的网格（gap = 窗口长度 4320 分钟）
+jq '[.weak_areas[].mrt_minutes] | max' reports/imaging-plan/latest/plan.json
+```
+
+**真正原因**：task2 的达标面积 = 面积中「单格最长重访间隔（MRT）≤ 目标」的占比，而这个
+间隔**含夜间与窗口首尾空档**（`regional_metrics` 对 `[window_start, window_end]` 取补集）。
+光学只覆盖白天，单格 MRT 的下限就是夜间空档（约 12–19 h，冬季更长），所以 24 分钟的目标
+在任何窗口下都只能是 0.0%——不是选星坏了，也不是面积目标给了 90% 的错。
+
+同一份结果换目标即可看出梯度（杭州 72 h、目标指向、90% 面积）：
+
+| 目标 | 达标面积 |
+| --- | --- |
+| 24 分（1440 s） | 0.0% |
+| 48 h（2880 分） | 66.1% |
+| 72 h（4320 分） | 100%，且 **0 颗星**（空集也“达标”：未覆盖网格的 gap 正好等于窗口长度） |
+
+**修复**
+
+- 抽屉「最长重访上限」默认改为 **2880 分（48 h）**，字段名从「P95 重访上限」改成
+  「最长重访上限」（引擎算的是单格最大间隔，不是 P95），提示写明夜间空档这条下限。
+- 报告与结果卡的「达标面积」旁边必须带目标：`达标面积（最长重访 ≤ 48 h · 面积 90%）`；
+  0.0% 时报告追加一条说明：目标低于物理下限、改小时级或换全天候载荷，不要调低面积目标。
+
+**回归**
+
+```bash
+jq '.selection.recommended_result.mrt_target_s' reports/imaging-plan/latest/plan.json  # 2880*60
+grep -o '达标面积（最长重访 ≤ [^）]*）' reports/imaging-plan/latest/report.html
+```
+
+**注意**：不要为了把 0.0% 变好看去调低面积目标，也不要套 task1/3 的“面积口径”改 task2；
+目标等于窗口长度（如 72 h）会退化成“0 颗星也 100%”，同样不能当默认。
 
 ## 新增条目模板
 
