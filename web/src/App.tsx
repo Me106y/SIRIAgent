@@ -652,9 +652,22 @@ export default function App() {
         onClose={() => setPlanOpen(false)}
         onAnalyze={(path) => {
           setPlanOpen(false);
-          void send(
-            `请分析这份成图方案：${path}。重点看覆盖薄弱区、选星是否合理、云量影响，并给出下一步建议。`,
-          );
+          void (async () => {
+            try {
+              const pair = await api.buildingChange();
+              if (!pair.image_files.length) {
+                void send(`请分析这份成图方案：${path}。`);
+                return;
+              }
+              const before = pair.image_files.find((item) => item.phase === "before");
+              const after = pair.image_files.find((item) => item.phase === "after");
+              void send(
+                `请基于遥感解译能力分析「建筑变化」这对图：变化前 ${before?.path ?? pair.image_files[0].path}，变化后 ${after?.path ?? pair.image_files[0].path}。请调用变化检测工具对两图做检测，解读变化结果并给出建议。成图方案参考：${path}。`,
+              );
+            } catch {
+              void send(`请分析这份成图方案：${path}。`);
+            }
+          })();
         }}
       />
     </div>

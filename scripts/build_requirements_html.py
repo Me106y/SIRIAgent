@@ -33,9 +33,9 @@ PHASE_CONFIG = {
     "3": {
         "title": "SIRIAgent Phase 3 需求文档",
         "subtitle": "遥感解译扩展 · 里程碑 · 验收剧本",
-        "version": "v0.1",
+        "version": "v0.2",
         "date": "2026-11-12",
-        "status": "13 项决策已锁定，待实施",
+        "status": "M1 已落地，M2~M4 待实施",
         "eyebrow": "Phase 3 · 需求文档",
         "brand": "SIRIAgent · Phase 3",
         "lead": "购买与工作区收敛、按钮语义切换、复刻 SIRIGeo 现役解译能力并全量 MCP 工具化。本文档是 Phase 3 的唯一事实源，包含四能力规格、四里程碑与六条验收剧本。",

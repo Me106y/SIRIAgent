@@ -2,6 +2,18 @@
 
 SIRIAgent 的用户可见变化。版本规则见 [docs/VERSIONING.md](docs/VERSIONING.md)。
 
+## [1.6.0] - 2026-11-12
+
+### Added
+
+- Phase 3 M1：购买改为固定「建筑变化」对图（image1.png / image2.png），工作区只保留一份 `workspace/images/building-change/`，重复购买只引用不复制；新增 `GET /api/purchases/building-change`。
+- 「让 Agent 分析」改为把固定对图交给 Agent 跑变化检测（经 MCP），不再引导覆盖薄弱区/选星/云量；固定图不存在时按钮禁用。
+
+### Changed
+
+- 购买页只展示方案摘要 + 变化前/后两张图；购买记录不再有 `source_dir` / `extras` / `files`，改为 `image_files`（含时相与标签）。
+- 工作区一次性重置：历史购买目录与上传清空（`reports/interpret/` 保留）。
+
 ## [1.5.4] - 2026-11-11
 
 ### Fixed

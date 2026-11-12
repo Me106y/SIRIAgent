@@ -1,4 +1,10 @@
-"""方案购买（模拟）：把 data/ 里的一个主题目录复制到平台工作区并留档。"""
+"""方案购买（模拟）：把「建筑变化」固定对图复制到平台工作区并留档。
+
+Phase 3 口径（docs/PHASE3-REQUIREMENTS.md §3.2）：
+- 每次购买只提供固定对图 image1.png（变化前）/ image2.png（变化后）；
+- 工作区只保留一份 workspace/images/building-change/，首次购买复制，之后只写记录不复制；
+- 购买记录不再有 source_dir / extras / 逐文件清单。
+"""
 
 from __future__ import annotations
 
@@ -23,15 +29,10 @@ REPORT_DIR = PROJECT_ROOT / "reports" / "imaging-plan"
 DATA_ROOT = Path(
     os.environ.get("PURCHASE_DATA_ROOT", str(Path.home() / "桌面" / "data"))
 )
-# 只从可做前后配对的主题里随机；大气污染是单时相多源，留给后续“多源分析”。
-POOL = (
-    "多维度全面评估火灾",
-    "森林覆盖变化",
-    "沥青路面老化评估",
-    "洪水检测",
-)
-# 每次购买都附带这一组，保证演示时总有一对变化明显的前后图。
-ALWAYS_INCLUDE = "建筑变化"
+# 固定对图：变化前 / 变化后（Phase 3 不再随机复制主题目录）。
+BUILDING_CHANGE = "建筑变化"
+FIXED_PAIR = (("image1.png", "before", "变化前"), ("image2.png", "after", "变化后"))
+FIXED_DIR = IMAGES_DIR / "building-change"
 SIMULATED = True
 BJ = timezone(timedelta(hours=8))
 
@@ -120,57 +121,56 @@ def _image_size(path: Path) -> tuple[int, int] | None:
     return None
 
 
-def _collect_files(directory: Path) -> list[dict[str, Any]]:
-    files: list[dict[str, Any]] = []
-    for item in sorted(directory.iterdir(), key=lambda p: p.name):
-        if not item.is_file():
-            continue
-        entry: dict[str, Any] = {"name": item.name, "bytes": item.stat().st_size}
-        size = _image_size(item)
-        if size is not None:
-            entry["width"], entry["height"] = size
-        files.append(entry)
-    return files
-
-
-def _copy_extras(destination: Path) -> list[str]:
-    """把固定附带的目录复制到同一个购买目录；返回复制后的文件名。"""
-    root = DATA_ROOT / ALWAYS_INCLUDE
-    if not root.is_dir():
-        return []
-    copied: list[str] = []
-    for item in sorted(root.iterdir()):
-        if not item.is_file():
-            continue
-        target = destination / item.name
-        if target.exists():
-            target = destination / f"{item.stem}_{ALWAYS_INCLUDE}{item.suffix}"
-        shutil.copy2(item, target)
-        copied.append(target.name)
-    return copied
-
-
-def _pick_source() -> Path:
-    available = [DATA_ROOT / name for name in POOL if (DATA_ROOT / name).is_dir()]
-    if not available:
-        raise FileNotFoundError(f"数据目录不可用：{DATA_ROOT}")
-    return secrets.choice(available)
-
-
 def _public(record: dict[str, Any]) -> dict[str, Any]:
     return dict(record)
 
 
+def _ensure_fixed_pair() -> None:
+    """把「建筑变化」固定对图复制到 FIXED_DIR（幂等：已存在则跳过）。"""
+    source = DATA_ROOT / BUILDING_CHANGE
+    if not source.is_dir():
+        raise FileNotFoundError(f"数据目录不可用：{source}")
+    FIXED_DIR.mkdir(parents=True, exist_ok=True)
+    missing = [name for name, _phase, _label in FIXED_PAIR if not (FIXED_DIR / name).is_file()]
+    if not missing:
+        return
+    for name, _phase, _label in FIXED_PAIR:
+        src = source / name
+        if not src.is_file():
+            raise FileNotFoundError(f"固定对图缺失：{src}")
+        shutil.copy2(src, FIXED_DIR / name)
+
+
+def _fixed_files() -> list[dict[str, Any]]:
+    """固定对图的元数据清单（与工作区单份文件一一对应）。"""
+    files: list[dict[str, Any]] = []
+    for name, phase, label in FIXED_PAIR:
+        path = FIXED_DIR / name
+        entry: dict[str, Any] = {
+            "name": name,
+            "phase": phase,
+            "label": label,
+            "path": path.relative_to(PROJECT_ROOT).as_posix(),
+        }
+        if path.is_file():
+            entry["bytes"] = path.stat().st_size
+            size = _image_size(path)
+            if size is not None:
+                entry["width"], entry["height"] = size
+        files.append(entry)
+    return files
+
+
 @purchase_bp.post("/api/purchases")
 def create_purchase() -> Any:
-    """模拟购买：复制一个随机主题目录到 workspace/images/<purchase_id>/。"""
+    """模拟购买：保证固定对图单份存在，然后写购买记录（引用同一目录）。"""
     body = request.get_json(silent=True) or {}
     run_id = str(body.get("run_id") or "").strip()
     if not run_id or not _RUN_ID_RE.match(run_id):
         return jsonify({"ok": False, "error": "run_id 不合法。"}), 400
 
     try:
-        source = _pick_source()
+        _ensure_fixed_pair()
     except FileNotFoundError as exc:
         return jsonify({"ok": False, "error": str(exc)}), 503
 
@@ -182,22 +182,12 @@ def create_purchase() -> Any:
             purchase_id = f"pur-{stamp}-{secrets.token_hex(3)}"
             if purchase_id not in used:
                 break
-        destination = IMAGES_DIR / purchase_id
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            shutil.copytree(source, destination)
-            extras = _copy_extras(destination)
-        except Exception as exc:  # noqa: BLE001 - 复制失败不留半套目录
-            shutil.rmtree(destination, ignore_errors=True)
-            return jsonify({"ok": False, "error": f"复制失败：{exc}"}), 500
         record = {
             "purchase_id": purchase_id,
             "run_id": run_id,
-            "source_dir": source.name,
-            "extras": [ALWAYS_INCLUDE] if extras else [],
-            "workspace_dir": destination.relative_to(PROJECT_ROOT).as_posix(),
+            "workspace_dir": FIXED_DIR.relative_to(PROJECT_ROOT).as_posix(),
             "summary": _plan_summary(run_id),
-            "files": _collect_files(destination),
+            "image_files": _fixed_files(),
             "created_at": _now(),
             "simulated": SIMULATED,
         }
@@ -205,10 +195,25 @@ def create_purchase() -> Any:
         try:
             _write_records(existing)
         except OSError as exc:
-            shutil.rmtree(destination, ignore_errors=True)
             return jsonify({"ok": False, "error": f"记录写入失败：{exc}"}), 500
 
     return jsonify({"ok": True, "purchase": _public(record)}), 201
+
+
+@purchase_bp.get("/api/purchases/building-change")
+def building_change() -> Any:
+    """固定对图清单（「让 Agent 分析」用）；文件不存在时由端点保证复制。"""
+    try:
+        _ensure_fixed_pair()
+    except FileNotFoundError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 503
+    return jsonify(
+        {
+            "ok": True,
+            "workspace_dir": FIXED_DIR.relative_to(PROJECT_ROOT).as_posix(),
+            "image_files": _fixed_files(),
+        }
+    )
 
 
 @purchase_bp.get("/api/purchases/<purchase_id>")

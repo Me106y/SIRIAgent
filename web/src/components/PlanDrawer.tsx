@@ -176,6 +176,7 @@ function NumberStepper({ label, value, onChange, min, max, step = 1, placeholder
 export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
   const [options, setOptions] = useState<PlanOptions | null>(null);
   const [optionsError, setOptionsError] = useState<string | null>(null);
+  const [hasFixedPair, setHasFixedPair] = useState(false);
   const [step, setStep] = useState(0);
   const [operation, setOperation] = useState("task1");
   const [provinceCode, setProvinceCode] = useState("330000");
@@ -260,6 +261,22 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
       alive = false;
     };
   }, [open, options]);
+
+  useEffect(() => {
+    if (!open) return;
+    let alive = true;
+    api
+      .buildingChange()
+      .then((payload) => {
+        if (alive) setHasFixedPair(payload.image_files.length >= 2);
+      })
+      .catch(() => {
+        if (alive) setHasFixedPair(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -822,6 +839,8 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
                   type="button"
                   className="plan-ghost"
                   onClick={() => onAnalyze(report.relative_plan)}
+                  disabled={!hasFixedPair}
+                  title={hasFixedPair ? undefined : "先购买方案获得图像"}
                 >
                   让 Agent 分析
                 </button>
