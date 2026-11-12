@@ -34,7 +34,7 @@ const LEVEL_LABELS: Record<string, string> = {
 };
 const FIELD_LABELS: Record<string, string> = {
   temporal_coverage_target_pct: "目标覆盖率",
-  mrt_target_minutes: "P95 重访上限",
+  mrt_target_minutes: "最长重访上限",
   n_budget: "星数预算",
   area_target_pct: "面积目标",
   fallback_area_target_pct: "面积回退",
@@ -45,7 +45,7 @@ const FIELD_LABELS: Record<string, string> = {
 };
 const FIELD_HINTS: Record<string, string> = {
   temporal_coverage_target_pct: "%，单格覆盖率，72h 通常 <1%",
-  mrt_target_minutes: "分钟",
+  mrt_target_minutes: "分钟；光学夜间无过境，单格最长间隔至少是夜间空档（约 12–19 h）",
   n_budget: "颗",
   area_target_pct: "%，至少成像一次",
   fallback_area_target_pct: "%",
@@ -106,6 +106,12 @@ function formatMoment(value?: string | null): string {
   return `${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(
     date.getMinutes(),
   )}`;
+}
+
+function formatDuration(minutes: number | null | undefined): string {
+  const value = formatNumber(minutes ?? null, 0);
+  if (value === "—") return "—";
+  return Number(minutes) >= 120 ? `${formatNumber(Number(minutes) / 60, 1)} h` : `${value} 分`;
 }
 
 function formatKpi(item: PlanHistoryItem): string {
@@ -249,7 +255,8 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
   const [fields, setFields] = useState<Record<string, string>>({
     // 仅用于旧后端（task3 还要求目标覆盖率时）的过渡；新 task3 不再发送该字段。
     temporal_coverage_target_pct: "0.3",
-    mrt_target_minutes: "24",
+    // task2 的「最长重访」含夜间与窗口首尾空档；分钟级目标（如 24 分）对光学必然 0%。
+    mrt_target_minutes: "2880",
     n_budget: "3",
     area_target_pct: "90",
   });
@@ -828,11 +835,23 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
     // task3 是面积口径：给定星数最大化时间窗内覆盖面积，不再有“达标面积”。
     const isTask3 =
       value.operation === "task3" || value.operation === "task_3_max_qualified_area";
+    const isTask2 =
+      value.operation === "task2" || value.operation === "task_2_min_satellites_mrt";
+    const selection = (value.selection ?? {}) as {
+      recommended_result?: { mrt_target_s?: number | null };
+      strict_result?: { mrt_target_s?: number | null };
+    };
+    const mrtTargetSeconds =
+      selection.recommended_result?.mrt_target_s ?? selection.strict_result?.mrt_target_s;
+    const mrtTargetMinutes =
+      mrtTargetSeconds == null ? (value.targets?.mrt_minutes ?? null) : mrtTargetSeconds / 60;
     const hideTemporal = isTask1 || isTask3;
     const target = isTask1 ? value.targets?.area_pct : value.targets?.temporal_coverage_pct;
     const targetLabel = isTask3
       ? "覆盖面积"
-      : isTask1
+      : isTask2
+        ? `达标面积（最长重访 ≤ ${formatDuration(mrtTargetMinutes)}）`
+        : isTask1
         ? target != null
           ? `达标面积（目标 ${target}%）`
           : "达标面积"
@@ -882,6 +901,12 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
         {isTask1 ? (
           <p className="plan-note">
             面积口径：目标区域至少成像一次即视为达标，不展示时间覆盖率与面积加权 MRT。
+          </p>
+        ) : isTask2 && Number(areaValue ?? 0) === 0 ? (
+          <p className="plan-note">
+            达标面积 0.0% 多半是目标低于物理下限：光学只覆盖白天，单格最长间隔至少是夜间空档
+            （约 12–19 h），分钟级目标（如 24 分）必然为 0。把「最长重访上限」改到小时级再求解，
+            或改用全天候载荷。
           </p>
         ) : isTask3 ? (
           <p className="plan-note">
