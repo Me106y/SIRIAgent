@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
-"""把 docs/PHASE2-REQUIREMENTS.md 渲染成与 PRD.html 同风格的独立 HTML。
+"""把 docs/PHASE{2,3}-REQUIREMENTS.md 渲染成与 PRD.html 同风格的独立 HTML。
 
 用法：
-    .venv/bin/python scripts/build_requirements_html.py
+    .venv/bin/python scripts/build_requirements_html.py            # Phase 2（默认）
+    .venv/bin/python scripts/build_requirements_html.py --phase 3  # Phase 3
 
 依赖：markdown（已加入 .venv）
 """
 from __future__ import annotations
 
+import argparse
 import html
 import re
 from pathlib import Path
@@ -15,14 +17,30 @@ from pathlib import Path
 import markdown
 
 ROOT = Path(__file__).resolve().parents[1]
-MD_PATH = ROOT / "docs" / "PHASE2-REQUIREMENTS.md"
-OUT_PATH = ROOT / "docs" / "PHASE2-REQUIREMENTS.html"
 
-TITLE = "SIRIAgent Phase 2 需求文档"
-SUBTITLE = "范围 · 优先级 · 验收标准"
-VERSION = "v1.4"
-DATE = "2026-10-19"
-STATUS = "102 颗 LEO 展示集定稿，无阻塞项"
+# 每个阶段的页面标题与首屏文案；源文件路径按 phase 推导。
+PHASE_CONFIG = {
+    "2": {
+        "title": "SIRIAgent Phase 2 需求文档",
+        "subtitle": "范围 · 优先级 · 验收标准",
+        "version": "v1.4",
+        "date": "2026-10-19",
+        "status": "102 颗 LEO 展示集定稿，无阻塞项",
+        "eyebrow": "Phase 2 · 需求文档",
+        "brand": "SIRIAgent · Phase 2",
+        "lead": "两仓库分工、星历数据服务、MCP 与命令式 skill、双栏前端改版。本文档是 Phase 2 的唯一事实源，包含 102 颗国产 LEO 卫星清单、优先级、验收标准、精度口径与风险边界。",
+    },
+    "3": {
+        "title": "SIRIAgent Phase 3 需求文档",
+        "subtitle": "遥感解译扩展 · 里程碑 · 验收剧本",
+        "version": "v0.1",
+        "date": "2026-11-12",
+        "status": "13 项决策已锁定，待实施",
+        "eyebrow": "Phase 3 · 需求文档",
+        "brand": "SIRIAgent · Phase 3",
+        "lead": "购买与工作区收敛、按钮语义切换、复刻 SIRIGeo 现役解译能力并全量 MCP 工具化。本文档是 Phase 3 的唯一事实源，包含四能力规格、四里程碑与六条验收剧本。",
+    },
+}
 
 
 CSS = r"""
@@ -338,7 +356,15 @@ def build_toc(toc: list[tuple[str, str, int]]) -> str:
 
 
 def main() -> int:
-    source = MD_PATH.read_text(encoding="utf-8")
+    parser = argparse.ArgumentParser(description="渲染 Phase 需求文档 HTML")
+    parser.add_argument("--phase", choices=("2", "3"), default="2")
+    args = parser.parse_args()
+
+    cfg = PHASE_CONFIG[args.phase]
+    md_path = ROOT / "docs" / f"PHASE{args.phase}-REQUIREMENTS.md"
+    out_path = ROOT / "docs" / f"PHASE{args.phase}-REQUIREMENTS.html"
+
+    source = md_path.read_text(encoding="utf-8")
     # 去掉一级标题（页面用 hero 呈现）
     source = re.sub(r"^# .*?\n", "", source, count=1)
 
@@ -350,12 +376,29 @@ def main() -> int:
     body = tag_priorities(body)
 
     toc_html = build_toc(toc)
+    decision_grids = {
+        "2": """
+      <article><span class="card-index">仓库</span><h3>两个公开仓库</h3><p><b>SIRIAgent</b> 负责前端、DSH 调用与 skill；<b>RS-Service</b> 负责星历库、同步、REST 与 MCP。运行数据不进仓库。</p></article>
+      <article><span class="card-index">数据</span><h3>12 张表</h3><p>卫星目录、TLE 历史、传感器、数据源、同步运行、同步状态、AOI、过境、覆盖等；TLE 追加写入，不覆盖。</p></article>
+      <article><span class="card-index">同步</span><h3>每天 1 次 · 3 次重试</h3><p>03:00 Asia/Shanghai 触发；退避 5/15/45 分钟；三次都失败当天停止，次日自动恢复。</p></article>
+      <article><span class="card-index">前端</span><h3>1/3 + 2/3</h3><p>左栏 Cesium 星历可视化，右栏 Agent；React + Vite + TypeScript，深空青绿，适配多分辨率与主流浏览器。</p></article>
+      <article><span class="card-index">精度</span><h3>口径写死</h3><p>SGP4 约 1 km/天；可视化 5°、成像 10°、光学太阳角 &gt;10°；足迹 ±2–5 km；所有输出带 accuracy_note。</p></article>
+      <article><span class="card-index">卫星</span><h3>102 颗 · 全部 LEO</h3><p>商业 64 / 民用 25 / 气象海洋 13，军事 0；LEO 可见 2.57–5.29 次/天。</p></article>""",
+        "3": """
+      <article><span class="card-index">范围</span><h3>复刻 SIRIGeo 现役四能力</h3><p>变化检测 + 目标检测 + 语义分割 + 图像处理（灰度 / Canny / 降噪），全部以 REST + MCP 工具暴露。</p></article>
+      <article><span class="card-index">购买</span><h3>固定对图 · 单份工作区</h3><p>每次购买只提供建筑变化 image1 / image2；工作区只存一份，重复购买只引用不复制。</p></article>
+      <article><span class="card-index">按钮</span><h3>让 Agent 分析 = 变化检测</h3><p>把固定对图交给 Agent，经 MCP detect_change 自主执行并解读；覆盖 / 选星 / 云量引导移除。</p></article>
+      <article><span class="card-index">模型</span><h3>YOLOX-S · SparseMask</h3><p>COCO 权重 Apache-2.0；OpenEarthMap 8 类 ONNX 限所内；允许镜像下载 + SHA256，替换需过三门槛。</p></article>
+      <article><span class="card-index">界面</span><h3>impeccable 重设计解译抽屉</h3><p>功能选择、输入槽位随功能自适应、结果内联；不搬 HTML 报告 + 本地 LLM 链路。</p></article>
+      <article><span class="card-index">里程碑</span><h3>M1 → M2 → M3 → M4</h3><p>M1 重置 + 购买 + 按钮语义；M2 目标检测；M3 语义分割；M4 图像处理；独立 PR / 验收 / bump。</p></article>""",
+    }[args.phase]
+
     doc = f"""<!doctype html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{TITLE}</title>
+<title>{cfg["title"]}</title>
 <style>{CSS}</style>
 </head>
 <body>
@@ -364,8 +407,8 @@ def main() -> int:
   <a class="brand" href="#main-content" aria-label="返回文档顶部">
     <span class="brand-mark">S</span>
     <span>
-      <strong>SIRIAgent · Phase 2</strong>
-      <small>{SUBTITLE}</small>
+      <strong>{cfg["brand"]}</strong>
+      <small>{cfg["subtitle"]}</small>
     </span>
   </a>
   <div class="topbar-actions">
@@ -381,32 +424,26 @@ def main() -> int:
   <main id="main-content">
     <section class="hero">
       <div class="hero-copy">
-        <p class="eyebrow">Phase 2 · 需求文档</p>
-        <h1>{TITLE}</h1>
-        <p class="hero-lead">两仓库分工、星历数据服务、MCP 与命令式 skill、双栏前端改版。本文档是 Phase 2 的唯一事实源，包含 102 颗国产 LEO 卫星清单、优先级、验收标准、精度口径与风险边界。</p>
+        <p class="eyebrow">{cfg["eyebrow"]}</p>
+        <h1>{cfg["title"]}</h1>
+        <p class="hero-lead">{cfg["lead"]}</p>
         <div class="meta-row">
-          <span class="meta-chip">版本 {VERSION}</span>
-          <span class="meta-chip">{DATE}</span>
-          <span class="meta-chip">{STATUS}</span>
-          <span class="meta-chip">源文件 docs/PHASE2-REQUIREMENTS.md</span>
+          <span class="meta-chip">版本 {cfg["version"]}</span>
+          <span class="meta-chip">{cfg["date"]}</span>
+          <span class="meta-chip">{cfg["status"]}</span>
+          <span class="meta-chip">源文件 docs/PHASE{args.phase}-REQUIREMENTS.md</span>
         </div>
       </div>
     </section>
 
-    <div class="decision-grid">
-      <article><span class="card-index">仓库</span><h3>两个公开仓库</h3><p><b>SIRIAgent</b> 负责前端、DSH 调用与 skill；<b>RS-Service</b> 负责星历库、同步、REST 与 MCP。运行数据不进仓库。</p></article>
-      <article><span class="card-index">数据</span><h3>12 张表</h3><p>卫星目录、TLE 历史、传感器、数据源、同步运行、同步状态、AOI、过境、覆盖等；TLE 追加写入，不覆盖。</p></article>
-      <article><span class="card-index">同步</span><h3>每天 1 次 · 3 次重试</h3><p>03:00 Asia/Shanghai 触发；退避 5/15/45 分钟；三次都失败当天停止，次日自动恢复。</p></article>
-      <article><span class="card-index">前端</span><h3>1/3 + 2/3</h3><p>左栏 Cesium 星历可视化，右栏 Agent；React + Vite + TypeScript，深空青绿，适配多分辨率与主流浏览器。</p></article>
-      <article><span class="card-index">精度</span><h3>口径写死</h3><p>SGP4 约 1 km/天；可视化 5°、成像 10°、光学太阳角 &gt;10°；足迹 ±2–5 km；所有输出带 accuracy_note。</p></article>
-      <article><span class="card-index">卫星</span><h3>102 颗 · 全部 LEO</h3><p>商业 64 / 民用 25 / 气象海洋 13，军事 0；LEO 可见 2.57–5.29 次/天。</p></article>
+    <div class="decision-grid">{decision_grids}
     </div>
 
 {body}
 
     <div class="document-control">
-      <span>{TITLE} · {VERSION} · {DATE}</span>
-      <span>SIRIAgent / docs/PHASE2-REQUIREMENTS.md</span>
+      <span>{cfg["title"]} · {cfg["version"]} · {cfg["date"]}</span>
+      <span>SIRIAgent / docs/PHASE{args.phase}-REQUIREMENTS.md</span>
     </div>
   </main>
 </div>
@@ -446,8 +483,8 @@ def main() -> int:
 </body>
 </html>
 """
-    OUT_PATH.write_text(doc, encoding="utf-8")
-    print(f"wrote {OUT_PATH} ({len(doc):,} bytes, {len(toc)} toc entries)")
+    out_path.write_text(doc, encoding="utf-8")
+    print(f"wrote {out_path} ({len(doc):,} bytes, {len(toc)} toc entries)")
     return 0
 
 

@@ -1,0 +1,933 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SIRIAgent Phase 3 需求文档</title>
+<style>
+:root {
+  --bg: #f3f6fc;
+  --surface: #ffffff;
+  --ink: #182647;
+  --muted: #5c6f94;
+  --line: #dfe7f4;
+  --brand: #2348b2;
+  --brand-ink: #17306f;
+  --brand-soft: #e9f0fd;
+  --brand-line: #c7d7f4;
+  --warn-bg: #fdf6e7;
+  --warn-line: #f0dca6;
+  --warn-ink: #7d5300;
+  --ok-bg: #eef7f0;
+  --ok-line: #bfe0c8;
+  --ok-ink: #1f6b3a;
+  --code-bg: #0f1b33;
+  --radius: 14px;
+  --shadow: 0 1px 2px rgba(23, 48, 111, .05), 0 8px 24px rgba(23, 48, 111, .07);
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Segoe UI", "Microsoft YaHei", "PingFang SC", system-ui, -apple-system, sans-serif;
+  font-size: 15px;
+  line-height: 1.78;
+}
+a { color: var(--brand-ink); text-decoration: none; }
+a:hover { text-decoration: underline; }
+code {
+  font-family: Consolas, "JetBrains Mono", Menlo, monospace;
+  font-size: .86em;
+  background: var(--brand-soft);
+  border: 1px solid var(--brand-line);
+  border-radius: 6px;
+  padding: 1px 6px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+pre {
+  background: var(--code-bg);
+  color: #dbe7ff;
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  overflow: auto;
+  font-size: 13px;
+  line-height: 1.7;
+  box-shadow: var(--shadow);
+  margin: 0 0 22px;
+}
+pre code {
+  background: none; border: none; padding: 0;
+  color: inherit; white-space: pre; font-size: 13px;
+}
+.skip-link { position: absolute; left: -9999px; }
+.skip-link:focus { left: 16px; top: 12px; background: var(--surface); padding: 8px 14px; border-radius: 8px; z-index: 99; }
+/* ---------- 顶栏 ---------- */
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 32px;
+  background: rgba(255, 255, 255, .93);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand:hover { text-decoration: none; }
+.brand-mark {
+  width: 42px; height: 42px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 12px;
+  background: linear-gradient(145deg, var(--brand), #4b78e6);
+  color: #fff; font-weight: 800; font-size: 18px;
+  box-shadow: 0 6px 16px rgba(35, 72, 178, .28);
+}
+.brand strong { display: block; font-size: 15.5px; color: var(--ink); }
+.brand small { display: block; font-size: 12px; color: var(--muted); }
+.primary-button {
+  border: none; cursor: pointer;
+  background: var(--brand); color: #fff;
+  font-size: 13.5px; font-weight: 600;
+  padding: 9px 18px; border-radius: 10px;
+  box-shadow: var(--shadow);
+  transition: background .15s ease;
+}
+.primary-button:hover { background: var(--brand-ink); }
+/* ---------- 版面 ---------- */
+.page-shell {
+  display: flex; gap: 40px; align-items: flex-start;
+  max-width: 1320px; margin: 0 auto;
+  padding: 30px 32px 90px;
+}
+.sidebar { width: 264px; flex-shrink: 0; position: sticky; top: 84px; max-height: calc(100vh - 110px); overflow-y: auto; padding-right: 4px; }
+#toc { display: flex; flex-direction: column; gap: 2px; }
+#toc a {
+  padding: 6px 12px; border-radius: 9px;
+  font-size: 13px; color: var(--muted);
+  border-left: 3px solid transparent;
+}
+#toc a.depth-3 { padding-left: 24px; font-size: 12.5px; }
+#toc a:hover { background: #edf2fa; text-decoration: none; color: var(--ink); }
+#toc a.active {
+  background: var(--brand-soft); color: var(--brand-ink);
+  border-left-color: var(--brand); font-weight: 600;
+}
+main { flex: 1; min-width: 0; }
+.doc-section { margin-bottom: 58px; scroll-margin-top: 84px; }
+.section-heading { margin-bottom: 20px; }
+.section-heading h2 { margin: 0 0 6px; font-size: 24px; letter-spacing: -.3px; }
+.section-heading p { margin: 0; color: var(--muted); font-size: 14px; }
+.sub-heading { margin: 34px 0 14px; font-size: 17px; scroll-margin-top: 84px; }
+.note { font-size: 13px; color: var(--muted); margin: 10px 0 18px; }
+h2 { scroll-margin-top: 84px; }
+h3 { scroll-margin-top: 84px; }
+h4 { margin: 26px 0 10px; font-size: 14.5px; scroll-margin-top: 84px; }
+/* ---------- 首屏 ---------- */
+.hero {
+  display: flex; gap: 28px; justify-content: space-between; align-items: stretch;
+  background: linear-gradient(135deg, #ffffff 0%, #eef4fe 55%, #d9e6fc 100%);
+  border: 1px solid var(--brand-line);
+  border-radius: 20px; padding: 38px 40px; margin-bottom: 30px;
+  box-shadow: var(--shadow);
+}
+.hero-copy { flex: 1; min-width: 0; }
+.eyebrow {
+  margin: 0 0 10px; font-size: 12.5px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase; color: var(--brand);
+}
+.hero h1 { margin: 0 0 12px; font-size: 30px; letter-spacing: -.5px; }
+.hero-lead { margin: 0; font-size: 15.5px; color: var(--muted); max-width: 720px; }
+.meta-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.meta-chip {
+  font-size: 12px; color: var(--brand-ink);
+  background: rgba(255, 255, 255, .7);
+  border: 1px solid var(--brand-line);
+  border-radius: 999px; padding: 4px 12px;
+}
+/* ---------- 核心决策卡片 ---------- */
+.decision-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin: 0 0 40px; }
+.decision-grid article {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 18px 20px; box-shadow: var(--shadow);
+}
+.decision-grid .card-index {
+  display: inline-block; font-size: 11.5px; font-weight: 700;
+  letter-spacing: 1px; color: var(--brand);
+  background: var(--brand-soft); border-radius: 6px; padding: 2px 10px; margin-bottom: 10px;
+}
+.decision-grid h3 { margin: 0 0 6px; font-size: 15px; }
+.decision-grid p { margin: 0; font-size: 13px; color: var(--muted); }
+/* ---------- 提示块 ---------- */
+.callout {
+  background: var(--surface); border: 1px solid var(--line);
+  border-left: 4px solid var(--brand);
+  border-radius: var(--radius); padding: 18px 22px; margin: 0 0 24px;
+  box-shadow: var(--shadow);
+}
+.callout-label {
+  display: block; font-size: 12px; font-weight: 700;
+  letter-spacing: 1.5px; color: var(--brand);
+  margin-bottom: 4px;
+}
+.callout p { margin: 0; font-size: 14px; color: var(--ink); }
+.callout p + p { margin-top: 8px; }
+/* ---------- 卡片网格 ---------- */
+.card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+.card-grid article {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 18px 20px; box-shadow: var(--shadow);
+}
+.card-grid .card-index {
+  display: inline-block; font-size: 11.5px; font-weight: 700;
+  letter-spacing: 1px; color: var(--brand);
+  background: var(--brand-soft); border-radius: 6px; padding: 2px 10px; margin-bottom: 10px;
+}
+.card-grid h3 { margin: 0 0 6px; font-size: 15px; }
+.card-grid p { margin: 0; font-size: 13px; color: var(--muted); }
+.card-grid .card-tail { display: block; margin-top: 10px; font-size: 12.5px; color: var(--brand-ink); }
+/* ---------- 表格 ---------- */
+.table-wrap {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); overflow: auto; box-shadow: var(--shadow);
+  margin-bottom: 22px;
+}
+table { width: 100%; border-collapse: collapse; }
+th {
+  text-align: left; font-size: 12.5px; letter-spacing: .3px;
+  color: var(--muted); background: #f1f5fc;
+  padding: 10px 14px; border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+td { padding: 11px 14px; border-bottom: 1px solid var(--line); font-size: 13.5px; vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+td code, th code { white-space: nowrap; }
+.table-wrap.wide table { min-width: 1040px; }
+.table-wrap.wide td, .table-wrap.wide th { word-break: keep-all; font-size: 12.4px; padding: 8px 10px; }
+.table-wrap.wide td:nth-child(11), .table-wrap.wide th:nth-child(11) { max-width: 240px; }
+/* ---------- 标签 ---------- */
+.tag {
+  display: inline-block; font-size: 11.5px; font-weight: 700;
+  border-radius: 6px; padding: 1px 8px; white-space: nowrap;
+  border: 1px solid var(--brand-line); background: var(--brand-soft); color: var(--brand-ink);
+}
+.tag.plain { border-color: var(--line); background: #f1f5fc; color: var(--muted); }
+.tag.warn { border-color: var(--warn-line); background: var(--warn-bg); color: var(--warn-ink); }
+.tag.ok { border-color: var(--ok-line); background: var(--ok-bg); color: var(--ok-ink); }
+/* ---------- 清单 ---------- */
+main ul, main ol { padding-left: 24px; }
+main li { margin: 6px 0; }
+main ul li::marker { color: var(--brand); }
+/* ---------- 页脚 ---------- */
+.document-control {
+  border-top: 1px solid var(--line); margin-top: 20px; padding-top: 22px;
+  color: var(--muted); font-size: 12.5px;
+  display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+}
+.back-to-top {
+  position: fixed; right: 26px; bottom: 26px; z-index: 60;
+  width: 42px; height: 42px; border-radius: 50%;
+  border: 1px solid var(--brand-line); background: #fff; color: var(--brand);
+  font-size: 17px; cursor: pointer; box-shadow: var(--shadow);
+  opacity: 0; pointer-events: none; transition: opacity .2s ease;
+}
+.back-to-top.visible { opacity: 1; pointer-events: auto; }
+@media (max-width: 960px) {
+  .page-shell { flex-direction: column; align-items: stretch; padding: 20px 18px 70px; }
+  .sidebar { position: static; width: 100%; max-width: 100%; max-height: none; margin-bottom: 6px; }
+  main { width: 100%; max-width: 100%; }
+  .table-wrap, pre { max-width: 100%; }
+  #toc {
+    flex-direction: row; flex-wrap: nowrap; gap: 4px;
+    overflow-x: auto; padding-bottom: 8px;
+    -webkit-overflow-scrolling: touch;
+  }
+  #toc a { white-space: nowrap; border-left: none; border-bottom: 3px solid transparent; }
+  #toc a.active { border-left: none; border-bottom-color: var(--brand); }
+  #toc a.depth-3 { padding-left: 12px; }
+  .hero { flex-direction: column; padding: 28px 24px; }
+}
+@media print {
+  .topbar, .sidebar, .back-to-top { display: none; }
+  body { background: #fff; }
+  .page-shell { max-width: none; padding: 0; display: block; }
+  .hero, .callout, .decision-grid article, .card-grid article, .table-wrap { box-shadow: none; break-inside: avoid; }
+  .doc-section { margin-bottom: 34px; }
+  pre { box-shadow: none; }
+}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main-content">跳到正文</a>
+<header class="topbar">
+  <a class="brand" href="#main-content" aria-label="返回文档顶部">
+    <span class="brand-mark">S</span>
+    <span>
+      <strong>SIRIAgent · Phase 3</strong>
+      <small>遥感解译扩展 · 里程碑 · 验收剧本</small>
+    </span>
+  </a>
+  <div class="topbar-actions">
+    <button type="button" class="primary-button" id="print-document">打印 / 导出 PDF</button>
+  </div>
+</header>
+
+<div class="page-shell">
+  <aside class="sidebar" aria-label="文档导航">
+    <nav id="toc" aria-label="文档导航">
+<a class="depth-2" href="#sec-1">1. 现状与目标</a>
+<a class="depth-3" href="#sec-1-1">1.1 现状</a>
+<a class="depth-3" href="#sec-1-2">1.2 Phase 3 目标</a>
+<a class="depth-3" href="#sec-1-3">1.3 完成口径（验收剧本）</a>
+<a class="depth-2" href="#sec-2">2. 范围与不做</a>
+<a class="depth-3" href="#sec-2-1">2.1 三仓边界</a>
+<a class="depth-3" href="#sec-2-2">2.2 明确不做</a>
+<a class="depth-2" href="#sec-3">3. 工作区与购买规则</a>
+<a class="depth-3" href="#sec-3-1">3.1 一次性重置（M1 开工时执行）</a>
+<a class="depth-3" href="#sec-3-2">3.2 购买新规则</a>
+<a class="depth-2" href="#sec-4">4. 遥感解译能力（复刻 SIRIGeo 现役）</a>
+<a class="depth-3" href="#sec-4-1">4.1 变化检测（保留，不改造）</a>
+<a class="depth-3" href="#sec-4-2">4.2 目标检测（M2 新增）</a>
+<a class="depth-3" href="#sec-4-3">4.3 语义分割（M3 新增）</a>
+<a class="depth-3" href="#sec-4-4">4.4 图像处理（M4 新增，三算子）</a>
+<a class="depth-3" href="#sec-4-5">4.5 演示图源</a>
+<a class="depth-2" href="#sec-5">5. MCP 工具契约（DSH Agent 可直接调用）</a>
+<a class="depth-2" href="#sec-6">6. 「让 Agent 分析」语义</a>
+<a class="depth-2" href="#sec-7">7. 界面（解译抽屉重设计，impeccable 回填）</a>
+<a class="depth-2" href="#sec-8">8. 里程碑</a>
+<a class="depth-2" href="#sec-9">9. 决策记录（已关闭）</a>
+<a class="depth-2" href="#sec-10">10. 风险与对策</a>
+<a class="depth-2" href="#sec-11">11. 变更记录</a>
+</nav>
+  </aside>
+
+  <main id="main-content">
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">Phase 3 · 需求文档</p>
+        <h1>SIRIAgent Phase 3 需求文档</h1>
+        <p class="hero-lead">购买与工作区收敛、按钮语义切换、复刻 SIRIGeo 现役解译能力并全量 MCP 工具化。本文档是 Phase 3 的唯一事实源，包含四能力规格、四里程碑与六条验收剧本。</p>
+        <div class="meta-row">
+          <span class="meta-chip">版本 v0.1</span>
+          <span class="meta-chip">2026-11-12</span>
+          <span class="meta-chip">13 项决策已锁定，待实施</span>
+          <span class="meta-chip">源文件 docs/PHASE3-REQUIREMENTS.md</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="decision-grid">
+      <article><span class="card-index">范围</span><h3>复刻 SIRIGeo 现役四能力</h3><p>变化检测 + 目标检测 + 语义分割 + 图像处理（灰度 / Canny / 降噪），全部以 REST + MCP 工具暴露。</p></article>
+      <article><span class="card-index">购买</span><h3>固定对图 · 单份工作区</h3><p>每次购买只提供建筑变化 image1 / image2；工作区只存一份，重复购买只引用不复制。</p></article>
+      <article><span class="card-index">按钮</span><h3>让 Agent 分析 = 变化检测</h3><p>把固定对图交给 Agent，经 MCP detect_change 自主执行并解读；覆盖 / 选星 / 云量引导移除。</p></article>
+      <article><span class="card-index">模型</span><h3>YOLOX-S · SparseMask</h3><p>COCO 权重 Apache-2.0；OpenEarthMap 8 类 ONNX 限所内；允许镜像下载 + SHA256，替换需过三门槛。</p></article>
+      <article><span class="card-index">界面</span><h3>impeccable 重设计解译抽屉</h3><p>功能选择、输入槽位随功能自适应、结果内联；不搬 HTML 报告 + 本地 LLM 链路。</p></article>
+      <article><span class="card-index">里程碑</span><h3>M1 → M2 → M3 → M4</h3><p>M1 重置 + 购买 + 按钮语义；M2 目标检测；M3 语义分割；M4 图像处理；独立 PR / 验收 / bump。</p></article>
+    </div>
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>文档定位</td>
+<td>Phase 3 唯一事实源（内部开发蓝图）</td>
+</tr>
+<tr>
+<td>版本</td>
+<td>v0.1</td>
+</tr>
+<tr>
+<td>状态</td>
+<td>共识锁定（2026-11-12 grilling 收敛 13 项决策），待实施</td>
+</tr>
+<tr>
+<td>配套网页</td>
+<td><code>docs/PHASE3-REQUIREMENTS.html</code>（由 <code>scripts/build_requirements_html.py --phase 3</code> 生成）</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="sec-1">1. 现状与目标</h2>
+<h3 id="sec-1-1">1.1 现状</h3>
+<ul>
+<li>Phase 2 已验收完成（见 <code>docs/PHASE2-REQUIREMENTS.md</code> §1.3）；成图规划走右栏「卫星成图」抽屉 → RS-Service 求解 → 四节报告 → 报告内「购买本方案」跳 <code>/purchase/&lt;run_id&gt;</code>。</li>
+<li>购买目前是模拟：<code>purchase.py</code> 每次随机复制一个主题目录（火灾 / 森林 / 沥青 / 洪水，5~22 张图）到 <code>workspace/images/pur-*/</code>，再附加「建筑变化」的 <code>image1.png</code>、<code>image2.png</code>。同一对图在工作区重复多份。</li>
+<li>「遥感解译」抽屉只做变化检测（FlickCD / WHU-CD 权重），前后图从工作区选择或上传，结果内联展示。</li>
+<li>RS-Service 已有 <code>/api/v1/interpret/images</code> 与 <code>/api/v1/interpret/change-detection</code> REST，以及 MCP 工具 <code>list_workspace_images</code>、<code>detect_change</code>；DSH Agent 已能经 MCP（<code>http://127.0.0.1:8765/mcp</code>）跑变化检测。</li>
+<li>抽屉「让 Agent 分析」目前给对话注入固定引导「重点看覆盖薄弱区、选星是否合理、云量影响」，与本阶段解译方向不符。</li>
+</ul>
+<h3 id="sec-1-2">1.2 Phase 3 目标</h3>
+<p>把 SIRIAgent 的遥感解译从「变化检测单功能」扩展为 SIRIGeo 现役能力的 Web 复刻：</p>
+<ol>
+<li><strong>购买与工作区收敛</strong>：购买只提供固定一对建筑变化图（<code>image1.png</code> / <code>image2.png</code>），不再随机复制主题目录；工作区只保留一份，重复购买只引用不复制。</li>
+<li><strong>按钮语义切换</strong>：「让 Agent 分析」改为把这对图交给 Agent 做变化检测分析（经 MCP），不再引导覆盖薄弱区 / 选星 / 云量。</li>
+<li><strong>解译能力扩展</strong>：变化检测（保留）+ 目标检测 + 语义分割 + 图像处理（灰度 / Canny 边缘 / 降噪），全部以 REST + MCP 工具暴露给前端与 DSH Agent。</li>
+<li><strong>界面重设计</strong>：解译抽屉由 impeccable 重新设计（功能选择、输入槽位自适应、结果展示）。</li>
+</ol>
+<h3 id="sec-1-3">1.3 完成口径（验收剧本）</h3>
+<ol>
+<li>工作区重置后干净：<code>workspace/images/</code>、<code>workspace/uploads/</code>、<code>purchases.json</code> 无历史残留。</li>
+<li>生成 task1 报告 → 购买 → 购买页只展示方案摘要 + <code>image1/2</code> 两张图；工作区只有一份 <code>workspace/images/building-change/</code>，多次购买不产生新副本。</li>
+<li>点「让 Agent 分析」→ Agent 在对话里经 MCP <code>detect_change</code> 分析该对图，输出变化指标、掩膜图路径、解读与 <code>accuracy_note</code>。</li>
+<li>解译抽屉跑通：目标检测（标注图 + 计数）、语义分割（分类专题图 + 图例 + 面积占比）、图像处理三算子（各档位结果图）。</li>
+<li>在对话里直接指挥（如「把这张图做边缘检测」），Agent 能经 MCP 工具完成，不需点抽屉。</li>
+<li>界面三档宽度（1280 / 1440 / 1920）无横向溢出；<code>cd web &amp;&amp; pnpm build</code> 与 <code>cd ../RS-Service &amp;&amp; uv run pytest</code> 全绿。</li>
+</ol>
+<hr />
+<h2 id="sec-2">2. 范围与不做</h2>
+<h3 id="sec-2-1">2.1 三仓边界</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>仓库</th>
+<th>本阶段改动</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SIRIAgent</td>
+<td><code>purchase.py</code> 购买规则、<code>app.py</code> 路由（如需）、<code>web/</code>（PlanDrawer 按钮语义、解译抽屉重设计、PurchasePage）、<code>demo/images/</code> 示例图、PHASE2 §7.3 顺延说明</td>
+</tr>
+<tr>
+<td>RS-Service</td>
+<td>解译推理模块（目标检测 / 语义分割 / 图像处理）、<code>data/models/</code> 权重、REST <code>/api/v1/interpret/*</code>、MCP 工具、依赖（新增 onnxruntime）</td>
+</tr>
+<tr>
+<td>SIRIGeo</td>
+<td><strong>只读参考</strong>，不做任何改动</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>浏览器 → Flask 8000 → RS-Service 8766 的边界不变；<code>/api/rs/*</code> 仍是唯一反代入口，DSH 经 MCP 直连 8765。</li>
+<li>解译输入路径的合法根从「仅 <code>workspace/</code>」扩展为「<code>workspace/</code> + <code>demo/</code>」（示例图必须能被抽屉与 MCP 使用）；越界仍 403。</li>
+</ul>
+<h3 id="sec-2-2">2.2 明确不做</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项</th>
+<th>原因</th>
+<th>去向</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SIRIGeo 的地形分析、植被检测</td>
+<td>SIRIGeo 已下线，非现役能力</td>
+<td>后续按需</td>
+</tr>
+<tr>
+<td>SIRIGeo 的「自定义功能」与 SQLite 影像图库</td>
+<td>桌面形态特有，与 Web 平台形态不符</td>
+<td>后续按需</td>
+</tr>
+<tr>
+<td>SIRIGeo 的「单文件 HTML 报告 + 本地 LLM 解读」链路</td>
+<td>平台已有 DSH Agent 兜底解读；抽屉保持内联结果</td>
+<td>后续按需</td>
+</tr>
+<tr>
+<td>解译任务队列 / 异步 job</td>
+<td>四个推理均为秒级（变化检测有 55s 预算），同步足够</td>
+<td>Phase 4+</td>
+</tr>
+<tr>
+<td>模型再训练</td>
+<td>一律现成预训练权重</td>
+<td>不做</td>
+</tr>
+<tr>
+<td>门禁控制（权限 / 审批 / 白名单）</td>
+<td>顺延</td>
+<td>Phase 4（原 PHASE2 §7.3 占位）</td>
+</tr>
+<tr>
+<td>工作区图像管理 UI（删除 / 重置按钮）</td>
+<td>重置是一次性运维动作</td>
+<td>按需再加</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="sec-3">3. 工作区与购买规则</h2>
+<h3 id="sec-3-1">3.1 一次性重置（M1 开工时执行）</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>对象</th>
+<th>动作</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>workspace/images/pur-*</code></td>
+<td>全部删除（9 个历史购买目录）</td>
+</tr>
+<tr>
+<td><code>workspace/uploads/*</code></td>
+<td>全部删除</td>
+</tr>
+<tr>
+<td><code>workspace/purchases.json</code></td>
+<td>清空为 <code>[]</code></td>
+</tr>
+<tr>
+<td><code>reports/interpret/</code></td>
+<td><strong>保留</strong>（历史检测结果可回看）</td>
+</tr>
+</tbody>
+</table></div>
+<div class="callout"><span class="callout-label">说明</span><p><code>workspace/</code> 在 <code>.gitignore</code> 内，重置不改仓库文件；重置是运维动作，不进 PR。</p></div>
+<h3 id="sec-3-2">3.2 购买新规则</h3>
+<ul>
+<li>购买不再随机选主题目录；每次购买只提供「建筑变化」固定对图：<code>image1.png</code>（变化前）、<code>image2.png</code>（变化后）。</li>
+<li>工作区只保留一份：<code>workspace/images/building-change/</code>。首次购买（或目录不存在）时复制；已存在则<strong>跳过复制</strong>，只写购买记录（引用同一目录，不产生副本）。</li>
+<li>购买记录字段：<code>run_id</code>、<code>summary</code>（方案摘要，取自 <code>plan.json</code>，与现状一致）、<code>image_files</code>（固定指向 <code>workspace/images/building-change/image1.png</code>、<code>image2.png</code>）、<code>created_at</code>；不再有 <code>source_dir</code> / <code>extras</code> / 逐文件清单。</li>
+<li>购买页（<code>/purchase/&lt;run_id|purchase_id&gt;</code>）只展示：方案摘要卡 + 两张图（变化前 / 变化后）。多方案购买入口保留现状（报告内「购买本方案」→ 首次进入触发购买 → 刷新只读）。</li>
+<li><code>purchase.py</code> 的 POOL / ALWAYS_INCLUDE 逻辑删除；<code>data/</code> 桌面目录（火灾等主题）不再被购买引用（示例图改由 §4.5 的 <code>demo/images/</code> 承担）。</li>
+</ul>
+<hr />
+<h2 id="sec-4">4. 遥感解译能力（复刻 SIRIGeo 现役）</h2>
+<p>四个能力共用契约：<strong>输入 = 平台内图像路径（<code>workspace/</code> 或 <code>demo/</code> 相对路径）→ 同步执行 → 输出 = 结果图路径 + 统计数字 + <code>accuracy_note</code></strong>。结果图落 <code>reports/interpret/&lt;run_id&gt;/</code>，输入图原样回显。</p>
+<h3 id="sec-4-1">4.1 变化检测（保留，不改造）</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项</th>
+<th>口径</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>模型</td>
+<td>FlickCD（RepViT-m0 编码器 + 差异增强 + 层级解码），WHU-CD 配置权重 <code>RS-Service/data/models/change_detection/best_model.pth</code>（已在用）</td>
+</tr>
+<tr>
+<td>输入</td>
+<td>前后两图（双时相）；最大边超 2048 先缩放</td>
+</tr>
+<tr>
+<td>输出</td>
+<td>变化掩膜 PNG、变化像素数、占比、连通域数、耗时、设备</td>
+</tr>
+<tr>
+<td>阈值</td>
+<td>0.5 固定（与 SIRIGeo 一致）；accuracy_note 沿用现有文案</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="sec-4-2">4.2 目标检测（M2 新增）</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项</th>
+<th>口径</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>模型</td>
+<td>YOLOX-S（Megvii 官方 sdist 最小 vendor 子集）+ COCO 80 类官方权重 <code>models/object_detection/yolox_s.pth</code>（Apache-2.0，可商用）；预处理与官方 demo 一致（等比 640×640、灰边 114 填充）</td>
+</tr>
+<tr>
+<td>推理参数</td>
+<td>CONF 0.25 / NMS 0.45（与 SIRIGeo 一致）</td>
+</tr>
+<tr>
+<td>输入</td>
+<td>单图（最大边超 2048 先缩放）</td>
+</tr>
+<tr>
+<td>输出</td>
+<td>检出标注图（框 + 类别 + 置信度）、目标数、类别数、置信度均值/最低、检测框列表（sidecar）、耗时</td>
+</tr>
+<tr>
+<td>性能</td>
+<td>纯 CPU 640×640 单图约 0.15s（SIRIGeo 实测口径）</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="sec-4-3">4.3 语义分割（M3 新增）</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项</th>
+<th>口径</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>模型</td>
+<td>oem-lightweight SparseMask + OpenEarthMap 8 类预训练 ONNX <code>models/semantic_segmentation/sparsemask_openearthmap.onnx</code>（代码 MIT；权重谱系 CC BY-NC-SA，<strong>限所内非商用</strong>）；类别表与调色板随权重目录 <code>sparsemask_config.json</code> 分发</td>
+</tr>
+<tr>
+<td>预处理</td>
+<td>等比缩到长边 1024、OpenEarthMap 均值方差归一化、反射填充到 32 的整数倍</td>
+</tr>
+<tr>
+<td>输入</td>
+<td>单图</td>
+</tr>
+<tr>
+<td>输出</td>
+<td>8 类分类专题图（调色板色图 + 图例）、半透明叠加图、各类面积与占比、类别数、耗时</td>
+</tr>
+<tr>
+<td>性能</td>
+<td>纯 CPU 1024 输入约 0.6s（SIRIGeo 实测口径）</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="sec-4-4">4.4 图像处理（M4 新增，三算子）</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>算子 id</th>
+<th>名称</th>
+<th>档位</th>
+<th>口径</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>grayscale</code></td>
+<td>灰度图</td>
+<td>无</td>
+<td>BGR → 单通道灰度（带 alpha 铺白底）</td>
+</tr>
+<tr>
+<td><code>canny</code></td>
+<td>边缘检测（Canny）</td>
+<td><code>soft</code> 30/90 · <code>normal</code> 50/150 · <code>sharp</code> 80/200</td>
+<td>先 5×5 高斯平滑再 Canny 双阈值，输出黑白线稿</td>
+</tr>
+<tr>
+<td><code>denoise</code></td>
+<td>降噪</td>
+<td><code>light</code> 高斯 3×3 · <code>medium</code> 中值 5×5 · <code>strong</code> NL-Means</td>
+<td>按强度三选一，保留主体结构</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>输出统一 PNG 落 <code>reports/interpret/&lt;run_id&gt;/</code>，文件名 = <code>&lt;原文件名&gt;_&lt;算子&gt;[_&lt;档位&gt;].png</code>，重名追加序号不覆盖（对齐 SIRIGeo）。</li>
+<li>图像处理算子由 <code>opencv-python-headless</code> 实现，无模型依赖；参数档位是常量表（不在代码/注释外另抄）。</li>
+</ul>
+<h3 id="sec-4-5">4.5 演示图源</h3>
+<ul>
+<li>从 SIRIGeo 复制对口样例到 <code>SIRIAgent/demo/images/</code>（git 入库、只读、不参与购买重置）：</li>
+<li>目标检测：<code>test_cars_01~03.jpg</code>（尾矿/车辆航拍，厘米级，可实际检出）；</li>
+<li>语义分割：OpenEarthMap 航拍 3 张（如 <code>aachen_1.jpg</code> 等）。</li>
+<li>解译抽屉图源 = 工作区图像（购买 + 上传）+ 示例图两个分区；用户上传通道保留（<code>workspace/uploads/</code>，单文件 ≤ 20MB，PNG/JPG）。</li>
+</ul>
+<hr />
+<h2 id="sec-5">5. MCP 工具契约（DSH Agent 可直接调用）</h2>
+<p>RS-Service MCP 服务（8765）在现有基础上新增三工具；<code>detect_change</code> 与 <code>list_workspace_images</code> 保留并放宽路径根（允许 <code>demo/</code>）。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>工具</th>
+<th>入参</th>
+<th>出参（要点）</th>
+<th>失败语义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>list_workspace_images</code></td>
+<td>无</td>
+<td>工作区 + 示例图清单（kind/group/name/path/宽高）</td>
+<td><code>{ok:false,error}</code></td>
+</tr>
+<tr>
+<td><code>detect_change</code></td>
+<td><code>before_path</code>, <code>after_path</code></td>
+<td>掩膜图路径、变化像素/占比、连通域、耗时、设备、<code>accuracy_note</code></td>
+<td>timeout 504 / forbidden 403 / 422</td>
+</tr>
+<tr>
+<td><code>detect_objects</code></td>
+<td><code>image_path</code></td>
+<td>标注图路径、目标数、类别数、置信度统计、检测框列表、耗时、<code>accuracy_note</code></td>
+<td>同上</td>
+</tr>
+<tr>
+<td><code>segment_semantics</code></td>
+<td><code>image_path</code></td>
+<td>分类专题图、叠加图、各类面积占比、图例、耗时、<code>accuracy_note</code></td>
+<td>同上</td>
+</tr>
+<tr>
+<td><code>process_image</code></td>
+<td><code>image_path</code>, <code>operator</code>(<code>grayscale</code>|<code>canny</code>|<code>denoise</code>), <code>level</code>（canny/denoise 档位，灰度忽略）</td>
+<td>结果图路径、算子、档位、耗时、<code>accuracy_note</code></td>
+<td>422（算子/档位非法）</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>全部<strong>同步执行</strong>；变化检测沿用 55s 内部预算，其余 &lt;10s。不引入任务队列。</li>
+<li><code>accuracy_note</code> 每个工具必带（如目标检测「YOLOX-S 估计，结果需人工复核；输入限制最大边 2048」）。</li>
+<li>REST 侧同步新增 <code>/api/v1/interpret/object-detection</code>、<code>/segment-semantics</code>、<code>/process-image</code>（SIRIAgent 抽屉经 <code>/api/rs/*</code> 反代调用）。</li>
+</ul>
+<hr />
+<h2 id="sec-6">6. 「让 Agent 分析」语义</h2>
+<ul>
+<li>按钮保留在「卫星成图」抽屉的报告中（文案可由 impeccable 一并优化），点击后<strong>不再</strong>注入覆盖薄弱区 / 选星 / 云量引导。</li>
+<li>新语义：把固定对图（<code>workspace/images/building-change/image1.png</code>、<code>image2.png</code>）的路径与购买方案摘要交给 Agent，指令为「基于遥感解译能力分析这对图（如变化检测），解读结果并给出建议」；Agent 经 MCP <code>detect_change</code> 自主执行并解读，结果（指标 + 掩膜图 + accuracy_note）在对话里呈现。</li>
+<li>若固定图不存在（从未购买），按钮禁用并提示「先购买方案获得图像」。</li>
+<li>覆盖薄弱区 / 选星 / 云量分析<strong>不保留按钮入口</strong>；用户可直接在对话里问，Agent 仍能读 <code>reports/imaging-plan/latest/plan.json</code> 与报告。</li>
+</ul>
+<hr />
+<h2 id="sec-7">7. 界面（解译抽屉重设计，impeccable 回填）</h2>
+<ul>
+<li>范围：只重设计「遥感解译」抽屉（功能选择、输入槽位随功能自适应、结果展示）；不碰星历主界面、购买页与整体视觉体系（响应式三档与色系沿用既有规范）。</li>
+<li>功能选择：变化检测（双图）/ 目标检测（单图）/ 语义分割（单图）/ 图像处理（单图 + 算子 + 档位）。</li>
+<li>输入：双/单图槽位随功能自适应；图源分区 = 工作区 + 示例图，另保留上传。</li>
+<li>结果：抽屉内联展示（结果图 + 指标 + <code>accuracy_note</code>）；不搬 SIRIGeo 的 HTML 报告链路。</li>
+<li><strong>时机</strong>：M2 开工前先跑 impeccable 设计访谈与产出，设计结论回填本节；M1 不动解译抽屉版式。</li>
+</ul>
+<hr />
+<h2 id="sec-8">8. 里程碑</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>里程碑</th>
+<th>内容</th>
+<th>验收</th>
+<th>涉及仓库</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M1 工作区与按钮语义</td>
+<td>一次性重置；购买新规则（固定对图、单份引用）；购买页改版；「让 Agent 分析」语义切换</td>
+<td>§1.3 第 1、2、3、6 条</td>
+<td>SIRIAgent</td>
+</tr>
+<tr>
+<td>M2 目标检测</td>
+<td>YOLOX-S 推理模块 + 权重下载校验 + REST + MCP + 抽屉功能选择（先跑 impeccable 设计）</td>
+<td>§1.3 第 4、5、6 条（目标检测部分）</td>
+<td>RS-Service + SIRIAgent</td>
+</tr>
+<tr>
+<td>M3 语义分割</td>
+<td>SparseMask ONNX 推理 + REST + MCP + 抽屉接入</td>
+<td>同上（语义分割部分）</td>
+<td>RS-Service + SIRIAgent</td>
+</tr>
+<tr>
+<td>M4 图像处理</td>
+<td>三算子 + 档位 + REST + MCP + 抽屉接入</td>
+<td>同上（图像处理部分）</td>
+<td>RS-Service + SIRIAgent</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>实施顺序：M1 → M2 → M3 → M4；M2/M3/M4 可并行开发，但每里程碑独立 PR、独立验收、独立 bump 版本（新能力 MINOR：SIRIAgent 1.6.0 起，RS-Service 同步 MINOR）。</li>
+<li>每个里程碑 PR 按 <code>.github/pull_request_template.md</code> 填写；本仓与 RS-Service 分开 PR（先合接口/后端，再合前端），正文互链。</li>
+<li>模型下载：允许经 hf-mirror 等镜像获取公开权重，附 SHA256 校验与许可说明；替换基线模型的判定 = 许可不劣于基线 ∧ 遥感对口不弱于基线 ∧ 纯 CPU 单图 ≤ 2s，三者同时满足才替换，否则沿用 §4 基线（评估结论回填 §4）。</li>
+</ul>
+<hr />
+<h2 id="sec-9">9. 决策记录（已关闭）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>决策点</th>
+<th>结论</th>
+<th>日期</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>D1</td>
+<td>阶段定位</td>
+<td>Phase 3「遥感解译扩展」；PRD 落 <code>docs/PHASE3-REQUIREMENTS.md</code>；PHASE2 §7.3 门禁顺延 Phase 4</td>
+<td>2026-11-12</td>
+</tr>
+<tr>
+<td>D2</td>
+<td>工作区重置</td>
+<td>一次性清理（images/、uploads/、purchases.json），reports/interpret 保留；不做常驻重置按钮</td>
+<td>2026-11-12</td>
+</tr>
+<tr>
+<td>D3</td>
+<td>购买新规则</td>
+<td>只提供「建筑变化」固定对图；工作区单份 <code>workspace/images/building-change/</code>，重复购买只引用不复制</td>
+<td>2026-11-12</td>
+</tr>
+<tr>
+<td>D4</td>
+<td>按钮语义</td>
+<td>「让 Agent 分析」= 交对图给 Agent 经 MCP 做变化检测并解读；覆盖/选星/云量引导移除、不设按钮</td>
+<td>2026-11-12</td>
+</tr>
+<tr>
+<td>D5</td>
+<td>复刻范围</td>
+<td>变化检测 + 目标检测 + 语义分割 + 图像处理三算子；不做地形分析/植被检测/自定义功能/SQLite 图库</td>
+<td>2026-11-12</td>
+</tr>
+<tr>
+<td>D6</td>
+<td>工具化</td>
+<td>四能力全部注册 MCP 工具（detect_change / detect_objects / segment_semantics / process_image）+ 对应 REST；同步执行、无队列</td>
+<td>2026-11-12</td>
+</tr>
+<tr>
+<td>D7</td>
+<td>模型选型</td>
+<td>基线 = YOLOX-S+COCO（Apache-2.0）、SparseMask OpenEarthMap 8 类 ONNX（CC BY-NC-SA 限所内）；允许镜像下载 + SHA256；「更好」= 许可不劣 ∧ 对口不弱 ∧ CPU ≤2s</td>
+<td>2026-11-12</td>
+</tr>
+<tr>
+<td>D8</td>
+<td>演示图源</td>
+<td>SIRIGeo 样例复制到 <code>demo/images/</code>（git 入库、只读）；抽屉图源 = 工作区 + 示例图 + 上传；路径合法根扩展为 workspace/ + demo/</td>
+<td>2026-11-12</td>
+</tr>
+<tr>
+<td>D9</td>
+<td>未提交改动</td>
+<td>工作区 8 个未提交文件（SW 自动更新等）单独开修复 PR 先合 main，Phase 3 从干净 main 起步</td>
+<td>2026-11-12</td>
+</tr>
+<tr>
+<td>D10</td>
+<td>impeccable</td>
+<td>只重设计解译抽屉，不碰主界面/购买页/视觉体系；M2 前先跑，结论回填 §7</td>
+<td>2026-11-12</td>
+</tr>
+<tr>
+<td>D11</td>
+<td>界面形态</td>
+<td>抽屉功能选择 + 输入自适应 + 结果内联；不搬 HTML 报告 + 本地 LLM 链路</td>
+<td>2026-11-12</td>
+</tr>
+<tr>
+<td>D12</td>
+<td>里程碑</td>
+<td>M1 重置+购买+按钮 → M2 目标检测 → M3 语义分割 → M4 图像处理；独立 PR/验收/版本 bump</td>
+<td>2026-11-12</td>
+</tr>
+<tr>
+<td>D13</td>
+<td>验收剧本</td>
+<td>§1.3 六条为 DoD</td>
+<td>2026-11-12</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="sec-10">10. 风险与对策</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>风险</th>
+<th>对策</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>R1</td>
+<td>权重下载失败（源站 / hf-mirror 不可达）</td>
+<td>优先 hf-mirror；记录 SHA256 与来源；失败时该里程碑 blocked，不降级 mock</td>
+</tr>
+<tr>
+<td>R2</td>
+<td>OpenEarthMap 权重许可（CC BY-NC-SA 限所内）</td>
+<td>报告与 MCP 工具文档明示；对外商用回退自训练预案（同 SIRIGeo B-R2）</td>
+</tr>
+<tr>
+<td>R3</td>
+<td>onnxruntime 新依赖与现有 torch 环境冲突</td>
+<td>在 RS-Service 单独验证导入与推理；CPU 版 onnxruntime 与 torch 共存无已知冲突，验证后再写 lock</td>
+</tr>
+<tr>
+<td>R4</td>
+<td>解译路径根扩展（demo/）被误用</td>
+<td><code>_resolve_image</code> 白名单根 + 拒绝绝对越界；测试覆盖 demo/ 放行与越界 403</td>
+</tr>
+<tr>
+<td>R5</td>
+<td>同步 MCP 调用在 Agent 回合内耗时</td>
+<td>变化检测预算 55s 沿用；其余秒级；超时返回明确错误而非挂起</td>
+</tr>
+<tr>
+<td>R6</td>
+<td>抽屉重设计（impeccable）与 M2 实现脱节</td>
+<td>设计结论先回填 §7 再开工；实现 PR 引用设计产出</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="sec-11">11. 变更记录</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>日期</th>
+<th>版本</th>
+<th>变更</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2026-11-12</td>
+<td>v0.1</td>
+<td>初版。基于 grilling 访谈锁定 13 项决策：购买固定对图与单份工作区、「让 Agent 分析」改解译语义、复刻 SIRIGeo 现役四能力并全量 MCP 工具化、四里程碑与六条验收剧本</td>
+</tr>
+</tbody>
+</table></div>
+
+    <div class="document-control">
+      <span>SIRIAgent Phase 3 需求文档 · v0.1 · 2026-11-12</span>
+      <span>SIRIAgent / docs/PHASE3-REQUIREMENTS.md</span>
+    </div>
+  </main>
+</div>
+
+<button type="button" class="back-to-top" id="back-to-top" aria-label="回到顶部">↑</button>
+
+<script>
+(function () {
+  var printBtn = document.getElementById('print-document');
+  if (printBtn) printBtn.addEventListener('click', function () { window.print(); });
+
+  var links = Array.prototype.slice.call(document.querySelectorAll('#toc a'));
+  var targets = links.map(function (a) {
+    var id = a.getAttribute('href').slice(1);
+    return document.getElementById(id);
+  }).filter(Boolean);
+
+  function setActive() {
+    var y = window.scrollY + 120;
+    var current = targets[0] || null;
+    targets.forEach(function (el) { if (el.offsetTop <= y) current = el; });
+    links.forEach(function (a) {
+      var on = current && a.getAttribute('href') === '#' + current.id;
+      a.classList.toggle('active', !!on);
+    });
+    var top = document.getElementById('back-to-top');
+    if (top) top.classList.toggle('visible', window.scrollY > 600);
+  }
+  window.addEventListener('scroll', setActive, { passive: true });
+  window.addEventListener('resize', setActive);
+  setActive();
+
+  var topBtn = document.getElementById('back-to-top');
+  if (topBtn) topBtn.addEventListener('click', function () { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+})();
+</script>
+</body>
+</html>

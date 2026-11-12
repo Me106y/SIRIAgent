@@ -769,10 +769,11 @@ when-to-use: 用户询问某地某时的卫星过境、可见性、覆盖能力�
 | Agent 误改工作区/系统文件 | 会话工作区固定；每日备份；Phase 3 优先补沙箱 |
 | 密钥泄露 | DSH 凭据只在 `~/.dsh-siriagent/.credentials.yaml`；不进仓库 |
 
-### 7.3 Phase 3 第一项（占位）
+### 7.3 门禁安排（2026-11-12 修订）
 
-- 工具面最小化 + 命令白名单 + 高风险审批 + 审计查询页。
-- 依据：Phase 2 的 `COMMANDS.md` 风险标注与 `command_audit` 表。
+- 原「Phase 3 第一项」的**门禁控制**（工具面最小化 + 命令白名单 + 高风险审批 + 审计查询页）**顺延至 Phase 4**。
+- 依据：Phase 3 实际范围定为「遥感解译扩展」，见 `docs/PHASE3-REQUIREMENTS.md`。
+- Phase 2 的 `COMMANDS.md` 风险标注与 `command_audit` 表仍作为 Phase 4 门禁设计的输入，口径不变。
 
 ---
 

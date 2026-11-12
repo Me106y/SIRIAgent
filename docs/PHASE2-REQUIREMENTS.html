@@ -315,7 +315,7 @@ main ul li::marker { color: var(--brand); }
 <a class="depth-2" href="#sec-7">7. 工作流 E — 门禁（Phase 2 不做）</a>
 <a class="depth-3" href="#sec-7-1">7.1 本轮决策</a>
 <a class="depth-3" href="#sec-7-2">7.2 已知风险与缓解</a>
-<a class="depth-3" href="#sec-7-3">7.3 Phase 3 第一项（占位）</a>
+<a class="depth-3" href="#sec-7-3">7.3 门禁安排（2026-11-12 修订）</a>
 <a class="depth-2" href="#sec-8">8. 优先级总表</a>
 <a class="depth-2" href="#sec-9">9. 依赖与里程碑</a>
 <a class="depth-3" href="#sec-9-1">9.1 实施进度（2026-11-07）</a>
@@ -3163,10 +3163,11 @@ when-to-use: 用户询问某地某时的卫星过境、可见性、覆盖能力�
 </tr>
 </tbody>
 </table></div>
-<h3 id="sec-7-3">7.3 Phase 3 第一项（占位）</h3>
+<h3 id="sec-7-3">7.3 门禁安排（2026-11-12 修订）</h3>
 <ul>
-<li>工具面最小化 + 命令白名单 + 高风险审批 + 审计查询页。</li>
-<li>依据：Phase 2 的 <code>COMMANDS.md</code> 风险标注与 <code>command_audit</code> 表。</li>
+<li>原「Phase 3 第一项」的<strong>门禁控制</strong>（工具面最小化 + 命令白名单 + 高风险审批 + 审计查询页）<strong>顺延至 Phase 4</strong>。</li>
+<li>依据：Phase 3 实际范围定为「遥感解译扩展」，见 <code>docs/PHASE3-REQUIREMENTS.md</code>。</li>
+<li>Phase 2 的 <code>COMMANDS.md</code> 风险标注与 <code>command_audit</code> 表仍作为 Phase 4 门禁设计的输入，口径不变。</li>
 </ul>
 <hr />
 <h2 id="sec-8">8. 优先级总表</h2>
@@ -3661,6 +3662,12 @@ M5 联调上线（约 0.5 周）
 <td>2026-11-05 起从 DSH skill 改为 RS-Service 后端 5 任务 + 右栏全屏抽屉；目录裁剪为 65 颗（61 光学 + 4 高光谱），SAR 19/缺幅宽 12/微波 6 移出</td>
 <td>2026-11-05</td>
 </tr>
+<tr>
+<td>Q7</td>
+<td>task1 自动扩窗上限</td>
+<td>自动扩窗按「请求窗口 → 72h → 168h」阶梯，最多 3 次，最大 7 天；请求 72h 不达标也会继续扩到 168h。超过 7 天的 TLE 按 §4.6.4 拒绝过境计算，不再往 14 天扩</td>
+<td>2026-11-10</td>
+</tr>
 </tbody>
 </table></div>
 <div class="callout"><span class="callout-label">说明</span><p>当前无阻塞项。下一步按 §9 的 M1 开工。</p></div>
@@ -3743,6 +3750,11 @@ M5 联调上线（约 0.5 周）
 <td>2026-11-10</td>
 <td>v3.15</td>
 <td>task4 改为固定 N 颗最小化 N% 面积分位 MRT（默认 <code>exact_budget=True</code>）；报告首屏显示面积分位 MRT 与「星数预算 / 实际」，不显示达标面积/时间覆盖率；覆盖回放是联合覆盖，不是 MRT KPI</td>
+</tr>
+<tr>
+<td>2026-11-10</td>
+<td>v3.16</td>
+<td>task1 自动扩窗改为「请求窗口 → 72h → 168h」阶梯（最多 3 次，最大 7 天）：修复请求 72h 时扩窗不生效、3 天不达标就停的问题；报告按实际窗口展示；超过 7 天按 TLE 口径拒绝过境，不扩到 14 天</td>
 </tr>
 <tr>
 <td>2026-11-09</td>
