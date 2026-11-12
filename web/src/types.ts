@@ -347,6 +347,39 @@ export interface ReportInfo {
   report_url: string;
 }
 
+export interface PlanHistoryKpi {
+  key: string;
+  label: string;
+  value: number | null;
+  unit: string;
+}
+
+export interface PlanHistoryItem {
+  run_id: string;
+  task: string;
+  task_label: string;
+  aoi_kind: "city" | "custom" | string;
+  area_name: string;
+  window_start: string | null;
+  window_end: string | null;
+  sat_count: number;
+  kpi: PlanHistoryKpi;
+  feasible: boolean;
+  created_at: string;
+  dir: string;
+  has_report: boolean;
+  relative_report: string;
+  relative_plan: string;
+}
+
+export interface PlanHistory {
+  ok: boolean;
+  root: string;
+  runs: PlanHistoryItem[];
+  total: number;
+  by_task: Record<string, number>;
+}
+
 export interface PlanCreateBody {
   operation: string;
   aoi_code?: string | null;
