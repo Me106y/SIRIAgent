@@ -47,7 +47,8 @@ git log --oneline -10
 ## 成图产物（运行时约定）
 
 - 成图由右栏“卫星成图”抽屉提交到 RS-Service，不再走 DSH skill；`skills/imaging-plan` 已移除。
-- 产物在 `reports/imaging-plan/<run_id>/`（`plan.json` + `report.html`），`latest` 指向最近一次。
+- 产物在 `reports/imaging-plan/<task>/<run_id>/`（`plan.json` + `report.html` + `meta.json`），`<task>` 是 `task1`..`task5`；`latest` 指向最近一次。
+- 抽屉的「历史结果」按任务分组列这些 run，读的是 RS-Service 的 `GET /api/rs/plans/history`（只读 `meta.json`）。
 - 要分析方案，先读 `reports/imaging-plan/latest/plan.json` 与 `report.html`；不要重新求解。
 
 ## 架构：四条不能破的线

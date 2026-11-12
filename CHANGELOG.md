@@ -2,6 +2,19 @@
 
 SIRIAgent 的用户可见变化。版本规则见 [docs/VERSIONING.md](docs/VERSIONING.md)。
 
+## [1.10.0] - 2026-11-12
+
+### Added
+
+- 成图抽屉第 5 步下方新增「历史结果」：左侧导轨分割线下一个入口，点开后主区按任务类型（task1–task5）分组，一份报告一张卡片——任务编号、区域（城市 / 自定义范围）、KPI 大字与星数、`run_id`、生成时间、窗口，以及常显的「打开报告 / 让 Agent 分析」；已购买的报告带「已购买」角标。
+- 历史数据来自 RS-Service 的 `GET /api/rs/plans/history`（只读每份报告的 `meta.json`），购买状态来自本仓 `/api/purchases`。
+
+### Changed
+
+- 报告按任务落盘：`reports/imaging-plan/<task>/<run_id>/{plan.json,report.html,meta.json}`，`latest` 软链指向 `<task>/<run_id>`；`purchase.py` 读 `plan.json` 时兼容新旧两种目录。
+- 报告「覆盖与回放」的回放时钟只显示时间，去掉累计覆盖百分比（百分比与 `cum[]` 累加一并删除）；推荐计划表的平均/最大覆盖、KPI 条与口径注释保持原样。
+- `POST /api/purchases` 改为按 `run_id` 幂等：同一份报告重复点「购买本方案」只返回原购买单，不再重复建单。
+
 ## [1.9.0] - 2026-11-12
 
 ### Added

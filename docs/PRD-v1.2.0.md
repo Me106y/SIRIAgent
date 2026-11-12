@@ -83,7 +83,7 @@ API：
 | GET | `/api/purchases/<purchase_id>` | 记录 + 文件清单 |
 | GET | `/api/purchases` | 最近购买列表（工作区页/后续用） |
 
-摘要来源：`reports/imaging-plan/<run_id>/plan.json`；读取失败时摘要留空但仍可购买。
+摘要来源：`reports/imaging-plan/<task>/<run_id>/plan.json`；读取失败时摘要留空但仍可购买。
 
 ## 4. 功能二：遥感解译（变化检测）
 

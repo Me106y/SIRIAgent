@@ -2,7 +2,17 @@ import { useEffect, useMemo, useState } from "react";
 
 import { api } from "../api";
 import { fileUrl } from "../lib/fileLinks";
-import type { PlanAoi, PlanCreateBody, PlanJob, PlanOptions, PlanResult, ReportInfo } from "../types";
+import type {
+  PlanAoi,
+  PlanCreateBody,
+  PlanHistory,
+  PlanHistoryItem,
+  PlanJob,
+  PlanOptions,
+  PlanResult,
+  PurchaseRecord,
+  ReportInfo,
+} from "../types";
 import { MapDrawModal } from "./MapDrawModal";
 
 interface Props {
@@ -78,6 +88,51 @@ function ArrowIcon({ back = false }: { back?: boolean }) {
 function formatNumber(value: number | null | undefined, digits = 1): string {
   if (value == null || Number.isNaN(value)) return "—";
   return value.toFixed(digits);
+}
+
+const TASK_ORDER = ["task1", "task2", "task3", "task4", "task5"];
+const TASK_NUMERALS = ["①", "②", "③", "④", "⑤"];
+
+function taskNumeral(key: string): string {
+  const index = TASK_ORDER.indexOf(key);
+  return index >= 0 ? TASK_NUMERALS[index] : "·";
+}
+
+function formatMoment(value?: string | null): string {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(
+    date.getMinutes(),
+  )}`;
+}
+
+function formatKpi(item: PlanHistoryItem): string {
+  const value = item.kpi?.value;
+  if (value == null || Number.isNaN(value)) return "—";
+  const unit = item.kpi?.unit ?? "";
+  if (unit === "%") return `${value.toFixed(1)}%`;
+  if (unit === "h") return `${value.toFixed(1)} h`;
+  return `${Math.round(value)} ${unit}`.trim();
+}
+
+function ChevronIcon({ open }: { open: boolean }) {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true" className={`history-chevron ${open ? "open" : ""}`}>
+      <path d="M4 6l4 4 4-4" />
+    </svg>
+  );
+}
+
+function HistoryIcon() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M8 4.2V8l2.6 1.6" />
+      <path d="M13.2 8a5.2 5.2 0 1 1-1.7-3.8" />
+      <path d="M13.4 1.8v2.6h-2.6" />
+    </svg>
+  );
 }
 
 function aoiDigits(item: PlanAoi): string {
@@ -204,6 +259,14 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
   const [pollError, setPollError] = useState<string | null>(null);
   const [report, setReport] = useState<ReportInfo | null>(null);
   const [reporting, setReporting] = useState(false);
+  // 左导轨第 5 步下方是「历史结果」：导轨只是入口，列表铺在主区才有分类与卡片的余地。
+  const [view, setView] = useState<"wizard" | "history">("wizard");
+  const [history, setHistory] = useState<PlanHistory | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [purchased, setPurchased] = useState<Record<string, string>>({});
+  const [closedGroups, setClosedGroups] = useState<Record<string, boolean>>({});
+  const [historySeq, setHistorySeq] = useState(0);
 
   const task = useMemo(
     () => options?.tasks.find((item) => item.operation === operation) ?? null,
@@ -277,6 +340,38 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
       alive = false;
     };
   }, [open]);
+
+  // 进入历史视图时读一次：报告列表来自 RS-Service，购买状态来自本仓 /api/purchases。
+  useEffect(() => {
+    if (!open || view !== "history") return;
+    let alive = true;
+    setHistoryLoading(true);
+    Promise.all([
+      api.planHistory(),
+      api.purchases().catch(() => ({ ok: false, items: [] as PurchaseRecord[] })),
+    ])
+      .then(([snapshot, purchases]) => {
+        if (!alive) return;
+        setHistory(snapshot);
+        const bought: Record<string, string> = {};
+        for (const item of purchases.items ?? []) {
+          if (item?.run_id && !bought[item.run_id]) bought[item.run_id] = item.purchase_id;
+        }
+        setPurchased(bought);
+        setHistoryError(null);
+      })
+      .catch((reason: unknown) => {
+        if (alive) {
+          setHistoryError(reason instanceof Error ? reason.message : "历史报告读取失败");
+        }
+      })
+      .finally(() => {
+        if (alive) setHistoryLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [open, view, historySeq]);
 
   useEffect(() => {
     if (!open) return;
@@ -938,6 +1033,129 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
     </div>
   );
 
+  const renderHistoryCard = (run: PlanHistoryItem) => {
+    const purchaseId = purchased[run.run_id];
+    const custom = run.aoi_kind === "custom";
+    return (
+      <article className="history-card" key={run.run_id}>
+        <div className="history-card-top">
+          <span className="history-card-numeral">{taskNumeral(run.task)}</span>
+          <span className={`history-card-area${custom ? " custom" : ""}`}>
+            {run.area_name || "—"}
+          </span>
+          {purchaseId ? (
+            <span className="history-card-bought" title={`购买单 ${purchaseId}`}>
+              已购买
+            </span>
+          ) : null}
+        </div>
+        <div className="history-card-kpi">
+          <strong>{formatKpi(run)}</strong>
+          <span>{run.kpi?.label ?? "KPI"}</span>
+          <em>{run.sat_count} 颗星</em>
+        </div>
+        <div className="history-card-meta">
+          <span className="mono">id {run.run_id}</span>
+          <span>{formatMoment(run.created_at)}</span>
+        </div>
+        <div className="history-card-window mono">
+          {formatMoment(run.window_start)} → {formatMoment(run.window_end)}
+        </div>
+        <div className="history-card-actions">
+          <a
+            className="plan-primary"
+            href={fileUrl(run.relative_report)}
+            target="_blank"
+            rel="noopener"
+          >
+            打开报告
+          </a>
+          <button type="button" className="plan-ghost" onClick={() => onAnalyze(run.relative_plan)}>
+            让 Agent 分析
+          </button>
+        </div>
+      </article>
+    );
+  };
+
+  const renderHistoryView = () => {
+    const runs = history?.runs ?? [];
+    const groups = TASK_ORDER.map((key, index) => ({
+      key,
+      label: options?.tasks.find((item) => item.operation === key)?.label ?? key,
+      numeral: TASK_NUMERALS[index],
+      runs: runs.filter((run) => run.task === key),
+    })).filter((group) => group.runs.length > 0);
+    const empty = history !== null && !historyLoading && !historyError && history.total === 0;
+    return (
+      <div className="history" key="history">
+        <header className="history-head">
+          <div>
+            <span className="plan-mark">归档</span>
+            <h2>历史结果</h2>
+            <p>按任务类型归档；一份报告一张卡，点开就是当时的四节报告。</p>
+          </div>
+          <button type="button" className="plan-ghost" onClick={() => setView("wizard")}>
+            返回向导
+          </button>
+        </header>
+
+        {historyLoading && !history ? (
+          <div className="plan-loading">正在读取历史报告…</div>
+        ) : null}
+
+        {historyError ? (
+          <div className="plan-error" role="alert">
+            <strong>历史报告读取失败</strong>
+            <p>{historyError}</p>
+            <button
+              type="button"
+              className="plan-ghost"
+              onClick={() => setHistorySeq((value) => value + 1)}
+            >
+              重试
+            </button>
+          </div>
+        ) : null}
+
+        {empty ? (
+          <div className="history-empty">
+            <strong>还没有历史报告</strong>
+            <p>先完成一次求解；报告会按任务类型归档到这里。</p>
+            <button type="button" className="plan-primary" onClick={() => setView("wizard")}>
+              回到向导
+            </button>
+          </div>
+        ) : null}
+
+        {groups.map((group) => {
+          const expanded = closedGroups[group.key] ?? group.key === operation;
+          return (
+            <section className="history-group" key={group.key}>
+              <button
+                type="button"
+                className="history-group-head"
+                aria-expanded={expanded}
+                onClick={() =>
+                  setClosedGroups((current) => ({ ...current, [group.key]: !expanded }))
+                }
+              >
+                <span className="history-group-numeral">{group.numeral}</span>
+                <span className="history-group-label">{group.label}</span>
+                <span className="history-group-count">{group.runs.length} 份</span>
+                <ChevronIcon open={expanded} />
+              </button>
+              {expanded ? (
+                <div className="history-grid">{group.runs.map(renderHistoryCard)}</div>
+              ) : null}
+            </section>
+          );
+        })}
+      </div>
+    );
+  };
+
+
   const stepContent = [
     renderTaskStep,
     renderAoiStep,
@@ -969,17 +1187,23 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
           </div>
           <ol className="plan-steps">
             {STEPS.map((label, index) => {
-              const active = index === step;
+              const active = view === "wizard" && index === step;
               const done = index < step;
               return (
                 <li key={label}>
                   <button
                     type="button"
                     className={`${active ? "active" : ""} ${done ? "done" : ""}`}
+                    aria-current={active ? "step" : undefined}
                     onClick={() => {
+                      if (view === "history") {
+                        setView("wizard");
+                        if (index <= step) setStep(index);
+                        return;
+                      }
                       if (index < step) setStep(index);
                     }}
-                    disabled={index > step}
+                    disabled={view === "wizard" && index > step}
                   >
                     <span className="plan-step-dot">{done ? <CheckIcon /> : index + 1}</span>
                     <span>{label}</span>
@@ -988,21 +1212,37 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
               );
             })}
           </ol>
+          <div className="plan-rail-split" role="separator" aria-orientation="horizontal" />
+          <button
+            type="button"
+            className={`plan-rail-history${view === "history" ? " active" : ""}`}
+            aria-pressed={view === "history"}
+            aria-label="历史结果"
+            onClick={() => setView(view === "history" ? "wizard" : "history")}
+          >
+            <span className="plan-rail-history-icon">
+              <HistoryIcon />
+            </span>
+            <span>历史结果</span>
+            {history && history.total > 0 ? <em>{history.total}</em> : null}
+          </button>
           <div className="plan-rail-foot">
             <span>{options?.capability.plannable ?? "—"} 颗可规划</span>
             <small>浙江省 · 5 km 网格 · TLE 每日同步</small>
           </div>
         </aside>
 
-        <section className="plan-main">
-          {optionsError ? (
+        <section className={`plan-main${view === "history" ? " is-history" : ""}`}>
+          {view === "wizard" && optionsError ? (
             <div className="plan-error" role="alert">
               <strong>规划服务不可用</strong>
               <p>{optionsError}</p>
             </div>
           ) : null}
-          {!options && !optionsError ? <div className="plan-loading">正在读取任务与范围…</div> : null}
-          {options && tleStale ? (
+          {view === "wizard" && !options && !optionsError ? (
+            <div className="plan-loading">正在读取任务与范围…</div>
+          ) : null}
+          {view === "wizard" && options && tleStale ? (
             <div className="plan-error" role="alert">
               <strong>TLE 已过期</strong>
               <p>
@@ -1011,9 +1251,10 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
               </p>
             </div>
           ) : null}
-          {options ? stepContent() : null}
+          {view === "wizard" && options ? stepContent() : null}
+          {view === "history" ? renderHistoryView() : null}
 
-          {options ? (
+          {view === "wizard" && options ? (
             <footer className="plan-nav">
               <button
                 type="button"

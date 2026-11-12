@@ -17,6 +17,7 @@ import type {
   PlanCreateBody,
   PlanJob,
   PlanOptions,
+  PlanHistory,
   PurchaseRecord,
   FixedPairFile,
   ReportInfo,
@@ -116,6 +117,9 @@ export const api = {
   planJob: (jobId: string) => getJson<PlanJob>(`/api/rs/plans/${jobId}`, 30_000),
   renderReport: (jobId: string) =>
     postJson<ReportInfo>(`/api/rs/plans/${jobId}/report`, {}, 60_000),
+  planHistory: () => getJson<PlanHistory>("/api/rs/plans/history?limit=200", 20_000),
+  purchases: () =>
+    getJson<{ ok: boolean; items: PurchaseRecord[] }>("/api/purchases", 20_000),
   createPurchase: (runId: string) =>
     postJson<{ ok: boolean; purchase: PurchaseRecord }>(
       "/api/purchases",

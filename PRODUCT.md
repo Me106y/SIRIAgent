@@ -25,7 +25,7 @@ SIRIAgent 是遥感任务平台：左 1/3 星历可视化（Cesium），右 2/3 
 ## Operating Context
 
 - 单机演示环境（127.0.0.1 + Cloudflare Tunnel），同一时刻只跑一轮对话。
-- 成图方案产物在 `reports/imaging-plan/<run_id>/`，购买记录在 `workspace/purchases.json`，工作区图像在 `workspace/images/`（购买 + `uploads/`）。
+- 成图方案产物在 `reports/imaging-plan/<task>/<run_id>/`（`task1`..`task5`），购买记录在 `workspace/purchases.json`，工作区图像在 `workspace/images/`（购买 + `uploads/`）。
 - 解译结果图落 `reports/interpret/<run_id>/`；示例图在 `demo/images/`（只读）。
 - 数据目录（`~/桌面/data/`）存放固定对图「建筑变化」等模拟影像。
 
@@ -42,7 +42,7 @@ SIRIAgent 是遥感任务平台：左 1/3 星历可视化（Cesium），右 2/3 
 ## Evidence on Hand
 
 - `docs/PHASE2-REQUIREMENTS.md`（星历与成图口径）、`docs/PHASE3-REQUIREMENTS.md`（解译扩展蓝图）。
-- `reports/imaging-plan/latest/`（真实求解结果）、`reports/interpret/`（真实 FlickCD 检测结果）、`demo/images/`（SIRIGeo 样例图）。
+- `reports/imaging-plan/latest/`（最近一次真实求解结果，软链到 `<task>/<run_id>`）、`reports/interpret/`（真实 FlickCD 检测结果）、`demo/images/`（SIRIGeo 样例图）。
 - 无用户访谈、无外部评测数据；演示场景证据以仓库运行数据为准，不虚构。
 
 ## Product Principles

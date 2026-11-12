@@ -66,9 +66,22 @@ def _write_records(records: list[dict[str, Any]]) -> None:
     tmp.replace(RECORD_FILE)
 
 
+def _plan_path(run_id: str) -> Path | None:
+    """报告落在 ``reports/imaging-plan/<task>/<run_id>/``；兼容旧的平铺目录。"""
+
+    if not run_id or not _RUN_ID_RE.match(run_id):
+        return None
+    direct = REPORT_DIR / run_id / "plan.json"
+    if direct.is_file():
+        return direct
+    for candidate in REPORT_DIR.glob(f"*/{run_id}/plan.json"):
+        return candidate
+    return None
+
+
 def _plan_summary(run_id: str) -> dict[str, Any]:
-    plan_path = REPORT_DIR / run_id / "plan.json"
-    if not _RUN_ID_RE.match(run_id) or not plan_path.is_file():
+    plan_path = _plan_path(run_id)
+    if plan_path is None:
         return {}
     try:
         plan = json.loads(plan_path.read_text(encoding="utf-8"))
@@ -163,11 +176,21 @@ def _fixed_files() -> list[dict[str, Any]]:
 
 @purchase_bp.post("/api/purchases")
 def create_purchase() -> Any:
-    """模拟购买：保证固定对图单份存在，然后写购买记录（引用同一目录）。"""
+    """模拟购买：保证固定对图单份存在，然后写购买记录（引用同一目录）。
+
+    按 ``run_id`` 幂等：同一份报告点第二次直接返回原购买单，不再新建，
+    否则报告里的「购买本方案」会被重复点出多条记录。
+    """
     body = request.get_json(silent=True) or {}
     run_id = str(body.get("run_id") or "").strip()
     if not run_id or not _RUN_ID_RE.match(run_id):
         return jsonify({"ok": False, "error": "run_id 不合法。"}), 400
+
+    with _lock:
+        existing = _read_records()
+        for item in existing:
+            if item.get("run_id") == run_id:
+                return jsonify({"ok": True, "purchase": _public(item), "reused": True}), 200
 
     try:
         _ensure_fixed_pair()
