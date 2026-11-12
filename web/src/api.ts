@@ -22,6 +22,7 @@ import type {
   ReportInfo,
   DetectionResult,
   ObjectDetectionResult,
+  SemanticSegmentationResult,
   WorkspaceImage,
 } from "./types";
 
@@ -136,6 +137,12 @@ export const api = {
     postJson<DetectionResult>(
       "/api/rs/interpret/change-detection",
       { before_path: beforePath, after_path: afterPath },
+      70_000,
+    ),
+  segmentSemantics: (imagePath: string) =>
+    postJson<SemanticSegmentationResult>(
+      "/api/rs/interpret/semantic-segmentation",
+      { image_path: imagePath },
       70_000,
     ),
   detectObjects: (imagePath: string) =>

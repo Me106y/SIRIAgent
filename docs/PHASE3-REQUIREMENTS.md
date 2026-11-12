@@ -3,7 +3,7 @@
 | 项 | 值 |
 | --- | --- |
 | 文档定位 | Phase 3 唯一事实源（内部开发蓝图） |
-| 版本 | v0.3 |
+| 版本 | v0.4 |
 | 状态 | M1 已落地；M2~M4 待实施 |
 | 配套网页 | `docs/PHASE3-REQUIREMENTS.html`（由 `scripts/build_requirements_html.py --phase 3` 生成） |
 
@@ -188,7 +188,7 @@ RS-Service MCP 服务（8765）在现有基础上新增三工具；`detect_chang
 | --- | --- | --- | --- |
 | M1 工作区与按钮语义 | 一次性重置；购买新规则（固定对图、单份引用）；购买页改版；「让 Agent 分析」语义切换 | §1.3 第 1、2、3、6 条 | SIRIAgent（**已落地**：重置完成；`purchase.py` 固定对图 + `building-change` 端点；购买页/按钮语义/按钮禁用已改；`pnpm build` 绿） |
 | M2 目标检测 | YOLOX-S 推理模块 + 权重下载校验 + REST + MCP + 抽屉功能选择（先跑 impeccable 设计） | §1.3 第 4、5、6 条（目标检测部分） | RS-Service + SIRIAgent（**已落地**：RS-Service PR #26；抽屉重设计 + 目标检测 UI + 示例图；`pnpm build` 绿） |
-| M3 语义分割 | SparseMask ONNX 推理 + REST + MCP + 抽屉接入 | 同上（语义分割部分） | RS-Service + SIRIAgent |
+| M3 语义分割 | SparseMask ONNX 推理 + REST + MCP + 抽屉接入 | 同上（语义分割部分） | RS-Service + SIRIAgent（**已落地**：RS-Service PR #27；抽屉第三功能 + 专题图/叠加图/类别占比图例；RS-Service 1.6.0） |
 | M4 图像处理 | 三算子 + 档位 + REST + MCP + 抽屉接入 | 同上（图像处理部分） | RS-Service + SIRIAgent |
 
 - 实施顺序：M1 → M2 → M3 → M4；M2/M3/M4 可并行开发，但每里程碑独立 PR、独立验收、独立 bump 版本（新能力 MINOR：SIRIAgent 1.6.0 起，RS-Service 同步 MINOR）。
@@ -234,6 +234,7 @@ RS-Service MCP 服务（8765）在现有基础上新增三工具；`detect_chang
 
 | 日期 | 版本 | 变更 |
 | --- | --- | --- |
+| 2026-11-12 | v0.4 | M3 落地（§8）：RS-Service 新增 SparseMask + OpenEarthMap 8 类语义分割（`POST /api/v1/interpret/semantic-segmentation`、MCP `segment_semantics`、onnxruntime 依赖、`fetch_models.py sparsemask`）；抽屉新增「语义分割」功能，结果展示原图/专题图/叠加图 + 8 类占比图例 + `accuracy_note` |
 | 2026-11-12 | v0.3 | M2 落地（§8）：impeccable 设计访谈回填 §7（功能分段控件 / 自适应槽位 / 工作区+示例图两段 / 目标检测可折叠框列表）；解译抽屉重设计并接入目标检测；示例图入库 `demo/images/`（目标检测 4 张 + 语义分割 3 张）；RS-Service 侧 YOLOX-S 推理 + REST + MCP `detect_objects`（PR #26） |
 | 2026-11-12 | v0.2 | M1 落地（§8）：工作区一次性重置；`purchase.py` 购买改为固定对图单份引用（`workspace/images/building-change/`），新增 `GET /api/purchases/building-change`；购买页只展示变化前/后两张图；「让 Agent 分析」改解译语义（把固定对图交给 Agent 跑变化检测），固定图不存在时按钮禁用 |
 | 2026-11-12 | v0.1 | 初版。基于 grilling 访谈锁定 13 项决策：购买固定对图与单份工作区、「让 Agent 分析」改解译语义、复刻 SIRIGeo 现役四能力并全量 MCP 工具化、四里程碑与六条验收剧本 |

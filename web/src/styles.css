@@ -3575,3 +3575,32 @@ button {
     grid-template-columns: 1fr;
   }
 }
+
+.interpret-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.interpret-legend li {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.interpret-legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.interpret-legend b {
+  font-weight: 600;
+  color: var(--ink);
+}

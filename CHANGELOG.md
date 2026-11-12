@@ -2,6 +2,13 @@
 
 SIRIAgent 的用户可见变化。版本规则见 [docs/VERSIONING.md](docs/VERSIONING.md)。
 
+## [1.8.0] - 2026-11-12
+
+### Added
+
+- Phase 3 M3：遥感解译新增「语义分割」（SparseMask OpenEarthMap 8 类）——原图 / 分类专题图 / 分类叠加图三图对照，8 类面积占比图例（按占比排序）+ `accuracy_note`，经 `/api/rs/interpret/semantic-segmentation`。
+- 解译抽屉功能分段控件扩为三项（变化检测 / 目标检测 / 语义分割）。
+
 ## [1.7.0] - 2026-11-12
 
 ### Added

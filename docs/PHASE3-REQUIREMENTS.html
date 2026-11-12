@@ -308,9 +308,9 @@ main ul li::marker { color: var(--brand); }
         <h1>SIRIAgent Phase 3 需求文档</h1>
         <p class="hero-lead">购买与工作区收敛、按钮语义切换、复刻 SIRIGeo 现役解译能力并全量 MCP 工具化。本文档是 Phase 3 的唯一事实源，包含四能力规格、四里程碑与六条验收剧本。</p>
         <div class="meta-row">
-          <span class="meta-chip">版本 v0.3</span>
+          <span class="meta-chip">版本 v0.4</span>
           <span class="meta-chip">2026-11-12</span>
-          <span class="meta-chip">M1/M2 已落地，M3~M4 待实施</span>
+          <span class="meta-chip">M1~M3 已落地，M4 待实施</span>
           <span class="meta-chip">源文件 docs/PHASE3-REQUIREMENTS.md</span>
         </div>
       </div>
@@ -339,7 +339,7 @@ main ul li::marker { color: var(--brand); }
 </tr>
 <tr>
 <td>版本</td>
-<td>v0.3</td>
+<td>v0.4</td>
 </tr>
 <tr>
 <td>状态</td>
@@ -724,7 +724,7 @@ main ul li::marker { color: var(--brand); }
 <td>M3 语义分割</td>
 <td>SparseMask ONNX 推理 + REST + MCP + 抽屉接入</td>
 <td>同上（语义分割部分）</td>
-<td>RS-Service + SIRIAgent</td>
+<td>RS-Service + SIRIAgent（<strong>已落地</strong>：RS-Service PR #27；抽屉第三功能 + 专题图/叠加图/类别占比图例；RS-Service 1.6.0）</td>
 </tr>
 <tr>
 <td>M4 图像处理</td>
@@ -887,6 +887,11 @@ main ul li::marker { color: var(--brand); }
 <tbody>
 <tr>
 <td>2026-11-12</td>
+<td>v0.4</td>
+<td>M3 落地（§8）：RS-Service 新增 SparseMask + OpenEarthMap 8 类语义分割（<code>POST /api/v1/interpret/semantic-segmentation</code>、MCP <code>segment_semantics</code>、onnxruntime 依赖、<code>fetch_models.py sparsemask</code>）；抽屉新增「语义分割」功能，结果展示原图/专题图/叠加图 + 8 类占比图例 + <code>accuracy_note</code></td>
+</tr>
+<tr>
+<td>2026-11-12</td>
 <td>v0.3</td>
 <td>M2 落地（§8）：impeccable 设计访谈回填 §7（功能分段控件 / 自适应槽位 / 工作区+示例图两段 / 目标检测可折叠框列表）；解译抽屉重设计并接入目标检测；示例图入库 <code>demo/images/</code>（目标检测 4 张 + 语义分割 3 张）；RS-Service 侧 YOLOX-S 推理 + REST + MCP <code>detect_objects</code>（PR #26）</td>
 </tr>
@@ -904,7 +909,7 @@ main ul li::marker { color: var(--brand); }
 </table></div>
 
     <div class="document-control">
-      <span>SIRIAgent Phase 3 需求文档 · v0.3 · 2026-11-12</span>
+      <span>SIRIAgent Phase 3 需求文档 · v0.4 · 2026-11-12</span>
       <span>SIRIAgent / docs/PHASE3-REQUIREMENTS.md</span>
     </div>
   </main>
