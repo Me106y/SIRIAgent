@@ -261,7 +261,11 @@ def _rs_json(subpath: str) -> dict:
 def service_worker():
     """无扩展名路径：Cloudflare 不按静态资源缓存，SW 更新能立即生效。"""
     response = send_from_directory(WEB_DIST, "sw.js")
-    response.headers["Cache-Control"] = "no-cache, max-age=0"
+    # 每次构建都会改写 SW 里的 VERSION，必须让浏览器每次回源校验，
+    # 否则用户会长期停在旧 SW 上，看老版本页面。
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
     response.headers["Service-Worker-Allowed"] = "/"
     return response
 
