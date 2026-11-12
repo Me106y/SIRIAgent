@@ -3,7 +3,7 @@
 | 项 | 值 |
 | --- | --- |
 | 文档定位 | Phase 3 唯一事实源（内部开发蓝图） |
-| 版本 | v0.2 |
+| 版本 | v0.3 |
 | 状态 | M1 已落地；M2~M4 待实施 |
 | 配套网页 | `docs/PHASE3-REQUIREMENTS.html`（由 `scripts/build_requirements_html.py --phase 3` 生成） |
 
@@ -136,8 +136,8 @@
 ### 4.5 演示图源
 
 - 从 SIRIGeo 复制对口样例到 `SIRIAgent/demo/images/`（git 入库、只读、不参与购买重置）：
-  - 目标检测：`test_cars_01~03.jpg`（尾矿/车辆航拍，厘米级，可实际检出）；
-  - 语义分割：OpenEarthMap 航拍 3 张（如 `aachen_1.jpg` 等）。
+  - 目标检测：`object_02.jpg`、`object_05.jpg`、`test_cars_02.jpg`、`test_cars_03.jpg`（车辆 / 人员航拍，YOLOX-S 实测可检出 `car` / `person` / `truck`；`test_cars_01` 与 `object_01` 同一张且检出异常，已弃用）；
+  - 语义分割：OpenEarthMap 航拍 3 张（`aachen_1.jpg`、`accra_1.jpg`、`abancay_1.jpg`）。
 - 解译抽屉图源 = 工作区图像（购买 + 上传）+ 示例图两个分区；用户上传通道保留（`workspace/uploads/`，单文件 ≤ 20MB，PNG/JPG）。
 
 ---
@@ -169,13 +169,16 @@ RS-Service MCP 服务（8765）在现有基础上新增三工具；`detect_chang
 
 ---
 
-## 7. 界面（解译抽屉重设计，impeccable 回填）
+## 7. 界面（解译抽屉重设计，impeccable v0.3 回填）
 
 - 范围：只重设计「遥感解译」抽屉（功能选择、输入槽位随功能自适应、结果展示）；不碰星历主界面、购买页与整体视觉体系（响应式三档与色系沿用既有规范）。
-- 功能选择：变化检测（双图）/ 目标检测（单图）/ 语义分割（单图）/ 图像处理（单图 + 算子 + 档位）。
-- 输入：双/单图槽位随功能自适应；图源分区 = 工作区 + 示例图，另保留上传。
-- 结果：抽屉内联展示（结果图 + 指标 + `accuracy_note`）；不搬 SIRIGeo 的 HTML 报告链路。
-- **时机**：M2 开工前先跑 impeccable 设计访谈与产出，设计结论回填本节；M1 不动解译抽屉版式。
+- 功能选择：抽屉顶部一行**功能分段控件**四选一（变化检测 / 目标检测 / 语义分割 / 图像处理）；沿用现有 `plan-ghost` / `plan-primary` 视觉词汇，不做新色系。
+- 输入：双图功能两个槽位（变化前 / 变化后），单图功能一个槽位；**切换功能时清空不兼容的槽位**；图像处理额外给「算子 + 档位」下拉。
+- 图源：两段列表——「工作区」（购买 + 上传）、「示例图」（`demo/images/`），另保留「从文件夹上传」。
+- 结果：抽屉内联展示（结果图 + 指标 + `accuracy_note`）；目标检测结果带**可折叠检测框列表**；无检测结果时给空态提示换图。
+- 状态：空态（提示先购买/上传）、执行中（按钮禁用 + 阶段文案）、错误（内联红条）、成功（结果卡）、无结果（空态）。
+- 交互：保留 ESC 关闭与既有键盘聚焦；不生成 HTML 报告。
+- **时机**：M2 开工前先跑 impeccable 设计访谈与产出，设计结论回填本节；M1 不动解译抽屉版式（已完成）。
 
 ---
 
@@ -184,7 +187,7 @@ RS-Service MCP 服务（8765）在现有基础上新增三工具；`detect_chang
 | 里程碑 | 内容 | 验收 | 涉及仓库 |
 | --- | --- | --- | --- |
 | M1 工作区与按钮语义 | 一次性重置；购买新规则（固定对图、单份引用）；购买页改版；「让 Agent 分析」语义切换 | §1.3 第 1、2、3、6 条 | SIRIAgent（**已落地**：重置完成；`purchase.py` 固定对图 + `building-change` 端点；购买页/按钮语义/按钮禁用已改；`pnpm build` 绿） |
-| M2 目标检测 | YOLOX-S 推理模块 + 权重下载校验 + REST + MCP + 抽屉功能选择（先跑 impeccable 设计） | §1.3 第 4、5、6 条（目标检测部分） | RS-Service + SIRIAgent |
+| M2 目标检测 | YOLOX-S 推理模块 + 权重下载校验 + REST + MCP + 抽屉功能选择（先跑 impeccable 设计） | §1.3 第 4、5、6 条（目标检测部分） | RS-Service + SIRIAgent（**已落地**：RS-Service PR #26；抽屉重设计 + 目标检测 UI + 示例图；`pnpm build` 绿） |
 | M3 语义分割 | SparseMask ONNX 推理 + REST + MCP + 抽屉接入 | 同上（语义分割部分） | RS-Service + SIRIAgent |
 | M4 图像处理 | 三算子 + 档位 + REST + MCP + 抽屉接入 | 同上（图像处理部分） | RS-Service + SIRIAgent |
 
@@ -231,5 +234,6 @@ RS-Service MCP 服务（8765）在现有基础上新增三工具；`detect_chang
 
 | 日期 | 版本 | 变更 |
 | --- | --- | --- |
+| 2026-11-12 | v0.3 | M2 落地（§8）：impeccable 设计访谈回填 §7（功能分段控件 / 自适应槽位 / 工作区+示例图两段 / 目标检测可折叠框列表）；解译抽屉重设计并接入目标检测；示例图入库 `demo/images/`（目标检测 4 张 + 语义分割 3 张）；RS-Service 侧 YOLOX-S 推理 + REST + MCP `detect_objects`（PR #26） |
 | 2026-11-12 | v0.2 | M1 落地（§8）：工作区一次性重置；`purchase.py` 购买改为固定对图单份引用（`workspace/images/building-change/`），新增 `GET /api/purchases/building-change`；购买页只展示变化前/后两张图；「让 Agent 分析」改解译语义（把固定对图交给 Agent 跑变化检测），固定图不存在时按钮禁用 |
 | 2026-11-12 | v0.1 | 初版。基于 grilling 访谈锁定 13 项决策：购买固定对图与单份工作区、「让 Agent 分析」改解译语义、复刻 SIRIGeo 现役四能力并全量 MCP 工具化、四里程碑与六条验收剧本 |

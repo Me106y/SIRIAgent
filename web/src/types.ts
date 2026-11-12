@@ -418,7 +418,7 @@ export interface PurchaseRecord {
 }
 
 export interface WorkspaceImage {
-  kind: "purchase" | "upload";
+  kind: "purchase" | "upload" | "demo";
   group: string;
   name: string;
   path: string;
@@ -440,6 +440,32 @@ export interface DetectionResult {
   components: number;
   elapsed_ms: number;
   resized: boolean;
+  device: string;
+  accuracy_note: string;
+}
+
+export interface ObjectDetection {
+  label: string;
+  class_id: number;
+  score: number;
+  box: number[];
+}
+
+export interface ObjectDetectionResult {
+  ok: boolean;
+  run_id: string;
+  image_path: string;
+  annotated_path: string;
+  width: number;
+  height: number;
+  count: number;
+  class_count: number;
+  classes: string[];
+  score_mean: number;
+  score_min: number;
+  detections: ObjectDetection[];
+  resized: boolean;
+  elapsed_ms: number;
   device: string;
   accuracy_note: string;
 }

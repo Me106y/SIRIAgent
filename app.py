@@ -451,7 +451,12 @@ def serve_generated_file() -> Response:
         resolved = candidate.resolve(strict=True)
     except (OSError, RuntimeError):
         return jsonify({"error": "not found"}), 404
-    allowed_roots = (PROJECT_ROOT / "reports", PROJECT_ROOT / "workspace")
+    # reports/ 报告产物、workspace/ 运行图像、demo/ 只读示例图（Phase 3 解译抽屉）。
+    allowed_roots = (
+        PROJECT_ROOT / "reports",
+        PROJECT_ROOT / "workspace",
+        PROJECT_ROOT / "demo",
+    )
     if not any(resolved.is_relative_to(root) for root in allowed_roots):
         return jsonify({"error": "forbidden"}), 403
     if not resolved.is_file():
