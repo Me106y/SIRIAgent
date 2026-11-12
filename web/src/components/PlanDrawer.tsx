@@ -695,7 +695,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
         <input type="checkbox" checked={cloud} onChange={(event) => setCloud(event.target.checked)} />
         <span>
           按云量过滤
-          <small>Open-Meteo 逐小时 cloud_cover &gt; 70% 的访问不参与选星</small>
+          <small>按 AOI 内网格代表点取 Open-Meteo 逐小时 cloud_cover，&gt; 70% 的网格访问不参与选星</small>
         </span>
       </label>
 

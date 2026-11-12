@@ -2,6 +2,15 @@
 
 SIRIAgent 的用户可见变化。版本规则见 [docs/VERSIONING.md](docs/VERSIONING.md)。
 
+## [1.5.4] - 2026-11-11
+
+### Fixed
+
+- 其他设备访问时长期看到旧版本：Service Worker 的 `VERSION` 自 2026-10-19 起固定不变，`activate` 的清理逻辑永远不触发，`/assets/` 又在 `cacheFirst` 下命中旧缓存，于是新 HTML 配旧 JS。现在构建时自动把 `VERSION` 替换成构建时间戳，每次发版 SW 字节都会变，浏览器必然重新 install/activate 并清空旧缓存。
+- 页面在 SW 接管时自动重载一次（只重载一次，不会刷屏），用户无需手动清缓存。
+- 不带内容哈希的 `/cesium/`、`/logo-` 改走 stale-while-revalidate，原地更新也能生效。
+- `/sw` 响应改为 `no-store`，浏览器每次回源校验。
+
 ## [1.5.3] - 2026-11-10
 
 ### Changed
