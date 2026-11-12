@@ -387,6 +387,16 @@ export interface PurchaseFile {
   height?: number;
 }
 
+export interface FixedPairFile {
+  name: string;
+  phase: "before" | "after";
+  label: string;
+  path: string;
+  bytes?: number;
+  width?: number;
+  height?: number;
+}
+
 export interface PurchaseSummary {
   city?: string | null;
   window_start?: string | null;
@@ -400,11 +410,9 @@ export interface PurchaseSummary {
 export interface PurchaseRecord {
   purchase_id: string;
   run_id: string;
-  source_dir: string;
-  extras?: string[];
   workspace_dir: string;
   summary: PurchaseSummary;
-  files: PurchaseFile[];
+  image_files: FixedPairFile[];
   created_at: string;
   simulated: boolean;
 }

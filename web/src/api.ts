@@ -18,6 +18,7 @@ import type {
   PlanJob,
   PlanOptions,
   PurchaseRecord,
+  FixedPairFile,
   ReportInfo,
   DetectionResult,
   WorkspaceImage,
@@ -121,6 +122,11 @@ export const api = {
   purchase: (purchaseId: string) =>
     getJson<{ ok: boolean; purchase: PurchaseRecord }>(
       `/api/purchases/${encodeURIComponent(purchaseId)}`,
+      30_000,
+    ),
+  buildingChange: () =>
+    getJson<{ ok: boolean; workspace_dir: string; image_files: FixedPairFile[] }>(
+      "/api/purchases/building-change",
       30_000,
     ),
   workspaceImages: () =>

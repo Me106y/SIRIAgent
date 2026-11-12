@@ -16,10 +16,6 @@ function formatTime(value?: string | null): string {
   });
 }
 
-function isImage(name: string): boolean {
-  return /\.(png|jpe?g)$/i.test(name);
-}
-
 export function PurchasePage({ purchaseId }: { purchaseId: string }) {
   const [record, setRecord] = useState<PurchaseRecord | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -65,7 +61,7 @@ export function PurchasePage({ purchaseId }: { purchaseId: string }) {
   }, [purchaseId]);
 
   const summary = record?.summary ?? {};
-  const images = (record?.files ?? []).filter((file) => isImage(file.name));
+  const images = record?.image_files ?? [];
 
   return (
     <div className="purchase-page">
@@ -125,14 +121,11 @@ export function PurchasePage({ purchaseId }: { purchaseId: string }) {
               </div>
               <div>
                 <span>数据目录</span>
-                <b>
-                  {record.source_dir}
-                  {record.extras?.length ? ` + ${record.extras.join("、")}` : ""}
-                </b>
+                <b>{record.workspace_dir}</b>
               </div>
               <div>
                 <span>图像数量</span>
-                <b>{record.files.length}</b>
+                <b>{images.length}</b>
               </div>
             </div>
 
@@ -153,17 +146,18 @@ export function PurchasePage({ purchaseId }: { purchaseId: string }) {
               <h2>遥感图像（{images.length}）</h2>
               <div className="purchase-grid">
                 {images.map((file) => {
-                  const path = `${record.workspace_dir}/${file.name}`;
                   return (
                     <a
                       className="purchase-item"
                       key={file.name}
-                      href={fileUrl(path)}
+                      href={fileUrl(file.path)}
                       target="_blank"
                       rel="noopener"
                     >
-                      <img src={fileUrl(path)} alt={file.name} loading="lazy" />
-                      <span>{file.name}</span>
+                      <img src={fileUrl(file.path)} alt={file.label} loading="lazy" />
+                      <span>
+                        {file.label}（{file.name}）
+                      </span>
                       {file.width && file.height && (
                         <small>
                           {file.width} × {file.height}

@@ -3,8 +3,8 @@
 | 项 | 值 |
 | --- | --- |
 | 文档定位 | Phase 3 唯一事实源（内部开发蓝图） |
-| 版本 | v0.1 |
-| 状态 | 共识锁定（2026-11-12 grilling 收敛 13 项决策），待实施 |
+| 版本 | v0.2 |
+| 状态 | M1 已落地；M2~M4 待实施 |
 | 配套网页 | `docs/PHASE3-REQUIREMENTS.html`（由 `scripts/build_requirements_html.py --phase 3` 生成） |
 
 ---
@@ -183,7 +183,7 @@ RS-Service MCP 服务（8765）在现有基础上新增三工具；`detect_chang
 
 | 里程碑 | 内容 | 验收 | 涉及仓库 |
 | --- | --- | --- | --- |
-| M1 工作区与按钮语义 | 一次性重置；购买新规则（固定对图、单份引用）；购买页改版；「让 Agent 分析」语义切换 | §1.3 第 1、2、3、6 条 | SIRIAgent |
+| M1 工作区与按钮语义 | 一次性重置；购买新规则（固定对图、单份引用）；购买页改版；「让 Agent 分析」语义切换 | §1.3 第 1、2、3、6 条 | SIRIAgent（**已落地**：重置完成；`purchase.py` 固定对图 + `building-change` 端点；购买页/按钮语义/按钮禁用已改；`pnpm build` 绿） |
 | M2 目标检测 | YOLOX-S 推理模块 + 权重下载校验 + REST + MCP + 抽屉功能选择（先跑 impeccable 设计） | §1.3 第 4、5、6 条（目标检测部分） | RS-Service + SIRIAgent |
 | M3 语义分割 | SparseMask ONNX 推理 + REST + MCP + 抽屉接入 | 同上（语义分割部分） | RS-Service + SIRIAgent |
 | M4 图像处理 | 三算子 + 档位 + REST + MCP + 抽屉接入 | 同上（图像处理部分） | RS-Service + SIRIAgent |
@@ -231,4 +231,5 @@ RS-Service MCP 服务（8765）在现有基础上新增三工具；`detect_chang
 
 | 日期 | 版本 | 变更 |
 | --- | --- | --- |
+| 2026-11-12 | v0.2 | M1 落地（§8）：工作区一次性重置；`purchase.py` 购买改为固定对图单份引用（`workspace/images/building-change/`），新增 `GET /api/purchases/building-change`；购买页只展示变化前/后两张图；「让 Agent 分析」改解译语义（把固定对图交给 Agent 跑变化检测），固定图不存在时按钮禁用 |
 | 2026-11-12 | v0.1 | 初版。基于 grilling 访谈锁定 13 项决策：购买固定对图与单份工作区、「让 Agent 分析」改解译语义、复刻 SIRIGeo 现役四能力并全量 MCP 工具化、四里程碑与六条验收剧本 |
