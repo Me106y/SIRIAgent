@@ -3604,3 +3604,9 @@ button {
   font-weight: 600;
   color: var(--ink);
 }
+
+.interpret-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+}

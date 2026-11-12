@@ -6,6 +6,7 @@ import type {
   DetectionResult,
   ObjectDetectionResult,
   SemanticSegmentationResult,
+  ImageProcessResult,
   WorkspaceImage,
 } from "../types";
 
@@ -21,7 +22,7 @@ interface Props {
   onClose: () => void;
 }
 
-type FuncKey = "change" | "object" | "semantic";
+type FuncKey = "change" | "object" | "semantic" | "process";
 
 interface FuncSpec {
   key: FuncKey;
@@ -48,6 +49,34 @@ const FUNCS: FuncSpec[] = [
     label: "语义分割",
     hint: "单图：SparseMask OpenEarthMap 8 类",
     dual: false,
+  },
+  {
+    key: "process",
+    label: "图像处理",
+    hint: "单图：灰度 / Canny / 降噪",
+    dual: false,
+  },
+];
+
+const PROCESS_OPERATORS = [
+  { id: "grayscale", label: "灰度图", levels: [] as { id: string; label: string }[] },
+  {
+    id: "canny",
+    label: "边缘检测（Canny）",
+    levels: [
+      { id: "soft", label: "柔和（30 / 90）" },
+      { id: "normal", label: "标准（50 / 150）" },
+      { id: "sharp", label: "锐利（80 / 200）" },
+    ],
+  },
+  {
+    id: "denoise",
+    label: "降噪",
+    levels: [
+      { id: "light", label: "轻度（高斯 3×3）" },
+      { id: "medium", label: "中度（中值 5×5）" },
+      { id: "strong", label: "强（NL-Means）" },
+    ],
   },
 ];
 
@@ -78,6 +107,9 @@ export function InterpretDrawer({ open, onClose }: Props) {
   const [changeResult, setChangeResult] = useState<DetectionResult | null>(null);
   const [objectResult, setObjectResult] = useState<ObjectDetectionResult | null>(null);
   const [semanticResult, setSemanticResult] = useState<SemanticSegmentationResult | null>(null);
+  const [processResult, setProcessResult] = useState<ImageProcessResult | null>(null);
+  const [operator, setOperator] = useState("grayscale");
+  const [processLevel, setProcessLevel] = useState("normal");
   const [uploading, setUploading] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const uploadTarget = useRef<"before" | "after" | "single">("before");
@@ -116,7 +148,14 @@ export function InterpretDrawer({ open, onClose }: Props) {
     setChangeResult(null);
     setObjectResult(null);
     setSemanticResult(null);
+    setProcessResult(null);
     setError(null);
+  };
+
+  const changeOperator = (next: string) => {
+    setOperator(next);
+    const spec = PROCESS_OPERATORS.find((item) => item.id === next);
+    if (spec && spec.levels.length) setProcessLevel(spec.levels[0].id);
   };
 
   const changeFunc = (next: FuncKey) => {
@@ -213,6 +252,10 @@ export function InterpretDrawer({ open, onClose }: Props) {
         setObjectResult(await api.detectObjects(single.path));
       } else if (func === "semantic" && single) {
         setSemanticResult(await api.segmentSemantics(single.path));
+      } else if (func === "process" && single) {
+        const spec = PROCESS_OPERATORS.find((item) => item.id === operator);
+        const level = spec && spec.levels.length ? processLevel : undefined;
+        setProcessResult(await api.processImage(single.path, operator, level));
       }
     } catch (exc) {
       setError(exc instanceof Error ? exc.message : "解译失败");
@@ -390,6 +433,45 @@ export function InterpretDrawer({ open, onClose }: Props) {
             </div>
           )}
 
+          {func === "process" && (
+            <div className="interpret-fields">
+              <label className="interpret-field">
+                <span>算子</span>
+                <select
+                  value={operator}
+                  onChange={(event) => changeOperator(event.target.value)}
+                  disabled={busy}
+                >
+                  {PROCESS_OPERATORS.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {(() => {
+                const current = PROCESS_OPERATORS.find((item) => item.id === operator);
+                if (!current || current.levels.length === 0) return null;
+                return (
+                  <label className="interpret-field">
+                    <span>档位</span>
+                    <select
+                      value={processLevel}
+                      onChange={(event) => setProcessLevel(event.target.value)}
+                      disabled={busy}
+                    >
+                      {current.levels.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                );
+              })()}
+            </div>
+          )}
+
           <div className="interpret-actions">
             <button
               type="button"
@@ -410,7 +492,10 @@ export function InterpretDrawer({ open, onClose }: Props) {
           </div>
 
           <p className="interpret-hint">
-            支持 PNG / JPG，单文件 ≤ 20MB；最大边超过 2048 会先缩小再解译。
+            支持 PNG / JPG，单文件 ≤ 20MB；
+            {func === "process"
+              ? "结果为确定性算子，保留原图像素尺寸。"
+              : "最大边超过 2048 会先缩小再解译。"}
           </p>
         </section>
 
@@ -533,6 +618,38 @@ export function InterpretDrawer({ open, onClose }: Props) {
                 ))}
             </ul>
             <p className="interpret-note">{semanticResult.accuracy_note}</p>
+          </section>
+        )}
+
+        {processResult && (
+          <section className="interpret-result">
+            <h3>图像处理结果</h3>
+            <div className="interpret-triple">
+              <figure>
+                <img src={fileUrl(processResult.image_path)} alt="原图" />
+                <figcaption>原图</figcaption>
+              </figure>
+              <figure>
+                <img src={fileUrl(processResult.output_path)} alt="处理结果" />
+                <figcaption>
+                  处理结果（{processResult.operator_name}
+                  {processResult.level_name ? ` · ${processResult.level_name}` : ""}）
+                </figcaption>
+              </figure>
+            </div>
+            <div className="interpret-stats">
+              <span>
+                {processResult.width} × {processResult.height}
+              </span>
+              <span>
+                耗时{" "}
+                {processResult.elapsed_ms < 1000
+                  ? `${processResult.elapsed_ms} ms`
+                  : `${(processResult.elapsed_ms / 1000).toFixed(1)} s`}
+              </span>
+              <span>OpenCV 确定性算子</span>
+            </div>
+            <p className="interpret-note">{processResult.accuracy_note}</p>
           </section>
         )}
 
