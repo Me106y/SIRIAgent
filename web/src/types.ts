@@ -389,7 +389,7 @@ export interface PlanCreateBody {
   auto_expand?: boolean;
   sensor_types?: string[];
   max_resolution_m?: number;
-  pointing?: "nadir" | "targeted";
+  pointing?: "nadir";
   cloud_filter?: boolean;
   cloud_threshold_pct?: number;
   [key: string]: unknown;
