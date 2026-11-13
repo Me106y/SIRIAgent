@@ -142,10 +142,9 @@ footer{margin-top:60px;padding-top:18px;border-top:1px solid var(--line);color:v
     <p class="side-title">目录</p>
     <nav>
       <a href="#flow">01 一次成图的五个步骤</a>
-      <a href="#see">02 能不能拍到，取决于七件事</a>
+      <a href="#see">02 能不能拍到，取决于六件事</a>
       <a href="#orbit" class="sub">卫星在哪：TLE 与 SGP4</a>
       <a href="#geom" class="sub">看不看得见：仰角与过境</a>
-      <a href="#attitude" class="sub">能不能侧着看：姿态与侧摆</a>
       <a href="#light" class="sub">有没有光：太阳高度</a>
       <a href="#payload" class="sub">拍多宽：分辨率与幅宽</a>
       <a href="#cloud" class="sub">云会不会挡：逐小时预报</a>
@@ -237,8 +236,8 @@ footer{margin-top:60px;padding-top:18px;border-top:1px solid var(--line);color:v
       <figcaption><b>逐格判定</b>：整块区域被切成 5 km 的小格，每格单独问「有没有过境、有没有光、云挡不挡」，三条都过才算这一格被覆盖。</figcaption>
     </figure>
 
-    <h2 id="see"><span class="num">02</span>能不能拍到，取决于七件事</h2>
-    <p class="lede">一颗卫星要算「拍到」，必须同时满足下面七条；任何一条不满足，这块地在那天就没有机会。</p>
+    <h2 id="see"><span class="num">02</span>能不能拍到，取决于六件事</h2>
+    <p class="lede">一颗卫星要算「拍到」，必须同时满足下面六条；任何一条不满足，这块地在那天就没有机会。</p>
 
     <h3 id="orbit">① 卫星在哪：TLE 与 SGP4</h3>
     <p>卫星的位置不是查表来的，是算出来的。每颗卫星有一组「两行根数」（TLE），可以理解成它某一时刻的轨道快照；把这组数代入 <b>SGP4</b> 轨道模型，就能推它未来任意时刻在哪、朝哪飞。</p>
@@ -352,73 +351,15 @@ footer{margin-top:60px;padding-top:18px;border-top:1px solid var(--line);color:v
       </svg>      <figcaption><b>一次过境的覆盖带</b>：此刻的足迹只是跨轨方向的一条窄带（宽 = 幅宽），卫星飞过去才把这条带拉长成走廊；走廊扫过哪些 5 km 格子，哪些格子才算被这次过境覆盖。<b>仰角</b>就是目标点到卫星的连线与当地水平线的夹角——卫星贴着地平线（仰角小）时路径太长，这次过境不作数。</figcaption>
     </figure>
 
-    <h3 id="attitude">③ 能不能侧着看：姿态与侧摆</h3>
-    <p>卫星不是「镜头永远朝下」的。它有三根姿态轴：绕飞行方向的<b>滚动</b>、绕翼展方向的<b>俯仰</b>、绕对地方的<b>偏航</b>。姿态决定视轴指向——视轴笔直向下叫<b>星下点</b>成像；绕滚动轴转一个角度、斜着看轨道侧边，就是<b>侧摆</b>（off-nadir，也叫侧视）。</p>
-    <p>侧摆的价值很直接：不必等卫星正好从头顶过，轨道两侧一定范围内都能"够着"，同一片区域的可拍机会会变多。代价也直接：斜着看的距离变长，<b>一个像元覆盖的地面变大、分辨率变差</b>；地面形状被拉斜、阴影与大气路径都变长，太阳高度角的条件也更苛刻；大角度侧摆还要额外的姿态机动时间与电量。</p>
-
-    <div class="callout warn"><b>所以这条是本项目的"保守项"：系统只按星下点算，不假设侧摆。</b>原因有两个——一是逐星的侧摆能力与姿态约束没有可靠数据（固定对地的星根本不能侧摆，敏捷星能到 ±30°–45°，差异很大）；二是一律假设"能侧摆到目标"，就会系统性高估覆盖。之前那个已成历史的口径（把所有星的视轴都锁到区域形心）就是这类高估的极端版本：数字很好看，但不代表卫星真能做到。因此报告里的覆盖率应当读作<b>保守下界</b>。</div>
-
-    <figure>
-      <svg viewBox="0 0 900 340" role="img" aria-label="星下点成像与侧摆成像的几何差别">
-        <g font-family="Segoe UI, Microsoft YaHei, sans-serif">
-          <!-- 地面 -->
-          <line x1="40" y1="240" x2="860" y2="240" stroke="#c9d3ea" stroke-width="2"/>
-          <rect x="40" y="240" width="820" height="34" fill="#eef3fd"/>
-
-          <!-- 卫星 -->
-          <g transform="translate(300 56)">
-            <rect x="-10" y="-10" width="20" height="20" rx="3" fill="#21317e"/>
-            <rect x="-40" y="-5" width="24" height="10" rx="2" fill="#7cb4d9"/>
-            <rect x="16" y="-5" width="24" height="10" rx="2" fill="#7cb4d9"/>
-            <circle cx="0" cy="0" r="2.8" fill="#2fc9e8"/>
-          </g>
-          <text x="300" y="30" text-anchor="middle" font-size="12" fill="#3d4a78">卫星（约 600 km）</text>
-
-          <!-- 星下点视轴 -->
-          <line x1="300" y1="68" x2="300" y2="240" stroke="#15438b" stroke-width="1.6"/>
-          <rect x="272" y="240" width="56" height="12" fill="#15438b" opacity=".28"/>
-          <text x="300" y="272" text-anchor="middle" font-size="11.5" fill="#21317e">星下点</text>
-
-          <!-- 侧摆视轴 -->
-          <line x1="300" y1="68" x2="620" y2="240" stroke="#e0a63a" stroke-width="1.6" stroke-dasharray="6 4"/>
-          <rect x="576" y="240" width="88" height="12" fill="#e0a63a" opacity=".30"/>
-          <text x="620" y="272" text-anchor="middle" font-size="11.5" fill="#7d5300">侧摆后能拍到</text>
-
-          <!-- 侧摆角 -->
-          <path d="M300 128 A60 60 0 0 1 386 160" fill="none" stroke="#7d5300" stroke-width="1.4"/>
-          <text x="335" y="152" font-size="12" fill="#7d5300">θ</text>
-
-          <!-- 地面偏移 -->
-          <path d="M300 296h320" stroke="#7cb4d9" stroke-width="1.4" marker-start="url(#ms)" marker-end="url(#ms)"/>
-          <text x="460" y="318" text-anchor="middle" font-size="11" fill="#3d4a78">地面偏移 ≈ 高度 × tan θ：θ 越大，够得越远，分辨率也越差</text>
-
-          <!-- 像元劣化 -->
-          <g>
-            <rect x="676" y="140" width="10" height="10" fill="none" stroke="#15438b" stroke-width="1.6"/>
-            <rect x="690" y="140" width="16" height="16" fill="none" stroke="#e0a63a" stroke-width="1.6"/>
-            <text x="714" y="152" font-size="11" fill="#3d4a78">同一像元</text>
-            <text x="676" y="176" font-size="11" fill="#5b678f">斜视后在地面铺得更开</text>
-          </g>
-
-          <defs>
-            <marker id="ms" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7" orient="auto">
-              <path d="M10 0L0 5l10 5z" fill="#7cb4d9"/>
-            </marker>
-          </defs>
-        </g>
-      </svg>
-      <figcaption><b>星下点 vs 侧摆</b>：视轴垂直向下时，只有轨道正下方的窄带能拍；转一个 θ 角斜看，能够到轨道旁边，代价是斜距变长、同样的像元在地上铺得更开。本项目的计算只走左边这条路。</figcaption>
-    </figure>
-
-    <h3 id="light">④ 有没有光：太阳高度</h3>
+    <h3 id="light">③ 有没有光：太阳高度</h3>
     <p>光学和高光谱卫星靠太阳反射成像，所以还要求目标地面的<b>太阳高度角大于 10°</b>。这一条把夜间直接排除：夜里的卫星过境对光学是没有意义的，SAR（雷达）不看太阳，夜里也能拍。</p>
     <div class="callout"><b>为什么这条很重要：</b>重访间隔（下一个话题）的下限，往往就是「一整夜加半个白天」。算出来动不动十几小时，不是算法保守，是光学物理上办不到。</div>
 
-    <h3 id="payload">⑤ 拍多宽：分辨率与幅宽</h3>
+    <h3 id="payload">④ 拍多宽：分辨率与幅宽</h3>
     <p>每颗星有两组关键参数：<b>分辨率</b>（一个像素对应地面多少米）和<b>幅宽</b>（一次扫过的地面宽度，从十几公里到九十公里不等）。幅宽决定了单次过境能覆盖目标区域的多少。</p>
     <p>这里有个容易被忽略的细节：这是<b>推扫</b>相机——沿飞行方向只有一个线阵，靠卫星飞过去一行行累积，而不是「咔嚓一张」。所以一次过境在地面上留下的是一条带宽等于幅宽的走廊；图纸上看起来像一条带，而不是一块方方正正的区域。</p>
 
-    <h3 id="cloud">⑥ 云会不会挡：逐小时预报</h3>
+    <h3 id="cloud">⑤ 云会不会挡：逐小时预报</h3>
     <p>云是光学成像的天敌。系统从 <b>Open-Meteo</b> 取目标区域附近的逐小时云量预报，对每个网格、每个过境时刻做判断：云量高于阈值的访问直接剔除，不参与选星。</p>
     <p>这里必须说清楚两点：一是它是<b>预报不是实测</b>，越往后越不准；二是逐格剔除会让「有卫星经过」和「真拍到了」之间出现差距——高云量的那几天，覆盖率会被直接砍掉一大截。</p>
 
@@ -468,7 +409,7 @@ footer{margin-top:60px;padding-top:18px;border-top:1px solid var(--line);color:v
       <figcaption><b>「可用访问」是三者的交集</b>：有过境、有光、云不挡。任何一条不满足，这次过境就被丢掉。</figcaption>
     </figure>
 
-    <h3 id="window">⑦ 给多长时间：窗口与重访</h3>
+    <h3 id="window">⑥ 给多长时间：窗口与重访</h3>
     <p>时间窗越长，能碰到的过境越多，覆盖率自然越高；但卫星根数会变老，所以窗口最长给到 7 天（168 小时）。默认是 72 小时，不够时可以自动扩窗——代价是整份求解要重算一遍。</p>
     <p>「重访」是另一个维度：不问你「看没看到过」，而问「隔多久能再看一次」。两种口径经常被混为一谈：</p>
 
@@ -548,7 +489,7 @@ footer{margin-top:60px;padding-top:18px;border-top:1px solid var(--line);color:v
         <tr><td>过境时刻</td><td>只到 ±1 分钟的精度量级，不能直接当指令下发</td></tr>
         <tr><td>成像门限</td><td>仰角 ≥ 10°；光学另加地面太阳高度 ≥ 10°；SAR 不看太阳</td></tr>
         <tr><td>覆盖统计</td><td>5 km 网格 + 面积加权，覆盖率与重访都标「估计」</td></tr>
-        <tr><td>指向与侧摆</td><td>只按星下点算，不建模侧摆能力与姿态机动；覆盖率因此是保守下界，敏捷星的真实机会只会更多</td></tr>
+        <tr><td>指向</td><td>只按星下点算，不假设卫星为了这块地大幅侧摆</td></tr>
         <tr><td>云量</td><td>Open-Meteo 逐小时预报，不是实测；阈值可调，越严覆盖越低</td></tr>
         <tr><td>载荷未公开的卫星</td><td>只给轨道与可见性，不给分辨率与幅宽，也不参与成像推荐</td></tr>
       </tbody>
