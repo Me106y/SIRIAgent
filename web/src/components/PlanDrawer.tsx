@@ -250,7 +250,6 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
   const [autoExpand, setAutoExpand] = useState(false);
   const [sensors, setSensors] = useState<string[]>(["optical", "hyperspectral"]);
   const [maxResolution, setMaxResolution] = useState(10);
-  const [pointing, setPointing] = useState<"nadir" | "targeted">("nadir");
   const [cloud, setCloud] = useState(true);
   const [fields, setFields] = useState<Record<string, string>>({
     // 仅用于旧后端（task3 还要求目标覆盖率时）的过渡；新 task3 不再发送该字段。
@@ -449,7 +448,6 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
       auto_expand: operation === "task1" ? autoExpand : false,
       sensor_types: sensors,
       max_resolution_m: maxResolution,
-      pointing,
       cloud_filter: cloud,
       cloud_threshold_pct: 70,
     };
@@ -789,25 +787,6 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
             ))}
           </select>
         </label>
-        <div className="plan-field">
-          <span>指向</span>
-          <div className="plan-seg" role="group" aria-label="指向模式">
-            <button
-              type="button"
-              className={pointing === "nadir" ? "active" : ""}
-              onClick={() => setPointing("nadir")}
-            >
-              星下点
-            </button>
-            <button
-              type="button"
-              className={pointing === "targeted" ? "active" : ""}
-              onClick={() => setPointing("targeted")}
-            >
-              目标指向
-            </button>
-          </div>
-        </div>
       </div>
 
       <label className="plan-switch">
@@ -1016,7 +995,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
           <dt>约束</dt>
           <dd>
             {sensors.map((item) => SENSOR_LABELS[item] ?? item).join(" + ") || "—"} · ≤{maxResolution} m ·{" "}
-            {pointing === "nadir" ? "星下点" : "目标指向"} · {cloud ? "云量过滤" : "不过滤云量"}
+            {cloud ? "云量过滤" : "不过滤云量"}
           </dd>
         </div>
       </dl>
