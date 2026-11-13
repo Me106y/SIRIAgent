@@ -2,6 +2,12 @@
 
 SIRIAgent 的用户可见变化。版本规则见 [docs/VERSIONING.md](docs/VERSIONING.md)。
 
+## [1.10.3] - 2026-11-13
+
+### Fixed
+
+- task5（给定星数最小化 ART）的结果卡不再写「达标面积 0.0%」：主 KPI 改为「面积加权 ART 20.6 h」，不再显示时间覆盖率与面积加权 MRT，与报告首屏一致。
+
 ## [1.10.2] - 2026-11-13
 
 ### Fixed
