@@ -816,6 +816,9 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
       value.operation === "task3" || value.operation === "task_3_max_qualified_area";
     const isTask2 =
       value.operation === "task2" || value.operation === "task_2_min_satellites_mrt";
+    // task5 的 KPI 是面积加权 ART，没有“达标面积”，也不展示时间覆盖率。
+    const isTask5 =
+      value.operation === "task5" || value.operation === "task_5_min_area_weighted_art";
     const selection = (value.selection ?? {}) as {
       recommended_result?: { mrt_target_s?: number | null };
       strict_result?: { mrt_target_s?: number | null };
@@ -824,9 +827,11 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
       selection.recommended_result?.mrt_target_s ?? selection.strict_result?.mrt_target_s;
     const mrtTargetMinutes =
       mrtTargetSeconds == null ? (value.targets?.mrt_minutes ?? null) : mrtTargetSeconds / 60;
-    const hideTemporal = isTask1 || isTask3;
+    const hideTemporal = isTask1 || isTask3 || isTask5;
     const target = isTask1 ? value.targets?.area_pct : value.targets?.temporal_coverage_pct;
-    const targetLabel = isTask3
+    const targetLabel = isTask5
+      ? "面积加权 ART"
+      : isTask3
       ? "覆盖面积"
       : isTask2
         ? `达标面积（最长重访 ≤ ${formatDuration(mrtTargetMinutes)}）`
@@ -837,9 +842,11 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
         : target != null
           ? `达标面积（目标 ${target}%）`
           : "达标面积";
-    const areaValue = isTask3
-      ? (cards.covered_area_pct ?? cards.qualified_area_pct)
-      : cards.qualified_area_pct;
+    const areaValue = isTask5
+      ? (cards.area_weighted_art_minutes ?? null)
+      : isTask3
+        ? (cards.covered_area_pct ?? cards.qualified_area_pct)
+        : cards.qualified_area_pct;
     const windowInfo = value.window;
     const expanded = Boolean(windowInfo?.expanded);
     const usedHorizon = windowInfo?.used_horizon_h;
@@ -861,7 +868,11 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
           </div>
           <div>
             <span>{targetLabel}</span>
-            <strong>{formatNumber(areaValue)}%</strong>
+            {isTask5 ? (
+              <strong>{formatDuration(areaValue)}</strong>
+            ) : (
+              <strong>{formatNumber(areaValue)}%</strong>
+            )}
           </div>
           {!hideTemporal && (
             <>
