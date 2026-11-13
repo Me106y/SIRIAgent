@@ -283,7 +283,7 @@ footer{margin-top:60px;padding-top:18px;border-top:1px solid var(--line);color:v
     <p>卫星在头顶飞过，不等于「能拍」。目标点看卫星的仰角要<b>大于 10°</b>，否则大气路径太长、成像价值低。一次满足条件的连续时段叫一次<b>过境</b>，通常只有几分钟——卫星以约 7 km/s 掠过，一天顶多一两次。</p>
 
     <figure>
-      <svg viewBox="0 0 900 300" role="img" aria-label="一次过境的覆盖带：幅宽与沿轨累积">
+      <svg viewBox="0 0 900 320" role="img" aria-label="一次过境的覆盖带，以及目标点看卫星的仰角">
         <defs>
           <pattern id="bandGrid" width="22" height="22" patternUnits="userSpaceOnUse">
             <path d="M22 0H0V22" fill="none" stroke="#ffffff" stroke-width="1.4" opacity=".7"/>
@@ -291,41 +291,54 @@ footer{margin-top:60px;padding-top:18px;border-top:1px solid var(--line);color:v
         </defs>
         <g font-family="Segoe UI, Microsoft YaHei, sans-serif">
           <!-- 地面 -->
-          <path d="M30 250 Q450 226 870 250" fill="none" stroke="#c9d3ea" stroke-width="2"/>
-          <path d="M30 250 Q450 226 870 250 L870 288 L30 288Z" fill="#eef3fd"/>
+          <path d="M30 250 Q450 232 870 250" fill="none" stroke="#c9d3ea" stroke-width="2"/>
+          <path d="M30 250 Q450 232 870 250 L870 292 L30 292Z" fill="#eef3fd"/>
 
-          <!-- 覆盖带（沿轨扫过的走廊） -->
-          <rect x="300" y="206" width="470" height="42" fill="#15438b" opacity=".16" stroke="#15438b" stroke-opacity=".35"/>
-          <rect x="300" y="206" width="470" height="42" fill="url(#bandGrid)"/>
-          <rect x="366" y="206" width="22" height="22" fill="none" stroke="#e0a63a" stroke-width="2"/>
+          <!-- 覆盖带（沿轨扫过的走廊），底边贴地 -->
+          <rect x="300" y="202" width="470" height="40" fill="#15438b" opacity=".16" stroke="#15438b" stroke-opacity=".35"/>
+          <rect x="300" y="202" width="470" height="40" fill="url(#bandGrid)"/>
+          <rect x="366" y="202" width="22" height="22" fill="none" stroke="#e0a63a" stroke-width="2"/>
 
           <!-- 卫星 -->
-          <g transform="translate(360 58)">
+          <g transform="translate(360 62)">
             <rect x="-9" y="-9" width="18" height="18" rx="3" fill="#21317e"/>
             <rect x="-36" y="-5" width="22" height="10" rx="2" fill="#7cb4d9"/>
             <rect x="14" y="-5" width="22" height="10" rx="2" fill="#7cb4d9"/>
             <circle cx="0" cy="0" r="2.6" fill="#2fc9e8"/>
           </g>
-          <text x="360" y="34" text-anchor="middle" font-size="12" fill="#3d4a78">卫星（约 600 km）</text>
+          <text x="360" y="36" text-anchor="middle" font-size="12" fill="#3d4a78">卫星（约 600 km）</text>
 
           <!-- 视场锥（此刻的足迹 = 一条跨轨的窄带） -->
-          <path d="M360 68 L326 206 L394 248 L360 68 Z" fill="#7cb4d9" opacity=".22" stroke="#7cb4d9" stroke-dasharray="5 4"/>
+          <path d="M360 72 L326 202 L394 238 L360 72 Z" fill="#7cb4d9" opacity=".20" stroke="#7cb4d9" stroke-dasharray="5 4"/>
 
-          <!-- 仰角 -->
-          <path d="M406 227 L406 190" stroke="#21317e" stroke-width="1.4" stroke-dasharray="4 3"/>
-          <path d="M406 227 L432 208" stroke="#21317e" stroke-width="1.4"/>
-          <path d="M418 221 A16 16 0 0 1 412 209" fill="none" stroke="#21317e"/>
-          <text x="440" y="204" font-size="11" fill="#21317e">仰角 ≥ 10°</text>
+          <!-- 目标点 → 卫星：视线 -->
+          <line x1="520" y1="242" x2="360" y2="72" stroke="#121b4a" stroke-width="1.8"/>
+          <circle cx="520" cy="242" r="4.2" fill="#121b4a"/>
+          <circle cx="520" cy="242" r="7.5" fill="none" stroke="#121b4a" stroke-opacity=".35"/>
+
+          <!-- 目标点处的当地水平线（白描边保证压在网格上也看得清） -->
+          <line x1="520" y1="242" x2="396" y2="242" stroke="#ffffff" stroke-width="5"/>
+          <line x1="520" y1="242" x2="396" y2="242" stroke="#121b4a" stroke-width="1.3" stroke-dasharray="5 4"/>
+
+          <!-- 仰角弧：水平线 → 视线 -->
+          <path d="M460 242 A60 60 0 0 0 479 198" fill="none" stroke="#121b4a" stroke-width="1.5"/>
+          <text x="492" y="206" font-size="12" fill="#121b4a">仰角 θ</text>
+
+          <!-- 文字标注 -->
+          <g font-size="11.5">
+            <text x="530" y="264" fill="#121b4a">目标点（地面）</text>
+            <text x="396" y="264" text-anchor="end" fill="#5b678f" font-size="11">当地水平线（0°）</text>
+          </g>
 
           <!-- 幅宽 -->
-          <path d="M786 206v42" stroke="#7cb4d9" stroke-width="1.4" marker-start="url(#m1)" marker-end="url(#m1)"/>
-          <text x="800" y="232" font-size="11.5" fill="#3d4a78">幅宽</text>
+          <path d="M786 202v40" stroke="#7cb4d9" stroke-width="1.4" marker-start="url(#m1)" marker-end="url(#m1)"/>
+          <text x="798" y="226" font-size="11.5" fill="#3d4a78">幅宽</text>
 
           <!-- 沿轨 -->
-          <path d="M300 268h460" stroke="#21317e" stroke-width="1.4" marker-end="url(#m3)"/>
-          <text x="530" y="262" text-anchor="middle" font-size="11.5" fill="#21317e">沿轨方向：靠卫星飞过去，一行行累积成这条走廊</text>
+          <path d="M300 300h460" stroke="#21317e" stroke-width="1.4" marker-end="url(#m3)"/>
+          <text x="530" y="294" text-anchor="middle" font-size="11.5" fill="#21317e">沿轨方向：靠卫星飞过去，一行行累积成这条走廊</text>
 
-          <text x="300" y="300" font-size="11" fill="#5b678f">橙色框 = 一个 5 km 网格；一次过境只覆盖走廊宽度内、沿线经过的格子</text>
+          <text x="300" y="318" font-size="11" fill="#5b678f">橙色框 = 一个 5 km 网格。仰角 = 目标点看卫星、从当地水平线量起的角度；小于 10° 时这次过境不算数。</text>
 
           <defs>
             <marker id="m1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7" orient="auto">
@@ -336,8 +349,7 @@ footer{margin-top:60px;padding-top:18px;border-top:1px solid var(--line);color:v
             </marker>
           </defs>
         </g>
-      </svg>
-      <figcaption><b>一次过境的覆盖带</b>：此刻的足迹只是跨轨方向的一条窄带（宽 = 幅宽），卫星飞过去才把这条带拉长成走廊；走廊扫过哪些 5 km 格子，哪些格子才算被这次过境覆盖。</figcaption>
+      </svg>      <figcaption><b>一次过境的覆盖带</b>：此刻的足迹只是跨轨方向的一条窄带（宽 = 幅宽），卫星飞过去才把这条带拉长成走廊；走廊扫过哪些 5 km 格子，哪些格子才算被这次过境覆盖。<b>仰角</b>就是目标点到卫星的连线与当地水平线的夹角——卫星贴着地平线（仰角小）时路径太长，这次过境不作数。</figcaption>
     </figure>
 
     <h3 id="attitude">③ 能不能侧着看：姿态与侧摆</h3>
