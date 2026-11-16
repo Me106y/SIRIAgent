@@ -146,7 +146,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
   const [aoiWkt, setAoiWkt] = useState("");
   const [drawOpen, setDrawOpen] = useState(false);
   const [startLocal, setStartLocal] = useState(nowLocal);
-  const [revisitHours, setRevisitHours] = useState(24);
+  const [revisitHours, setRevisitHours] = useState(48);
   const [maxResolution, setMaxResolution] = useState(10);
   const [cloud, setCloud] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);
@@ -199,7 +199,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
         setCityCode((current) => current || firstCity?.code || "");
         setDistrictCode("");
         setCloud(Boolean(payload.revisit?.cloud_filter_default));
-        setRevisitHours(payload.revisit?.default_hours ?? 24);
+        setRevisitHours(payload.revisit?.default_hours ?? 48);
       })
       .catch((reason: unknown) => {
         if (alive) setOptionsError(reason instanceof Error ? reason.message : "无法读取规划选项");
@@ -243,11 +243,11 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
         setStep(3);
         setJobSummary({
           aoi_label: parsed.aoi_label ?? "—",
-          revisit_hours: parsed.revisit_hours ?? 24,
+          revisit_hours: parsed.revisit_hours ?? 48,
           max_resolution_m: parsed.max_resolution_m ?? 10,
           cloud_filter: Boolean(parsed.cloud_filter),
         });
-        setRevisitHours(parsed.revisit_hours ?? 24);
+        setRevisitHours(parsed.revisit_hours ?? 48);
         setMaxResolution(parsed.max_resolution_m ?? 10);
         setCloud(Boolean(parsed.cloud_filter));
       }
@@ -349,7 +349,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
 
   const stepValid = (index: number): boolean => {
     if (index === 0) return Boolean(effectiveCode || aoiWkt);
-    if (index === 1) return Boolean(startLocal) && (revisitHours === 24 || revisitHours === 48 || revisitHours === 72);
+    if (index === 1) return Boolean(startLocal) && (revisitHours === 48 || revisitHours === 72);
     return true;
   };
 
@@ -510,7 +510,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
         <p>窗口由系统派生：W = min(3T, 168h)。窗口不能太短，否则“覆盖一次”也会被误判成重访达标。</p>
       </header>
       <div className="plan-chips" role="group" aria-label="重访时间">
-        {[24, 48, 72].map((hours) => (
+        {[48, 72].map((hours) => (
           <button
             key={hours}
             type="button"
