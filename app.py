@@ -385,7 +385,7 @@ def balance() -> Response:
 def bootstrap() -> Response:
     """首屏一次拿齐目录、星历与余额，少 3 个往返；星历是秒级数据，不缓存。"""
     try:
-        satellites = _rs_json("satellites?limit=200")
+        satellites = _rs_json("satellites?limit=500")
         positions = _rs_json("positions")
     except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, ValueError) as exc:
         return jsonify({"ok": False, "error": f"RS-Service 不可达：{exc}"}), 502
