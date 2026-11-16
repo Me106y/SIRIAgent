@@ -25,13 +25,13 @@ SIRIAgent 是遥感任务平台：左 1/3 星历可视化（Cesium），右 2/3 
 ## Operating Context
 
 - 单机演示环境（127.0.0.1 + Cloudflare Tunnel），同一时刻只跑一轮对话。
-- 成图方案产物在 `reports/imaging-plan/<task>/<run_id>/`（`task1`..`task5`），购买记录在 `workspace/purchases.json`，工作区图像在 `workspace/images/`（购买 + `uploads/`）。
+- 成图方案产物在 `reports/imaging-plan/<task>/<run_id>/`（新 run 为 `revisit`，旧 `task1`..`task5` 保留可读），购买记录在 `workspace/purchases.json`，工作区图像在 `workspace/images/`（购买 + `uploads/`）。
 - 解译结果图落 `reports/interpret/<run_id>/`；示例图在 `demo/images/`（只读）。
 - 数据目录（`~/桌面/data/`）存放固定对图「建筑变化」等模拟影像。
 
 ## Capabilities and Constraints
 
-- 能力：星历（目录/过境/轨迹/位置）、成图规划（task1~task4）、方案购买（固定对图）、遥感解译（变化检测 FlickCD；Phase 3 扩展目标检测 YOLOX-S、语义分割 SparseMask、图像处理三算子）、DSH Agent（MCP 工具：星历 8 个 + 解译 2 个已注册）。
+- 能力：星历（目录/过境/轨迹/位置）、成图规划（单场景 `revisit`：区域 + 重访时间）、方案购买（固定对图）、遥感解译（变化检测 FlickCD；Phase 3 扩展目标检测 YOLOX-S、语义分割 SparseMask、图像处理三算子）、DSH Agent（MCP 工具：星历 8 个 + 解译 2 个已注册）。
 - 硬约束：所有对外结果带 `accuracy_note`；解译结果需人工复核；输入图最大边 2048（分割 1024）缩放；`/api/files` 只允许 PROJECT_ROOT 内文件；解译输入路径只允许 `workspace/` + `demo/`；云量按 AOI 网格代表点。
 - 术语：AOI、过境、MRT/ART、TLE、SGP4、accuracy_note、run_id、purchase_id、before/after。
 
