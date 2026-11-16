@@ -81,7 +81,7 @@ git log --oneline -10
 - 选星限时：贪心 ≤60s（`greedy_time_limit_s`）+ ILP ≤30s；超时返回最佳努力并标 `time_limited`。机会计算按卫星并行，结果按 `sat_index` 确定性归并，golden 测试不得漂移。
 - 进度：`GET /plans/{id}` 必须带 `progress={stage,label,current,total,pct,elapsed_s}`；前端显示阶段、逐星 `N/总数`、已用时间，**不做 ETA**；job_id 存 localStorage，重开抽屉恢复，404 提示任务失效。
 - 报告：首屏 KPI = 最少卫星数 / 达标面积（最长重访 ≤ T · 目标 100%）/ 全目录上限 / 评估窗口；不再出现时间覆盖率、面积加权 MRT 作为主 KPI。不可行时标题写“未达标，全目录上限 X%”。地图与回放轴铺满主区，正文 15px、辅助 ≥13px。
-- 数据闸门：≤10m 光学补到 215 颗 / 203 可规划后，**杭州 144h / 48h / 100% 必须实测可行**（`scripts/revisit_gate.py`），才允许在 UI 承诺 100%。不过闸门就停止扩容，按 `suggestion` 发布并需产品负责人签字；不许为了凑 100% 塞近似参数或无限补星。
+- 数据闸门：≤10m 光学补到 203 颗后，**杭州 144h / 48h / 100% 必须实测可行**（`scripts/revisit_gate.py`），才允许在 UI 承诺 100%。不过闸门就停止扩容，按 `suggestion` 发布并需产品负责人签字；不许为了凑 100% 塞近似参数或无限补星。
 - 每次改 revisit 口径或报告，必须用修改后的代码实际跑一份杭州报告并核对：达标面积与 `targets.revisit_hours` 一致、未达标时不出现“0 颗星”、报告无旧 task KPI；只跑单测不算验收。
 
 ### 交互与安全
