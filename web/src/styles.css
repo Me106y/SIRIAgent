@@ -110,7 +110,7 @@ button {
 
 .brand small {
   display: block;
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--muted);
 }
 
@@ -123,7 +123,7 @@ button {
   border-radius: 999px;
   background: rgba(8, 20, 38, 0.8);
   color: var(--muted);
-  font-size: 11.5px;
+  font-size: 12px;
   white-space: nowrap;
   transition: border-color 160ms ease, color 160ms ease;
 }
@@ -236,7 +236,7 @@ button {
 .settings-desc {
   display: block;
   margin-top: 2px;
-  font-size: 10.5px;
+  font-size: 12px;
   color: var(--muted);
 }
 
@@ -285,7 +285,7 @@ button {
 }
 
 .settings-option-hint {
-  font-size: 10.5px;
+  font-size: 12px;
   line-height: 1.45;
   color: var(--muted);
 }
@@ -316,7 +316,7 @@ button {
   border-radius: 999px;
   background: rgba(8, 20, 38, 0.8);
   color: var(--muted);
-  font-size: 11.5px;
+  font-size: 12px;
   white-space: nowrap;
 }
 
@@ -389,7 +389,7 @@ button {
   justify-content: space-between;
   gap: 8px;
   padding: 18px 12px 8px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   background: linear-gradient(180deg, transparent, rgba(4, 10, 18, 0.9));
   pointer-events: none;
@@ -412,7 +412,7 @@ button {
 .panel-head p,
 .agent-head p {
   margin: 2px 0 0;
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--muted);
 }
 
@@ -484,7 +484,7 @@ button {
   color: var(--muted);
   border-radius: 999px;
   padding: 3px 9px;
-  font-size: 11.5px;
+  font-size: 12px;
 }
 
 .chip:hover {
@@ -562,13 +562,13 @@ button {
 
 .sat-name small {
   display: block;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
 }
 
 .sat-meta {
   font-family: var(--mono);
-  font-size: 10.5px;
+  font-size: 12px;
   color: var(--muted);
   white-space: nowrap;
 }
@@ -597,7 +597,7 @@ button {
 
 .detail-head p {
   margin: 2px 0 0;
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--muted);
 }
 
@@ -613,7 +613,7 @@ button {
   grid-template-columns: auto 1fr;
   gap: 2px 10px;
   margin: 8px 0 2px;
-  font-size: 11.5px;
+  font-size: 12px;
 }
 
 .detail-grid span {
@@ -630,7 +630,7 @@ button {
 .pass-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 11.5px;
+  font-size: 12px;
 }
 
 .pass-table th {
@@ -645,7 +645,7 @@ button {
   padding: 3px 6px;
   border-bottom: 1px solid rgba(22, 42, 68, 0.55);
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .muted {
@@ -682,7 +682,7 @@ button {
   color: var(--muted);
   border-radius: 8px;
   padding: 5px 10px;
-  font-size: 11.5px;
+  font-size: 12px;
 }
 
 .ghost:hover {
@@ -705,7 +705,7 @@ button {
 
 .eyebrow {
   margin: 0 0 6px;
-  font-size: 10.5px;
+  font-size: 12px;
   letter-spacing: 2px;
   color: var(--accent);
   font-weight: 700;
@@ -747,7 +747,7 @@ button {
 }
 
 .who {
-  font-size: 10.5px;
+  font-size: 12px;
   color: var(--muted);
   margin: 0 4px 4px;
 }
@@ -861,7 +861,7 @@ button {
   border: 0;
   padding: 0;
   background: transparent;
-  font-size: 11.5px;
+  font-size: 12px;
 }
 
 .markdown img {
@@ -948,7 +948,7 @@ button {
   border-radius: 9px;
   background: rgba(251, 191, 36, 0.07);
   color: #f8d38b;
-  font-size: 11.5px;
+  font-size: 12px;
   line-height: 1.55;
 }
 
@@ -968,7 +968,7 @@ button {
   list-style: none;
   cursor: pointer;
   user-select: none;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
 }
 
@@ -994,7 +994,7 @@ button {
 .work-count,
 .work-time {
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 12px;
   white-space: nowrap;
 }
 
@@ -1013,7 +1013,7 @@ button {
   white-space: nowrap;
   color: var(--accent);
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .work-steps[open] > summary .tool-chevron {
@@ -1058,7 +1058,7 @@ button {
   text-overflow: ellipsis;
   white-space: nowrap;
   color: #8fb4c9;
-  font-size: 10.5px;
+  font-size: 12px;
 }
 
 .tool-list {
@@ -1086,7 +1086,7 @@ button {
   list-style: none;
   user-select: none;
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 12px;
   color: #b9dced;
 }
 
@@ -1105,7 +1105,7 @@ button {
   text-overflow: ellipsis;
   white-space: nowrap;
   color: #7fa8bf;
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.5;
 }
 
@@ -1161,7 +1161,7 @@ button {
   text-overflow: ellipsis;
   white-space: nowrap;
   color: #8fb4c9;
-  font-size: 10.5px;
+  font-size: 12px;
 }
 
 .tool-detail.command {
@@ -1174,7 +1174,7 @@ button {
 
 .tool-state {
   flex: 0 0 auto;
-  font-size: 9.5px;
+  font-size: 12px;
   letter-spacing: 0.5px;
   white-space: nowrap;
   color: var(--muted);
@@ -1207,7 +1207,7 @@ button {
 
 .tool-label {
   margin: 4px 0 3px;
-  font-size: 9px;
+  font-size: 12px;
   letter-spacing: 1px;
   text-transform: uppercase;
   color: var(--muted);
@@ -1223,13 +1223,13 @@ button {
   max-height: 160px;
   overflow: auto;
   font-family: var(--mono);
-  font-size: 10.5px;
+  font-size: 12px;
   color: #c7d8ea;
 }
 
 .thinking {
   margin-top: 6px;
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--muted);
 }
 
@@ -1300,14 +1300,14 @@ button {
   max-height: 220px;
   overflow: auto;
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .meta {
   display: flex;
   gap: 10px;
   margin-top: 5px;
-  font-size: 10.5px;
+  font-size: 12px;
   color: var(--muted);
   font-family: var(--mono);
 }
@@ -1405,7 +1405,7 @@ button {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 10.5px;
+  font-size: 12px;
   color: #7890a8;
 }
 
@@ -1420,7 +1420,7 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 10.5px;
+  font-size: 12px;
   color: #7890a8;
   white-space: nowrap;
 }
@@ -1500,13 +1500,13 @@ button {
   justify-content: space-between;
   gap: 12px;
   padding: 5px 9px 7px;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
 }
 
 .slash-head span:last-child {
   font-family: var(--mono);
-  font-size: 9.5px;
+  font-size: 12px;
   color: #7890a8;
 }
 
@@ -1530,12 +1530,12 @@ button {
 
 .slash-name {
   font-family: var(--mono);
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--accent);
 }
 
 .slash-desc {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   line-height: 1.45;
 }
@@ -1546,7 +1546,7 @@ button {
   padding: 1px 7px;
   border-radius: 5px;
   border: 1px solid var(--line);
-  font-size: 10.5px;
+  font-size: 12px;
   white-space: nowrap;
 }
 
@@ -1676,7 +1676,7 @@ button {
 }
 
 .question-header {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -1725,7 +1725,7 @@ button {
 }
 
 .question-option-desc {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
 }
 
@@ -2018,7 +2018,7 @@ button {
   border-radius: 6px;
   background: rgba(34, 211, 238, 0.1);
   color: var(--accent);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.14em;
 }
@@ -2102,7 +2102,7 @@ button {
   border-radius: 50%;
   border: 1px solid var(--line);
   background: #071221;
-  font-size: 11px;
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -2140,7 +2140,7 @@ button {
 
 .plan-rail-foot small {
   color: #8ba3ba;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.5;
 }
 
@@ -2218,7 +2218,7 @@ button {
   border-radius: 50%;
   border: 1px solid var(--line);
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -2258,7 +2258,7 @@ button {
 
 .plan-task-req {
   color: #8ba3ba;
-  font-size: 11px;
+  font-size: 12px;
   white-space: nowrap;
 }
 
@@ -2292,7 +2292,7 @@ button {
 
 .plan-field > span small {
   color: #8ba3ba;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 400;
 }
 
@@ -2324,7 +2324,7 @@ button {
   align-items: center;
   gap: 12px;
   color: #8ba3ba;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .plan-or::before,
@@ -2491,7 +2491,7 @@ button {
 
 .plan-check small {
   color: #8ba3ba;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .plan-seg {
@@ -2543,7 +2543,7 @@ button {
 
 .plan-switch small {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.5;
 }
 
@@ -2584,7 +2584,7 @@ button {
 
 .plan-summary dt {
   color: #8ba3ba;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .plan-summary dd {
@@ -2743,7 +2743,7 @@ button {
 
 .plan-stats span {
   color: #8ba3ba;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .plan-stats strong {
@@ -2763,7 +2763,7 @@ button {
   border-bottom: 1px solid var(--line);
   color: #8ba3ba;
   text-align: left;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
 }
 
@@ -2776,7 +2776,7 @@ button {
 .plan-table td small {
   display: block;
   color: #8ba3ba;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .plan-table .num {
@@ -3058,7 +3058,7 @@ button {
 }
 
 .purchase-brand span {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
 }
 
@@ -3108,7 +3108,7 @@ button {
 
 .purchase-success code {
   font-family: var(--mono);
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--accent);
 }
 
@@ -3129,7 +3129,7 @@ button {
 .purchase-meta span {
   display: block;
   margin-bottom: 4px;
-  font-size: 10.5px;
+  font-size: 12px;
   color: var(--muted);
 }
 
@@ -3169,7 +3169,7 @@ button {
 .purchase-note {
   margin: 22px 0 0;
   text-align: center;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--warn);
 }
 
@@ -3210,7 +3210,7 @@ button {
 .purchase-item span {
   display: block;
   padding: 8px 10px 2px;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.4;
   word-break: break-all;
   color: var(--ink);
@@ -3219,7 +3219,7 @@ button {
 .purchase-item small {
   display: block;
   padding: 0 10px 9px;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
 }
 
@@ -3280,7 +3280,7 @@ button {
 
 .interpret-head p {
   margin: 0;
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--muted);
 }
 
@@ -3336,7 +3336,7 @@ button {
 }
 
 .interpret-slot span {
-  font-size: 10.5px;
+  font-size: 12px;
   color: var(--muted);
 }
 
@@ -3370,7 +3370,7 @@ button {
 
 .interpret-slot em {
   font-style: normal;
-  font-size: 10.5px;
+  font-size: 12px;
   color: var(--muted);
 }
 
@@ -3382,7 +3382,7 @@ button {
 
 .interpret-hint {
   margin: 0;
-  font-size: 10.5px;
+  font-size: 12px;
   color: var(--muted);
 }
 
@@ -3392,7 +3392,7 @@ button {
   border-radius: 10px;
   background: rgba(248, 113, 113, 0.1);
   color: var(--danger);
-  font-size: 11.5px;
+  font-size: 12px;
 }
 
 .interpret-gallery {
@@ -3434,14 +3434,14 @@ button {
 .interpret-item span {
   display: block;
   padding: 6px 8px 0;
-  font-size: 10px;
+  font-size: 12px;
   word-break: break-all;
 }
 
 .interpret-item small {
   display: block;
   padding: 2px 8px 7px;
-  font-size: 9.5px;
+  font-size: 12px;
   color: var(--muted);
 }
 
@@ -3510,13 +3510,13 @@ button {
 
 .interpret-single figcaption {
   padding: 5px 8px;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
 }
 
 .interpret-detections {
   margin-top: 10px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
 }
 
@@ -3569,7 +3569,7 @@ button {
 
 .interpret-triple figcaption {
   padding: 5px 8px;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
 }
 
@@ -3578,7 +3578,7 @@ button {
   flex-wrap: wrap;
   gap: 6px 14px;
   margin-top: 10px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
 }
 
@@ -3588,12 +3588,12 @@ button {
   border-radius: 10px;
   background: rgba(251, 191, 36, 0.08);
   color: var(--warn);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .interpret-note {
   margin: 8px 0 0;
-  font-size: 10.5px;
+  font-size: 12px;
   color: var(--warn);
 }
 
@@ -3615,7 +3615,7 @@ button {
   margin: 10px 0 0;
   padding: 0;
   list-style: none;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
 }
 
@@ -3701,7 +3701,7 @@ button {
 .plan-rail-history em {
   margin-left: auto;
   font-style: normal;
-  font-size: 11px;
+  font-size: 12px;
   color: #8ba3ba;
   font-variant-numeric: tabular-nums;
 }
@@ -3875,7 +3875,7 @@ button {
   border-radius: 999px;
   border: 1px solid rgba(45, 212, 191, 0.4);
   color: var(--accent-2);
-  font-size: 10.5px;
+  font-size: 12px;
   letter-spacing: 0.04em;
 }
 
@@ -3903,7 +3903,7 @@ button {
 .history-card-kpi em {
   margin-left: auto;
   color: #8ba3ba;
-  font-size: 11.5px;
+  font-size: 12px;
   font-style: normal;
 }
 
@@ -3912,7 +3912,7 @@ button {
   justify-content: space-between;
   gap: 10px;
   color: #8ba3ba;
-  font-size: 11.5px;
+  font-size: 12px;
 }
 
 .history-card-meta .mono {
@@ -3924,7 +3924,7 @@ button {
 
 .history-card-window {
   color: #7d93a8;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .history-card-actions {
@@ -3995,4 +3995,107 @@ button {
   .history-card-actions .plan-ghost {
     flex: 1;
   }
+}
+
+/* v2.0.0 单场景：重访读数与阶段进度 */
+.plan-readout {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #071322;
+}
+
+.plan-readout strong {
+  font-size: 16px;
+  color: var(--ink);
+}
+
+.plan-readout small {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.plan-progress {
+  display: block;
+}
+
+.plan-progress-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.plan-progress-bar {
+  height: 6px;
+  margin: 14px 0 12px;
+  border-radius: 999px;
+  background: rgba(34, 211, 238, 0.12);
+  overflow: hidden;
+}
+
+.plan-progress-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  transition: width 400ms ease;
+}
+
+.plan-progress-stages {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.plan-progress-stages li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.plan-progress-stages li.active {
+  color: var(--ink);
+}
+
+.plan-progress-stages li.done {
+  color: var(--muted);
+}
+
+.plan-progress-dot {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.plan-progress-stages li.done .plan-progress-dot {
+  border-color: rgba(52, 211, 153, 0.45);
+  color: var(--ok);
+}
+
+.plan-progress-stages li.active .plan-progress-dot {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.plan-progress-dot svg {
+  width: 11px;
+  height: 11px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }

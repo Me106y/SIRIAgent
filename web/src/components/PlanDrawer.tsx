@@ -21,38 +21,22 @@ interface Props {
   onAnalyze: (path: string) => void;
 }
 
-const STEPS = ["任务", "范围", "时间窗", "约束", "求解与报告"];
-const SENSOR_LABELS: Record<string, string> = {
-  optical: "光学",
-  hyperspectral: "高光谱",
-  sar: "SAR",
-};
+const STEPS = ["范围", "重访", "约束", "求解与报告"];
 const LEVEL_LABELS: Record<string, string> = {
-  province: "省级",
   city: "市级",
   district: "区县",
 };
-const FIELD_LABELS: Record<string, string> = {
-  temporal_coverage_target_pct: "目标覆盖率",
-  mrt_target_minutes: "最长重访上限",
-  n_budget: "星数预算",
-  area_target_pct: "面积目标",
-  fallback_area_target_pct: "面积回退",
-  exact_budget: "精确星数预算",
-  grid_size_km: "网格大小",
-  detection_step_s: "检测步长",
-  selection_time_limit_s: "选星时限",
-};
-const FIELD_HINTS: Record<string, string> = {
-  temporal_coverage_target_pct: "%，单格覆盖率，72h 通常 <1%",
-  mrt_target_minutes: "分钟；光学夜间无过境，单格最长间隔至少是夜间空档（约 12–19 h）",
-  n_budget: "颗",
-  area_target_pct: "%，至少成像一次",
-  fallback_area_target_pct: "%",
-  grid_size_km: "km",
-  detection_step_s: "秒",
-  selection_time_limit_s: "秒",
-};
+const JOB_KEY = "siri.plan.job";
+const PROGRESS_STAGES = [
+  { key: "prepare", label: "读取卫星与 TLE" },
+  { key: "grid", label: "生成网格" },
+  { key: "opportunities", label: "传播与过境机会" },
+  { key: "cloud", label: "云量过滤" },
+  { key: "selection", label: "选星（贪心 + ILP）" },
+  { key: "metrics", label: "指标计算" },
+  { key: "playback", label: "回放与报告数据" },
+];
+const RESOLUTION_OPTIONS = [1, 2, 5, 10];
 
 function nowLocal(): string {
   const now = new Date();
@@ -85,17 +69,27 @@ function ArrowIcon({ back = false }: { back?: boolean }) {
   );
 }
 
+function HistoryIcon() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M8 4.2V8l2.6 1.6" />
+      <path d="M13.2 8a5.2 5.2 0 1 1-1.7-3.8" />
+      <path d="M13.4 1.8v2.6h-2.6" />
+    </svg>
+  );
+}
+
+function ChevronIcon({ open }: { open: boolean }) {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true" className={`history-chevron ${open ? "open" : ""}`}>
+      <path d="M4 6l4 4 4-4" />
+    </svg>
+  );
+}
+
 function formatNumber(value: number | null | undefined, digits = 1): string {
   if (value == null || Number.isNaN(value)) return "—";
   return value.toFixed(digits);
-}
-
-const TASK_ORDER = ["task1", "task2", "task3", "task4", "task5"];
-const TASK_NUMERALS = ["①", "②", "③", "④", "⑤"];
-
-function taskNumeral(key: string): string {
-  const index = TASK_ORDER.indexOf(key);
-  return index >= 0 ? TASK_NUMERALS[index] : "·";
 }
 
 function formatMoment(value?: string | null): string {
@@ -114,6 +108,12 @@ function formatDuration(minutes: number | null | undefined): string {
   return Number(minutes) >= 120 ? `${formatNumber(Number(minutes) / 60, 1)} h` : `${value} 分`;
 }
 
+function formatElapsed(seconds: number | null | undefined): string {
+  if (seconds == null || Number.isNaN(seconds)) return "—";
+  if (seconds < 60) return `${Math.max(0, Math.round(seconds))} 秒`;
+  return `${Math.floor(seconds / 60)} 分 ${Math.round(seconds % 60)} 秒`;
+}
+
 function formatKpi(item: PlanHistoryItem): string {
   const value = item.kpi?.value;
   if (value == null || Number.isNaN(value)) return "—";
@@ -123,31 +123,8 @@ function formatKpi(item: PlanHistoryItem): string {
   return `${Math.round(value)} ${unit}`.trim();
 }
 
-function ChevronIcon({ open }: { open: boolean }) {
-  return (
-    <svg viewBox="0 0 16 16" aria-hidden="true" className={`history-chevron ${open ? "open" : ""}`}>
-      <path d="M4 6l4 4 4-4" />
-    </svg>
-  );
-}
-
-function HistoryIcon() {
-  return (
-    <svg viewBox="0 0 16 16" aria-hidden="true">
-      <path d="M8 4.2V8l2.6 1.6" />
-      <path d="M13.2 8a5.2 5.2 0 1 1-1.7-3.8" />
-      <path d="M13.4 1.8v2.6h-2.6" />
-    </svg>
-  );
-}
-
 function aoiDigits(item: PlanAoi): string {
   return (item.adcode || item.code || "").replace(/\D/g, "");
-}
-
-function parentProvinceCode(item: PlanAoi): string {
-  const digits = aoiDigits(item);
-  return digits.length >= 2 ? `${digits.slice(0, 2)}0000` : "";
 }
 
 function parentCityCode(item: PlanAoi): string {
@@ -155,83 +132,8 @@ function parentCityCode(item: PlanAoi): string {
   return digits.length >= 4 ? `${digits.slice(0, 4)}00` : "";
 }
 
-function MinusIcon() {
-  return (
-    <svg viewBox="0 0 16 16" aria-hidden="true">
-      <path d="M3.5 8h9" />
-    </svg>
-  );
-}
-
-function PlusIcon() {
-  return (
-    <svg viewBox="0 0 16 16" aria-hidden="true">
-      <path d="M3.5 8h9M8 3.5v9" />
-    </svg>
-  );
-}
-
-interface NumberStepperProps {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  min?: number;
-  max?: number;
-  step?: number;
-  placeholder?: string;
-}
-
-function NumberStepper({ label, value, onChange, min, max, step = 1, placeholder }: NumberStepperProps) {
-  const current = value.trim() === "" ? null : Number(value);
-  const numeric = current != null && Number.isFinite(current) ? current : null;
-  const floor = min ?? Number.NEGATIVE_INFINITY;
-  const ceiling = max ?? Number.POSITIVE_INFINITY;
-  const clamp = (next: number) => Math.min(ceiling, Math.max(floor, next));
-  const bump = (direction: 1 | -1) => {
-    if (numeric == null) {
-      onChange(String(min ?? 0));
-      return;
-    }
-    onChange(String(clamp(numeric + direction * step)));
-  };
-  return (
-    <div className="plan-number">
-      <button
-        type="button"
-        className="plan-number-btn"
-        onClick={() => bump(-1)}
-        disabled={numeric != null && numeric <= floor}
-        aria-label={`减少${label}`}
-      >
-        <MinusIcon />
-      </button>
-      <input
-        type="number"
-        inputMode="numeric"
-        aria-label={label}
-        value={value}
-        min={min}
-        max={max}
-        step={step}
-        placeholder={placeholder}
-        onChange={(event) => onChange(event.target.value)}
-        onBlur={() => {
-          if (value.trim() === "") return;
-          const next = Number(value);
-          if (Number.isFinite(next)) onChange(String(clamp(next)));
-        }}
-      />
-      <button
-        type="button"
-        className="plan-number-btn"
-        onClick={() => bump(1)}
-        disabled={numeric != null && numeric >= ceiling}
-        aria-label={`增加${label}`}
-      >
-        <PlusIcon />
-      </button>
-    </div>
-  );
+function windowHours(hours: number): number {
+  return Math.min(3 * hours, 168);
 }
 
 export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
@@ -239,62 +141,42 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
   const [optionsError, setOptionsError] = useState<string | null>(null);
   const [hasFixedPair, setHasFixedPair] = useState(false);
   const [step, setStep] = useState(0);
-  const [operation, setOperation] = useState("task1");
-  const [provinceCode, setProvinceCode] = useState("330000");
   const [cityCode, setCityCode] = useState("330100");
   const [districtCode, setDistrictCode] = useState("");
   const [aoiWkt, setAoiWkt] = useState("");
   const [drawOpen, setDrawOpen] = useState(false);
   const [startLocal, setStartLocal] = useState(nowLocal);
-  const [horizon, setHorizon] = useState(72);
-  const [autoExpand, setAutoExpand] = useState(false);
-  const [sensors, setSensors] = useState<string[]>(["optical", "hyperspectral"]);
+  const [revisitHours, setRevisitHours] = useState(24);
   const [maxResolution, setMaxResolution] = useState(10);
-  const [cloud, setCloud] = useState(true);
-  const [fields, setFields] = useState<Record<string, string>>({
-    // 仅用于旧后端（task3 还要求目标覆盖率时）的过渡；新 task3 不再发送该字段。
-    temporal_coverage_target_pct: "0.3",
-    // task2 的「最长重访」含夜间与窗口首尾空档；分钟级目标（如 24 分）对光学必然 0%。
-    mrt_target_minutes: "2880",
-    n_budget: "3",
-    area_target_pct: "90",
-  });
+  const [cloud, setCloud] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);
   const [job, setJob] = useState<PlanJob | null>(null);
+  const [jobSummary, setJobSummary] = useState<{
+    aoi_label: string;
+    revisit_hours: number;
+    max_resolution_m: number;
+    cloud_filter: boolean;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pollError, setPollError] = useState<string | null>(null);
   const [report, setReport] = useState<ReportInfo | null>(null);
   const [reporting, setReporting] = useState(false);
-  // 左导轨第 5 步下方是「历史结果」：导轨只是入口，列表铺在主区才有分类与卡片的余地。
   const [view, setView] = useState<"wizard" | "history">("wizard");
   const [history, setHistory] = useState<PlanHistory | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [purchased, setPurchased] = useState<Record<string, string>>({});
-  const [closedGroups, setClosedGroups] = useState<Record<string, boolean>>({});
   const [historySeq, setHistorySeq] = useState(0);
+  const [, setTick] = useState(0);
 
-  const task = useMemo(
-    () => options?.tasks.find((item) => item.operation === operation) ?? null,
-    [options, operation],
-  );
-  // task1 的约束是面积目标；后端把它放在 advanced 里，前端需要显式补进表单。
-  const constraintFields = useMemo(() => {
-    const names = new Set<string>(task?.required ?? []);
-    if (operation === "task1") names.add("area_target_pct");
-    return [...names];
-  }, [task, operation]);
-  const effectiveCode = districtCode || cityCode || provinceCode;
+  const effectiveCode = districtCode || cityCode;
   const aoi = useMemo(
     () => options?.aoi.find((item) => item.code === effectiveCode) ?? null,
     [options, effectiveCode],
   );
   const cities = useMemo(
-    () =>
-      (options?.aoi ?? []).filter(
-        (item) => item.level === "city" && parentProvinceCode(item) === provinceCode,
-      ),
-    [options, provinceCode],
+    () => (options?.aoi ?? []).filter((item) => item.level === "city"),
+    [options],
   );
   const districts = useMemo(
     () =>
@@ -313,15 +195,11 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
         if (!alive) return;
         setOptions(payload);
         setOptionsError(null);
-        const province = payload.aoi.find((item) => item.level === "province");
-        const nextProvince = province?.code ?? "";
-        const firstCity = payload.aoi.find(
-          (item) => item.level === "city" && parentProvinceCode(item) === nextProvince,
-        );
-        setProvinceCode(nextProvince);
-        setCityCode(firstCity?.code ?? "");
+        const firstCity = payload.aoi.find((item) => item.level === "city");
+        setCityCode((current) => current || firstCity?.code || "");
         setDistrictCode("");
-        setAutoExpand(Boolean(payload.defaults?.auto_expand));
+        setCloud(Boolean(payload.revisit?.cloud_filter_default));
+        setRevisitHours(payload.revisit?.default_hours ?? 24);
       })
       .catch((reason: unknown) => {
         if (alive) setOptionsError(reason instanceof Error ? reason.message : "无法读取规划选项");
@@ -347,7 +225,38 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
     };
   }, [open]);
 
-  // 进入历史视图时读一次：报告列表来自 RS-Service，购买状态来自本仓 /api/purchases。
+  // 关闭抽屉不丢任务：重开时从 localStorage 恢复 job_id。
+  useEffect(() => {
+    if (!open || jobId) return;
+    const stored = window.localStorage.getItem(JOB_KEY);
+    if (!stored) return;
+    try {
+      const parsed = JSON.parse(stored) as {
+        job_id?: string;
+        aoi_label?: string;
+        revisit_hours?: number;
+        max_resolution_m?: number;
+        cloud_filter?: boolean;
+      };
+      if (parsed?.job_id) {
+        setJobId(parsed.job_id);
+        setStep(3);
+        setJobSummary({
+          aoi_label: parsed.aoi_label ?? "—",
+          revisit_hours: parsed.revisit_hours ?? 24,
+          max_resolution_m: parsed.max_resolution_m ?? 10,
+          cloud_filter: Boolean(parsed.cloud_filter),
+        });
+        setRevisitHours(parsed.revisit_hours ?? 24);
+        setMaxResolution(parsed.max_resolution_m ?? 10);
+        setCloud(Boolean(parsed.cloud_filter));
+      }
+    } catch {
+      setJobId(stored);
+      setStep(3);
+    }
+  }, [open, jobId]);
+
   useEffect(() => {
     if (!open || view !== "history") return;
     let alive = true;
@@ -367,9 +276,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
         setHistoryError(null);
       })
       .catch((reason: unknown) => {
-        if (alive) {
-          setHistoryError(reason instanceof Error ? reason.message : "历史报告读取失败");
-        }
+        if (alive) setHistoryError(reason instanceof Error ? reason.message : "历史报告读取失败");
       })
       .finally(() => {
         if (alive) setHistoryLoading(false);
@@ -393,6 +300,13 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
     };
   }, [open, drawOpen, jobId, onClose]);
 
+  // 选星阶段可能 60s 没有新的 progress 事件；本地每秒刷新已用时间，避免看起来卡死。
+  useEffect(() => {
+    if (job?.status !== "queued" && job?.status !== "running") return;
+    const timer = window.setInterval(() => setTick((value) => value + 1), 1000);
+    return () => window.clearInterval(timer);
+  }, [job?.status]);
+
   useEffect(() => {
     if (!open || !jobId) return;
     let alive = true;
@@ -405,11 +319,20 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
         failures = 0;
         setJob(data);
         setPollError(null);
-        if (data.status === "completed" || data.status === "failed") return;
+        if (data.status === "completed" || data.status === "failed") {
+          window.localStorage.removeItem(JOB_KEY);
+          return;
+        }
       } catch (reason: unknown) {
         failures += 1;
+        const message = reason instanceof Error ? reason.message : "状态查询失败";
         if (alive) {
-          const message = reason instanceof Error ? reason.message : "状态查询失败";
+          if (/404/.test(message)) {
+            window.localStorage.removeItem(JOB_KEY);
+            setJobId(null);
+            setPollError("任务已失效（服务可能重启过），请重新求解。");
+            return;
+          }
           setPollError(failures >= 2 ? `状态查询暂时失败，正在重试（${message}）` : message);
         }
       }
@@ -425,41 +348,29 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
   if (!open) return null;
 
   const stepValid = (index: number): boolean => {
-    if (index === 0) return Boolean(operation);
-    if (index === 1) return Boolean(effectiveCode || aoiWkt);
-    if (index === 2) return Boolean(startLocal) && horizon > 0;
-    if (index === 3) {
-      if (sensors.length === 0) return false;
-      return constraintFields.every((name) => (fields[name] ?? "").trim() !== "");
-    }
+    if (index === 0) return Boolean(effectiveCode || aoiWkt);
+    if (index === 1) return Boolean(startLocal) && (revisitHours === 24 || revisitHours === 48 || revisitHours === 72);
     return true;
   };
 
   const canGoNext = stepValid(step);
   const busy = job?.status === "queued" || job?.status === "running";
+  const progress = job?.progress ?? null;
+  const elapsedSeconds = job?.created_at
+    ? Math.max(0, (Date.now() - new Date(job.created_at).getTime()) / 1000)
+    : progress?.elapsed_s ?? null;
 
-  const buildBody = (): PlanCreateBody => {
-    const body: PlanCreateBody = {
-      operation,
-      aoi_code: aoiWkt ? null : effectiveCode,
-      aoi_wkt: aoiWkt || null,
-      start_utc: new Date(startLocal).toISOString(),
-      horizon_h: horizon,
-      auto_expand: operation === "task1" ? autoExpand : false,
-      sensor_types: sensors,
-      max_resolution_m: maxResolution,
-      cloud_filter: cloud,
-      cloud_threshold_pct: 70,
-    };
-    const names = new Set<string>(constraintFields);
-    for (const name of names) {
-      const raw = (fields[name] ?? "").trim();
-      if (!raw) continue;
-      if (name === "exact_budget") body[name] = raw === "true";
-      else body[name] = Number(raw);
-    }
-    return body;
-  };
+  const buildBody = (): PlanCreateBody => ({
+    operation: "revisit",
+    aoi_code: aoiWkt ? null : effectiveCode,
+    aoi_wkt: aoiWkt || null,
+    start_utc: new Date(startLocal).toISOString(),
+    revisit_hours: revisitHours,
+    sensor_types: ["optical"],
+    max_resolution_m: maxResolution,
+    cloud_filter: cloud,
+    cloud_threshold_pct: 70,
+  });
 
   const solve = async () => {
     setError(null);
@@ -471,6 +382,15 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
       const created = await api.createPlan(buildBody());
       setJob(created);
       setJobId(created.job_id);
+      const summary = {
+        job_id: created.job_id,
+        aoi_label: aoiWkt ? "自定义多边形" : aoi?.name ?? effectiveCode,
+        revisit_hours: revisitHours,
+        max_resolution_m: maxResolution,
+        cloud_filter: cloud,
+      };
+      setJobSummary(summary);
+      window.localStorage.setItem(JOB_KEY, JSON.stringify(summary));
     } catch (reason: unknown) {
       setError(reason instanceof Error ? reason.message : "求解任务创建失败");
     }
@@ -498,90 +418,23 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
   };
 
   const resetJob = () => {
+    window.localStorage.removeItem(JOB_KEY);
     setJobId(null);
     setJob(null);
+    setJobSummary(null);
     setReport(null);
     setError(null);
     setPollError(null);
-    setStep(3);
+    setStep(2);
   };
-
-  const toggleSensor = (value: string) => {
-    setSensors((current) =>
-      current.includes(value) ? current.filter((item) => item !== value) : [...current, value],
-    );
-  };
-
-  const renderTaskStep = () => (
-    <div className="plan-step" key="task">
-      <header className="plan-step-head">
-        <h2>先确定要回答的问题</h2>
-        <p>五个任务问的是不同问题；切换任务会改变下面要填的目标字段。</p>
-      </header>
-      <div className="plan-task-list" role="radiogroup" aria-label="选择规划任务">
-        {(options?.tasks ?? []).map((item, index) => {
-          const active = item.operation === operation;
-          return (
-            <button
-              key={item.operation}
-              type="button"
-              role="radio"
-              aria-checked={active}
-              className={`plan-task ${active ? "active" : ""}`}
-              onClick={() => {
-                setOperation(item.operation);
-                if (item.operation !== "task1") setAutoExpand(false);
-              }}
-            >
-              <span className="plan-task-mark">{active ? <CheckIcon /> : String(index + 1)}</span>
-              <span className="plan-task-copy">
-                <strong>{item.label}</strong>
-                <small>{item.description}</small>
-              </span>
-              <span className="plan-task-req">
-                {item.required
-                  .map((name) => FIELD_LABELS[name] ?? name)
-                  .join(" · ")}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
 
   const renderAoiStep = () => (
     <div className="plan-step" key="aoi">
       <header className="plan-step-head">
         <h2>框定目标范围</h2>
-        <p>先选市，再选这个市下的区县；只支持浙江省内，也可以在地图上画一个多边形。</p>
+        <p>只支持浙江省内的市、区县，或在地图上画一个多边形（面积上限 2 万 km²）。</p>
       </header>
-      <div className="plan-grid-3">
-        <label className="plan-field">
-          <span>省</span>
-          <select
-            value={provinceCode}
-            onChange={(event) => {
-              const next = event.target.value;
-              setProvinceCode(next);
-              setAoiWkt("");
-              const first = (options?.aoi ?? []).find(
-                (item) => item.level === "city" && parentProvinceCode(item) === next,
-              );
-              setCityCode(first?.code ?? "");
-              setDistrictCode("");
-            }}
-            disabled={Boolean(aoiWkt)}
-          >
-            {(options?.aoi ?? [])
-              .filter((item) => item.level === "province")
-              .map((item) => (
-                <option key={item.code} value={item.code}>
-                  {item.name}
-                </option>
-              ))}
-          </select>
-        </label>
+      <div className="plan-grid-2">
         <label className="plan-field">
           <span>市</span>
           <select
@@ -591,9 +444,8 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
               setDistrictCode("");
               setAoiWkt("");
             }}
-            disabled={Boolean(aoiWkt) || cities.length === 0}
+            disabled={Boolean(aoiWkt)}
           >
-            <option value="">全省（不选市）</option>
             {cities.map((item) => (
               <option key={item.code} value={item.code}>
                 {item.name}
@@ -609,7 +461,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
               setDistrictCode(event.target.value);
               setAoiWkt("");
             }}
-            disabled={Boolean(aoiWkt) || !cityCode || districts.length === 0}
+            disabled={Boolean(aoiWkt) || districts.length === 0}
           >
             <option value="">全市（不选区县）</option>
             {districts.map((item) => (
@@ -645,18 +497,30 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
       ) : aoi ? (
         <p className="plan-note">
           将分析 {aoi.name}
-          {aoi.level ? `（${LEVEL_LABELS[aoi.level] ?? aoi.level}）` : ""}。
+          {aoi.level ? `（${LEVEL_LABELS[aoi.level] ?? aoi.level}）` : ""}；省级范围本版不开放。
         </p>
       ) : null}
     </div>
   );
 
-  const renderTimeStep = () => (
-    <div className="plan-step" key="time">
+  const renderRevisitStep = () => (
+    <div className="plan-step" key="revisit">
       <header className="plan-step-head">
-        <h2>定一个分析窗口</h2>
-        <p>窗口越长，覆盖与重访越容易达标；结果只在这个窗口内比较。</p>
+        <h2>给定重访时间</h2>
+        <p>窗口由系统派生：W = min(3T, 168h)。窗口不能太短，否则“覆盖一次”也会被误判成重访达标。</p>
       </header>
+      <div className="plan-chips" role="group" aria-label="重访时间">
+        {[24, 48, 72].map((hours) => (
+          <button
+            key={hours}
+            type="button"
+            className={`plan-chip ${revisitHours === hours ? "active" : ""}`}
+            onClick={() => setRevisitHours(hours)}
+          >
+            {hours} 小时
+          </button>
+        ))}
+      </div>
       <div className="plan-grid-2">
         <label className="plan-field">
           <span>开始时间</span>
@@ -667,198 +531,127 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
           />
         </label>
         <div className="plan-field">
-          <span>窗口长度（小时）</span>
-          <NumberStepper
-            label="窗口长度"
-            value={horizon ? String(horizon) : ""}
-            onChange={(value) => setHorizon(value.trim() === "" ? 0 : Number(value))}
-            min={1}
-            max={168}
-            placeholder="72"
-          />
+          <span>评估窗口</span>
+          <div className="plan-readout">
+            <strong>{windowHours(revisitHours)} h</strong>
+            <small>
+              {3 * revisitHours > 168
+                ? `3T = ${3 * revisitHours} h，受 TLE 7 天上限截断（2.33T）`
+                : `3T = ${3 * revisitHours} h`}
+            </small>
+          </div>
         </div>
       </div>
-      <div className="plan-chips" role="group" aria-label="常用窗口">
-        {[24, 72, 168].map((hours) => (
-          <button
-            key={hours}
-            type="button"
-            className={`plan-chip ${horizon === hours ? "active" : ""}`}
-            onClick={() => setHorizon(hours)}
-          >
-            {hours === 168 ? "7 天" : `${hours} 小时`}
-          </button>
-        ))}
-      </div>
-      <p className="plan-note">开始时间按本机时区填写，提交时转成 UTC。</p>
-      {(task?.supports_auto_expand ?? operation === "task1") ? (
-        <label className="plan-switch">
-          <input
-            type="checkbox"
-            checked={autoExpand}
-            onChange={(event) => setAutoExpand(event.target.checked)}
-          />
-          <span>
-            达不到目标时自动扩窗
-            <small>先试当前窗口，再按 72h → 7 天扩窗；最多 3 次求解，报告会标注实际窗口。仅 task1。</small>
-          </span>
-        </label>
-      ) : (
-        <p className="plan-note">此任务按你给定的窗口计算，不会自动扩窗。</p>
-      )}
+      <p className="plan-note">开始时间按本机时区填写，提交时转成 UTC；面积目标固定 100%。</p>
     </div>
   );
 
   const renderConstraintStep = () => (
     <div className="plan-step" key="constraints">
       <header className="plan-step-head">
-        <h2>目标和约束</h2>
-        <p>只显示当前任务需要的字段；其余参数使用引擎默认值。</p>
+        <h2>载荷与云量</h2>
+        <p>本版只对光学做 100% 承诺；高光谱仍保留在目录与星历里，但不参与本场景选星。</p>
       </header>
-
-      <div className="plan-grid-2">
-        {constraintFields.map((name) => (
-          <div className="plan-field" key={name}>
-            <span>
-              {FIELD_LABELS[name] ?? name}
-              {FIELD_HINTS[name] ? <small>{FIELD_HINTS[name]}</small> : null}
-            </span>
-            <NumberStepper
-              label={FIELD_LABELS[name] ?? name}
-              value={fields[name] ?? ""}
-              onChange={(value) =>
-                setFields((current) => ({ ...current, [name]: value }))
-              }
-              min={name === "mrt_target_minutes" ? 0 : 1}
-              max={
-                name === "n_budget"
-                  ? 500
-                  : name === "temporal_coverage_target_pct" || name === "area_target_pct"
-                    ? 100
-                    : 10_000
-              }
-              placeholder={
-                name === "n_budget"
-                  ? "3"
-                  : name === "mrt_target_minutes"
-                    ? "24"
-                    : name === "area_target_pct"
-                      ? "90"
-                      : "10"
-              }
-            />
-          </div>
-        ))}
-      </div>
-
-      <fieldset className="plan-fieldset">
-        <legend>传感器</legend>
-        <div className="plan-checks">
-          {(options?.sensor_types ?? []).map((item) => {
-            const disabled = item.value === "sar";
-            return (
-              <label key={item.value} className={`plan-check ${disabled ? "disabled" : ""}`}>
-                <input
-                  type="checkbox"
-                  checked={sensors.includes(item.value)}
-                  disabled={disabled}
-                  onChange={() => toggleSensor(item.value)}
-                />
-                <span>{SENSOR_LABELS[item.value] ?? item.label}</span>
-                {disabled ? <small>暂不可用</small> : null}
-              </label>
-            );
-          })}
-        </div>
-        <p className="plan-hint">SAR 因缺少原生入射角带暂不参与；当前目录为 61 光学 + 4 高光谱。</p>
-      </fieldset>
-
       <div className="plan-grid-2">
         <label className="plan-field">
-          <span>最大分辨率（米）</span>
+          <span>最大分辨率</span>
           <select
             value={maxResolution}
             onChange={(event) => setMaxResolution(Number(event.target.value))}
           >
-            {[1, 2, 5, 10, 30].map((value) => (
+            {RESOLUTION_OPTIONS.map((value) => (
               <option key={value} value={value}>
                 {value} m
               </option>
             ))}
           </select>
         </label>
+        <div className="plan-field">
+          <span>可规划目录</span>
+          <div className="plan-readout">
+            <strong>{options?.capability.plannable ?? "—"} 颗</strong>
+            <small>
+              ≤{maxResolution} m 光学 · TLE 最大年龄 {options?.tle?.max_age_hours ?? "—"} h
+            </small>
+          </div>
+        </div>
       </div>
-
       <label className="plan-switch">
         <input type="checkbox" checked={cloud} onChange={(event) => setCloud(event.target.checked)} />
         <span>
           按云量过滤
-          <small>按 AOI 内网格代表点取 Open-Meteo 逐小时 cloud_cover，&gt; 70% 的网格访问不参与选星</small>
+          <small>默认关闭。开启后按 AOI 内网格代表点的 Open-Meteo 逐小时 cloud_cover 剔除访问，100% 目标会受天气影响。</small>
         </span>
       </label>
-
     </div>
   );
 
   const tle = options?.tle;
   const tleStale = Boolean(tle?.stale);
-  const tleAge = tle?.max_age_hours;
   const result = job?.result ?? null;
+
+  const renderProgress = () => {
+    const stageKey = progress?.stage ?? "queued";
+    const cloudOn = jobSummary?.cloud_filter ?? cloud;
+    const stages = cloudOn
+      ? PROGRESS_STAGES
+      : PROGRESS_STAGES.filter((item) => item.key !== "cloud");
+    const activeIndex = stages.findIndex((item) => item.key === stageKey);
+    return (
+      <div className="plan-progress" role="status" aria-live="polite">
+        <div className="plan-progress-head">
+          <span className="plan-spinner" />
+          <div>
+            <strong>{progress?.label ?? (job?.status === "queued" ? "排队中…" : "准备中…")}</strong>
+            <p>
+              已用 {formatElapsed(elapsedSeconds)} · {Math.round(progress?.pct ?? 0)}%
+            </p>
+          </div>
+        </div>
+        <div className="plan-progress-bar" aria-hidden="true">
+          <span style={{ width: `${Math.max(2, progress?.pct ?? 0)}%` }} />
+        </div>
+        <ol className="plan-progress-stages">
+          {stages.map((item, index) => {
+            const done = stageKey === "done" || (activeIndex >= 0 && index < activeIndex);
+            const active = activeIndex === index;
+            const current =
+              active && progress?.current != null && progress?.total != null
+                ? ` · ${progress.current}/${progress.total}`
+                : "";
+            return (
+              <li key={item.key} className={`${done ? "done" : ""} ${active ? "active" : ""}`}>
+                <span className="plan-progress-dot">{done ? <CheckIcon /> : index + 1}</span>
+                <span>
+                  {item.label}
+                  {current}
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+        <p className="plan-note">
+          任务 {jobId}；关闭抽屉不会中断后台任务，重开可以从这里继续看。这里不估算剩余时间。
+        </p>
+      </div>
+    );
+  };
 
   const renderResult = (value: PlanResult) => {
     const cards = value.summary_cards ?? {};
     const sats = value.report_data?.sats ?? [];
-    // task1 是面积口径：达标面积对应 targets.area_pct，时间覆盖率/MRT 不是它的 KPI。
-    const isTask1 =
-      value.operation === "task1" || value.operation === "task_1_min_satellites_temporal";
-    // task3 是面积口径：给定星数最大化时间窗内覆盖面积，不再有“达标面积”。
-    const isTask3 =
-      value.operation === "task3" || value.operation === "task_3_max_qualified_area";
-    const isTask2 =
-      value.operation === "task2" || value.operation === "task_2_min_satellites_mrt";
-    // task5 的 KPI 是面积加权 ART，没有“达标面积”，也不展示时间覆盖率。
-    const isTask5 =
-      value.operation === "task5" || value.operation === "task_5_min_area_weighted_art";
-    const selection = (value.selection ?? {}) as {
-      recommended_result?: { mrt_target_s?: number | null };
-      strict_result?: { mrt_target_s?: number | null };
-    };
-    const mrtTargetSeconds =
-      selection.recommended_result?.mrt_target_s ?? selection.strict_result?.mrt_target_s;
-    const mrtTargetMinutes =
-      mrtTargetSeconds == null ? (value.targets?.mrt_minutes ?? null) : mrtTargetSeconds / 60;
-    const hideTemporal = isTask1 || isTask3 || isTask5;
-    const target = isTask1 ? value.targets?.area_pct : value.targets?.temporal_coverage_pct;
-    const targetLabel = isTask5
-      ? "面积加权 ART"
-      : isTask3
-      ? "覆盖面积"
-      : isTask2
-        ? `达标面积（最长重访 ≤ ${formatDuration(mrtTargetMinutes)}）`
-        : isTask1
-        ? target != null
-          ? `达标面积（目标 ${target}%）`
-          : "达标面积"
-        : target != null
-          ? `达标面积（目标 ${target}%）`
-          : "达标面积";
-    const areaValue = isTask5
-      ? (cards.area_weighted_art_minutes ?? null)
-      : isTask3
-        ? (cards.covered_area_pct ?? cards.qualified_area_pct)
-        : cards.qualified_area_pct;
-    const windowInfo = value.window;
-    const expanded = Boolean(windowInfo?.expanded);
-    const usedHorizon = windowInfo?.used_horizon_h;
-    const requestedHorizon = windowInfo?.requested_horizon_h;
+    const feasible = Boolean(value.feasible);
+    const targetLabel = `达标面积（最长重访 ≤ ${value.targets?.revisit_hours ?? revisitHours} h · 目标 100%）`;
+    const ceiling = cards.ceiling_area_pct;
+    const suggestion = value.suggestion;
     return (
       <div className="plan-result">
-        <div className={`plan-verdict ${value.feasible ? "ok" : "warn"}`}>
-          <strong>{isTask3 ? "求解完成" : value.feasible ? "目标可行" : "目标未达成"}</strong>
+        <div className={`plan-verdict ${feasible ? "ok" : "warn"}`}>
+          <strong>{feasible ? "目标可行" : "未达标"}</strong>
           <span>
-            {value.optimality ?? "—"} · 窗口 {usedHorizon ?? "—"}h
-            {expanded ? `（请求 ${requestedHorizon}h，已扩窗）` : ""} · 候选{" "}
-            {value.candidate_count ?? "—"} 颗 · 未参与 {value.blocked_count ?? 0} 颗
+            {value.optimality ?? "—"} · 窗口 {value.window?.used_horizon_h ?? "—"}h
+            {value.window?.capped_by_tle ? "（受 TLE 上限限制）" : ""} · 候选{" "}
+            {value.candidate_count ?? "—"} 颗
           </span>
         </div>
         <div className="plan-stats">
@@ -868,46 +661,39 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
           </div>
           <div>
             <span>{targetLabel}</span>
-            {isTask5 ? (
-              <strong>{formatDuration(areaValue)}</strong>
-            ) : (
-              <strong>{formatNumber(areaValue)}%</strong>
-            )}
+            <strong>{formatNumber(cards.qualified_area_pct)}%</strong>
           </div>
-          {!hideTemporal && (
-            <>
-              <div>
-                <span>时间覆盖率</span>
-                <strong>{formatNumber(cards.city_mean_temporal_coverage_pct, 2)}%</strong>
-              </div>
-              <div>
-                <span>面积加权 MRT</span>
-                <strong>{formatNumber(cards.area_weighted_mrt_minutes, 0)} 分</strong>
-              </div>
-            </>
-          )}
+          <div>
+            <span>全目录上限</span>
+            <strong>{formatNumber(ceiling)}%</strong>
+          </div>
+          <div>
+            <span>面积加权 MRT</span>
+            <strong>{formatDuration(cards.area_weighted_mrt_minutes)}</strong>
+          </div>
         </div>
 
-        {isTask1 ? (
+        {!feasible ? (
           <p className="plan-note">
-            面积口径：目标区域至少成像一次即视为达标，不展示时间覆盖率与面积加权 MRT。
+            未达标：全目录上限 {formatNumber(ceiling)}%。这不是选星算法偷懒——把全部候选星一起算也只有这个面积。
           </p>
-        ) : isTask2 && Number(areaValue ?? 0) === 0 ? (
+        ) : (
           <p className="plan-note">
-            达标面积 0.0% 多半是目标低于物理下限：光学只覆盖白天，单格最长间隔至少是夜间空档
-            （约 12–19 h），分钟级目标（如 24 分）必然为 0。把「最长重访上限」改到小时级再求解，
-            或改用全天候载荷。
+            面积口径：全部 5km 网格代表点都在 {value.targets?.revisit_hours ?? revisitHours} 小时内被重访；MRT 含夜间与窗口首尾空档。
           </p>
-        ) : isTask3 ? (
+        )}
+        {!feasible && suggestion ? (
           <p className="plan-note">
-            覆盖面积：时间窗内至少被选中卫星覆盖一次。
-          </p>
-        ) : null}
-        {expanded ? (
-          <p className="plan-note">
-            请求窗口 {requestedHorizon}h，实际按 {usedHorizon}h 计算；报告按实际窗口展示。
+            出路：放宽到 ≤{suggestion.max_resolution_m} m 后，{suggestion.estimated_sats} 颗{" "}
+            {suggestion.source} 可在同窗口做到 100%（{suggestion.basis}）。这只是建议，不会自动切换。
           </p>
         ) : null}
+        {value.window?.capped_by_tle ? (
+          <p className="plan-note">
+            请求窗口 {3 * revisitHours}h，实际按 {value.window.used_horizon_h}h 计算（TLE 7 天上限）。
+          </p>
+        ) : null}
+
         {sats.length > 0 ? (
           <table className="plan-table">
             <thead>
@@ -973,29 +759,27 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
     <div className="plan-step" key="solve">
       <header className="plan-step-head">
         <h2>求解并生成报告</h2>
-        <p>求解在 RS-Service 里执行，通常需要几秒到一分钟；关闭抽屉不会中断后台任务。</p>
+        <p>求解在 RS-Service 里执行；关闭抽屉不会中断后台任务，重开可以继续看进度。</p>
       </header>
 
       <dl className="plan-summary">
         <div>
-          <dt>任务</dt>
-          <dd>{task?.label ?? operation}</dd>
-        </div>
-        <div>
           <dt>范围</dt>
-          <dd>{aoiWkt ? "自定义多边形" : aoi?.name ?? effectiveCode}</dd>
+          <dd>{jobSummary?.aoi_label ?? (aoiWkt ? "自定义多边形" : aoi?.name ?? effectiveCode)}</dd>
         </div>
         <div>
-          <dt>窗口</dt>
+          <dt>重访</dt>
           <dd>
-            {startLocal.replace("T", " ")} · {horizon} h
+            ≤ {jobSummary?.revisit_hours ?? revisitHours} h · 窗口 {windowHours(
+              jobSummary?.revisit_hours ?? revisitHours,
+            )} h
           </dd>
         </div>
         <div>
           <dt>约束</dt>
           <dd>
-            {sensors.map((item) => SENSOR_LABELS[item] ?? item).join(" + ") || "—"} · ≤{maxResolution} m ·{" "}
-            {cloud ? "云量过滤" : "不过滤云量"}
+            光学 · ≤{jobSummary?.max_resolution_m ?? maxResolution} m ·{" "}
+            {(jobSummary?.cloud_filter ?? cloud) ? "云量过滤" : "不过滤云量"}
           </dd>
         </div>
       </dl>
@@ -1006,33 +790,16 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
         </div>
       ) : null}
 
-      {pollError && !error ? (
-        <p className="plan-note">状态查询暂时失败，正在重试：{pollError}</p>
-      ) : null}
+      {pollError && !error ? <p className="plan-note">状态查询暂时失败，正在重试：{pollError}</p> : null}
 
       {!jobId ? (
-        <button
-          type="button"
-          className="plan-solve"
-          onClick={() => void solve()}
-          disabled={tleStale}
-        >
+        <button type="button" className="plan-solve" onClick={() => void solve()} disabled={tleStale}>
           开始求解
           <ArrowIcon />
         </button>
       ) : null}
 
-      {busy ? (
-        <div className="plan-progress" role="status" aria-live="polite">
-          <span className="plan-spinner" />
-          <div>
-            <strong>{job?.status === "queued" ? "排队中…" : "正在传播与选星…"}</strong>
-            <p>
-              任务 {jobId}；自动扩窗到 7 天时求解可能需要几分钟。可以关闭抽屉，稍后回来不会保留这个页面的进度。
-            </p>
-          </div>
-        </div>
-      ) : null}
+      {busy ? renderProgress() : null}
 
       {job?.status === "failed" ? (
         <div className="plan-error" role="alert">
@@ -1054,7 +821,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
     return (
       <article className="history-card" key={run.run_id}>
         <div className="history-card-top">
-          <span className="history-card-numeral">{taskNumeral(run.task)}</span>
+          <span className="history-card-numeral">◷</span>
           <span className={`history-card-area${custom ? " custom" : ""}`}>
             {run.area_name || "—"}
           </span>
@@ -1077,12 +844,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
           {formatMoment(run.window_start)} → {formatMoment(run.window_end)}
         </div>
         <div className="history-card-actions">
-          <a
-            className="plan-primary"
-            href={fileUrl(run.relative_report)}
-            target="_blank"
-            rel="noopener"
-          >
+          <a className="plan-primary" href={fileUrl(run.relative_report)} target="_blank" rel="noopener">
             打开报告
           </a>
           <button type="button" className="plan-ghost" onClick={() => onAnalyze(run.relative_plan)}>
@@ -1095,12 +857,6 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
 
   const renderHistoryView = () => {
     const runs = history?.runs ?? [];
-    const groups = TASK_ORDER.map((key, index) => ({
-      key,
-      label: options?.tasks.find((item) => item.operation === key)?.label ?? key,
-      numeral: TASK_NUMERALS[index],
-      runs: runs.filter((run) => run.task === key),
-    })).filter((group) => group.runs.length > 0);
     const empty = history !== null && !historyLoading && !historyError && history.total === 0;
     return (
       <div className="history" key="history">
@@ -1108,26 +864,20 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
           <div>
             <span className="plan-mark">归档</span>
             <h2>历史结果</h2>
-            <p>按任务类型归档；一份报告一张卡，点开就是当时的四节报告。</p>
+            <p>一份报告一张卡；旧 task1~task5 的报告也在这里，点开仍是当时的四节报告。</p>
           </div>
           <button type="button" className="plan-ghost" onClick={() => setView("wizard")}>
             返回向导
           </button>
         </header>
 
-        {historyLoading && !history ? (
-          <div className="plan-loading">正在读取历史报告…</div>
-        ) : null}
+        {historyLoading && !history ? <div className="plan-loading">正在读取历史报告…</div> : null}
 
         {historyError ? (
           <div className="plan-error" role="alert">
             <strong>历史报告读取失败</strong>
             <p>{historyError}</p>
-            <button
-              type="button"
-              className="plan-ghost"
-              onClick={() => setHistorySeq((value) => value + 1)}
-            >
+            <button type="button" className="plan-ghost" onClick={() => setHistorySeq((value) => value + 1)}>
               重试
             </button>
           </div>
@@ -1136,48 +886,19 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
         {empty ? (
           <div className="history-empty">
             <strong>还没有历史报告</strong>
-            <p>先完成一次求解；报告会按任务类型归档到这里。</p>
+            <p>先完成一次求解；报告会归档到这里。</p>
             <button type="button" className="plan-primary" onClick={() => setView("wizard")}>
               回到向导
             </button>
           </div>
         ) : null}
 
-        {groups.map((group) => {
-          const expanded = closedGroups[group.key] ?? group.key === operation;
-          return (
-            <section className="history-group" key={group.key}>
-              <button
-                type="button"
-                className="history-group-head"
-                aria-expanded={expanded}
-                onClick={() =>
-                  setClosedGroups((current) => ({ ...current, [group.key]: !expanded }))
-                }
-              >
-                <span className="history-group-numeral">{group.numeral}</span>
-                <span className="history-group-label">{group.label}</span>
-                <span className="history-group-count">{group.runs.length} 份</span>
-                <ChevronIcon open={expanded} />
-              </button>
-              {expanded ? (
-                <div className="history-grid">{group.runs.map(renderHistoryCard)}</div>
-              ) : null}
-            </section>
-          );
-        })}
+        {runs.length > 0 ? <div className="history-grid">{runs.map(renderHistoryCard)}</div> : null}
       </div>
     );
   };
 
-
-  const stepContent = [
-    renderTaskStep,
-    renderAoiStep,
-    renderTimeStep,
-    renderConstraintStep,
-    renderSolveStep,
-  ][step];
+  const stepContent = [renderAoiStep, renderRevisitStep, renderConstraintStep, renderSolveStep][step];
 
   return (
     <div
@@ -1194,7 +915,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
           <div className="plan-rail-head">
             <div>
               <span className="plan-mark">成图</span>
-              <h2>卫星成图</h2>
+              <h2>区域重访</h2>
             </div>
             <button type="button" className="plan-close" onClick={onClose} aria-label="关闭">
               <CloseIcon />
@@ -1243,7 +964,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
           </button>
           <div className="plan-rail-foot">
             <span>{options?.capability.plannable ?? "—"} 颗可规划</span>
-            <small>浙江省 · 5 km 网格 · TLE 每日同步</small>
+            <small>浙江省 · 5 km 网格 · 光学 ≤10m</small>
           </div>
         </aside>
 
@@ -1261,7 +982,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
             <div className="plan-error" role="alert">
               <strong>TLE 已过期</strong>
               <p>
-                最新 TLE 年龄 {tleAge ?? "—"} 小时（超过 7 天）；先运行
+                最新 TLE 年龄 {tle?.max_age_hours ?? "—"} 小时（超过 7 天）；先运行
                 <code> rs-service sync</code> 再规划。
               </p>
             </div>
@@ -1278,13 +999,8 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
               >
                 {step === 0 ? "取消" : "上一步"}
               </button>
-              {step < 4 ? (
-                <button
-                  type="button"
-                  className="plan-primary"
-                  disabled={!canGoNext}
-                  onClick={() => setStep(step + 1)}
-                >
+              {step < 3 ? (
+                <button type="button" className="plan-primary" disabled={!canGoNext} onClick={() => setStep(step + 1)}>
                   下一步
                   <ArrowIcon />
                 </button>

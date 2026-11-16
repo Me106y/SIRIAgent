@@ -235,7 +235,18 @@ export interface PlanOptions {
   advanced: PlanAdvancedField[];
   sensor_types: Array<{ value: string; label: string }>;
   defaults: Record<string, unknown>;
+  revisit?: {
+    hours: number[];
+    default_hours: number;
+    window_rule: string;
+    area_target_pct: number;
+    cloud_filter_default: boolean;
+  };
   aoi: PlanAoi[];
+  aoi_limits?: {
+    max_area_km2: number;
+    levels: string[];
+  };
   capability: {
     plannable: number;
     blocked: number;
@@ -258,7 +269,8 @@ export interface PlanSummaryCards {
   city_mean_observable_duration_minutes?: number;
   area_weighted_mrt_minutes?: number;
   area_weighted_art_minutes?: number;
-  [key: string]: number | undefined;
+  ceiling_area_pct?: number | null;
+  [key: string]: number | undefined | null;
 }
 
 export interface PlanSat {
@@ -290,13 +302,30 @@ export interface PlanResult {
     temporal_coverage_pct?: number | null;
     area_pct?: number | null;
     mrt_minutes?: number | null;
+    revisit_hours?: number | null;
   };
   window?: {
     requested_horizon_h?: number;
     used_horizon_h?: number;
     expanded?: boolean;
     attempts?: number;
+    window_rule?: string | null;
+    revisit_hours?: number | null;
+    capped_by_tle?: boolean;
   };
+  catalog?: {
+    candidate_count?: number;
+    official_count?: number;
+    confidence?: Record<string, number>;
+  };
+  suggestion?: {
+    kind: string;
+    max_resolution_m: number;
+    estimated_sats: number;
+    source: string;
+    basis: string;
+    note: string;
+  } | null;
   tle?: {
     latest_epoch_utc?: string | null;
     max_age_hours?: number | null;
@@ -327,11 +356,22 @@ export interface PlanResult {
   [key: string]: unknown;
 }
 
+export interface PlanProgress {
+  stage: string;
+  label: string;
+  current: number | null;
+  total: number | null;
+  pct: number;
+  elapsed_s: number;
+  updated_at: string;
+}
+
 export interface PlanJob {
   ok: boolean;
   job_id: string;
   status: "queued" | "running" | "completed" | "failed";
   created_at: string;
+  progress?: PlanProgress | null;
   result?: PlanResult | null;
   error?: { code: string; message: string; [key: string]: unknown } | null;
 }
@@ -381,15 +421,13 @@ export interface PlanHistory {
 }
 
 export interface PlanCreateBody {
-  operation: string;
+  operation: "revisit";
   aoi_code?: string | null;
   aoi_wkt?: string | null;
   start_utc?: string;
-  horizon_h?: number;
-  auto_expand?: boolean;
+  revisit_hours: number;
   sensor_types?: string[];
   max_resolution_m?: number;
-  pointing?: "nadir";
   cloud_filter?: boolean;
   cloud_threshold_pct?: number;
   [key: string]: unknown;

@@ -47,8 +47,8 @@ git log --oneline -10
 ## 成图产物（运行时约定）
 
 - 成图由右栏“卫星成图”抽屉提交到 RS-Service，不再走 DSH skill；`skills/imaging-plan` 已移除。
-- 产物在 `reports/imaging-plan/<task>/<run_id>/`（`plan.json` + `report.html` + `meta.json`），`<task>` 是 `task1`..`task5`；`latest` 指向最近一次。
-- 抽屉的「历史结果」按任务分组列这些 run，读的是 RS-Service 的 `GET /api/rs/plans/history`（只读 `meta.json`）。
+- 产物在 `reports/imaging-plan/<task>/<run_id>/`（`plan.json` + `report.html` + `meta.json`），新 run 的 `<task>` 是 `revisit`；旧 `task1`..`task5` 目录保留可读；`latest` 指向最近一次。
+- 抽屉的「历史结果」是扁平列表，读 RS-Service 的 `GET /api/rs/plans/history`（只读 `meta.json`）；新 run 标「区域重访」，旧 task1~task5 原样可打开。
 - 要分析方案，先读 `reports/imaging-plan/latest/plan.json` 与 `report.html`；不要重新求解。
 
 ## 架构：四条不能破的线
@@ -72,22 +72,17 @@ git log --oneline -10
 
 ### 成图规划口径
 
-- `task1` 是**面积口径**：目标区域至少成像一次即达标（内部时间阈值固定 0.001%），面积目标默认 90%。`targets.temporal_coverage_pct` 对 task1 必须为 `null`，报告与抽屉只认 `targets.area_pct`；单格时间覆盖率不是对外 KPI，task3 也一样按覆盖面积口径。
-- 禁止用 90% 单格时间阈值算 task1：72 h 内单格覆盖率通常 <1%，达标面积会恒为 0.0%。改口径后先查 `reports/imaging-plan/latest/plan.json` 的 `selection.recommended_result.temporal_coverage_target_pct`（task1 必须是 0.001）与 `summary_cards.qualified_area_pct`；回归测试 `test_task1_is_area_only_regardless_of_temporal_target`、`test_task1_report_uses_area_target_and_hides_temporal_strip` 不得删改。
-- `task1` 的“求解并生成报告”结果卡与报告只保留「选中卫星 + 达标面积」；禁止显示「时间覆盖率」「面积加权 MRT」「薄弱区」（薄弱区表同样带 MRT/时间覆盖率）。
-- `task1` 的约束步骤必须提供可编辑的「面积目标 %」（默认 90，1–100）；不要重新加回「目标覆盖率 / 时间覆盖率」——task3 也已取消这个字段。约束步骤为空就是字段映射漏了，先查 `PlanDrawer` 的 `constraintFields`。
-- 改 task1/报告后，必须用修改后的代码实际生成一份报告并核对：标题里的达标面积与 `targets.area_pct` 一致且不为 0.0%，报告与结果卡没有时间覆盖率、面积加权 MRT、薄弱区；只跑单测或看旧报告不算验收。
-- 出现“达标面积 0.0%”先按 `docs/TROUBLESHOOTING.md` E15 查，不要靠调低目标凑非 0。
-- `task3` 是**给定星数最大化覆盖面积**：星数固定，在时间窗内求“至少被选中卫星覆盖一次”的面积最大。它**不是达标面积**，不设单格时间覆盖率门槛，`targets.temporal_coverage_pct` 对 task3 必须为 `null`；内部固定 0.001% 的“至少成像一次”阈值，`summary_cards.covered_area_pct`（兼容 `qualified_area_pct`）就是覆盖面积。
-- `task3` 的覆盖面积必须与报告“覆盖与回放”的终值一致，且回放的每个选中卫星都要有颜色：按“覆盖该网格总时长最多的卫星”着色，不能只按最先覆盖的卫星着色（否则最早那顆会吞掉所有网格）。
-- `task3` 的“求解并生成报告”结果卡与报告只保留「选中卫星 + 覆盖面积」；禁止出现「达标面积」「时间覆盖率」「面积加权 MRT」；薄弱区只保留网格与面积，禁止出现时间覆盖率/MRT 列。task3 约束步骤只有「星数预算」，禁止再出现「目标覆盖率」。
-- 改 task3/报告后，必须用修改后的代码实际生成一份报告并核对：标题与结果卡写“覆盖面积”且与回放终值一致、没有时间覆盖率/面积加权 MRT、薄弱区没有这两列、至少两颗选中卫星的颜色可见；只跑单测或看旧报告不算验收。
-- 成图规划的指向**只有星下点**（`pointing` 只接受 `nadir`，传 `targeted` 直接 422）；沿轨视场按检测步长换算成推扫糊（`0.55 × 7.5 km/s × dt`，10 s → 41.2 km 半长），不是固定 ±60° 扇形。两者一起改了以后覆盖率会大幅下降（杭州 72 h task1：96.6% → 28.9%），这是修正不是回归；不要为了"数字好看"把目标指向或 60° 沿轨加回来——那会让足印绕 AOI 形心扫成楔形、17 km 幅宽的星也能"盖住"65% 的城市。
-- 成像门限是五个 task 共用的：`adapter._payload` 必须给非 SAR 传 `min_elevation_deg=10` 和 `SunGroundElevAngle Min 10`（`RS_OPTICAL_SUN_MIN_DEG` 默认 10），SAR 豁免；改门限后必须重跑 task3 n=2/n=3，报告不得再出现夜航星。
-- `task2` 的达标面积 = 面积中「单格最长重访间隔（MRT）≤ 目标」的占比，这个间隔**含夜间与窗口首尾空档**。光学只覆盖白天，单格 MRT 下限 ≈ 夜间空档（约 12–19 h），所以分钟级目标（如 24 分）在任何窗口下都必然 0.0%，**不是选星坏了**：不要调低面积目标、不要套 task1/3 的面积口径、也不要改 `regional_metrics` 的 gap 定义（task4/5 共用）。基线：杭州 72 h 目标指向下 24 分→0.0%、48 h→66.1%、72 h→100% 且 0 颗星也“达标”（未覆盖网格的 gap 正好等于窗口长度），所以默认用 **2880 分（48 h）**，不要用等于窗口长度的目标。
-- `task2` 报告与抽屉结果卡的「达标面积」必须把重访目标写在旁边（`达标面积（最长重访 ≤ 48 h · 面积 90%）`）；0.0% 时报告要写明夜间空档这条物理下限与两条出路（改小时级目标 / 换全天候载荷）。字段名是「最长重访上限」，不是「P95 重访」——引擎算的是单格最大间隔。
-- `task5` 的 KPI 是「面积加权 ART」（`summary_cards.area_weighted_art_minutes`，报告按小时显示）；task5 没有面积目标，报告与结果卡禁止出现「达标面积」「时间覆盖率」，薄弱区只保留「时间覆盖率 + ART」两列。把 task1/3 的面积口径套到 task5，会把 `qualified_area_pct = null` 显示成 0.0%，等于用错 KPI 盖住真实成绩。
-- `task4` 报告首屏 KPI 必须是 `area_quantile_mrt_s` 的「N% 面积分位 MRT」，并显示「星数预算 / 实际」，禁止出现「达标面积」「时间覆盖率」；`task4` 默认 `exact_budget=True`，覆盖回放只是联合覆盖，不能当 MRT KPI。
+- v2.0.0 只有一个场景 `revisit`：给定区域 + 重访时间 T（24/48/72h），求最少卫星；面积目标固定 100%。旧 task1~task5 的 API/UI 入口已移除，旧报告目录保留可读。
+- 评估窗口 `W = min(3T, 168h)`，不由用户输入；T=72h 时封顶 168h（2.33T），结果必须标 `window.capped_by_tle=true` 并写“受 TLE 上限限制”。禁止自动扩窗（72h→168h 多轮求解）。
+- 达标 = 每个 5km 网格代表点的最长重访间隔（**含夜间与窗口首尾空档**）≤ T；100% 指全部网格代表点，不四舍五入。`targets.temporal_coverage_pct` 必须为 `null`，`targets.area_pct` 固定 100，`targets.revisit_hours` 是 T。
+- 不可行时禁止返回“0 颗星、0%”：必须再跑限时贪心，返回最佳努力 + `summary_cards.ceiling_area_pct`（全目录上限），并给 `suggestion`（放宽到 ≤1km 的实测建议，不自动切换）。`optimality` 只能是 `proven_optimal|time_limited|infeasible_heuristic`。
+- AOI 只允许市/区县/自定义 ≤20,000 km²；省级 AOI 返回 `aoi_too_large`。载荷只开光学，`max_resolution_m` 只接受 1/2/5/10；高光谱留在星历，不参与 revisit。
+- 云量默认**不过滤**；开启时逐网格剔除 >70% 访问，并在 assumptions 说明。成像门限：非 SAR 仰角 ≥10°，光学地面太阳高度 ≥10°。
+- 选星限时：贪心 ≤60s（`greedy_time_limit_s`）+ ILP ≤30s；超时返回最佳努力并标 `time_limited`。机会计算按卫星并行，结果按 `sat_index` 确定性归并，golden 测试不得漂移。
+- 进度：`GET /plans/{id}` 必须带 `progress={stage,label,current,total,pct,elapsed_s}`；前端显示阶段、逐星 `N/总数`、已用时间，**不做 ETA**；job_id 存 localStorage，重开抽屉恢复，404 提示任务失效。
+- 报告：首屏 KPI = 最少卫星数 / 达标面积（最长重访 ≤ T · 目标 100%）/ 全目录上限 / 评估窗口；不再出现时间覆盖率、面积加权 MRT 作为主 KPI。不可行时标题写“未达标，全目录上限 X%”。地图与回放轴铺满主区，正文 15px、辅助 ≥13px。
+- 数据闸门：≤10m 国产光学补到 150–180 颗后，**杭州 72h / 24h / 100% 必须实测可行**（`scripts/revisit_gate.py`），才允许在 UI 承诺 100%。不过闸门就停止扩容，按 `suggestion` 发布并需产品负责人签字；不许为了凑 100% 塞近似参数或无限补星。
+- 每次改 revisit 口径或报告，必须用修改后的代码实际跑一份杭州报告并核对：达标面积与 `targets.revisit_hours` 一致、未达标时不出现“0 颗星”、报告无旧 task KPI；只跑单测不算验收。
 
 ### 交互与安全
 
