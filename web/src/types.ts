@@ -430,6 +430,7 @@ export interface PlanCreateBody {
   aoi_wkt?: string | null;
   start_utc?: string;
   revisit_hours: number;
+  window_hours?: number;
   sensor_types?: string[];
   max_resolution_m?: number;
   cloud_filter?: boolean;
