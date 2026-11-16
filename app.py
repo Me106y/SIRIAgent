@@ -249,6 +249,24 @@ def rs_proxy(subpath: str):
             return jsonify({"ok": False, "error": f"RS-Service 不可达：{exc}"}), 502
 
 
+
+def _rs_catalog() -> dict:
+    """分页取完整卫星目录；RS 的 /satellites 单页上限是 200。"""
+    first = _rs_json("satellites?limit=200&offset=0")
+    items = list(first.get("items") or [])
+    total = int(first.get("total") or len(items))
+    offset = len(items)
+    while len(items) < total and offset < total:
+        page = _rs_json(f"satellites?limit=200&offset={offset}")
+        batch = list(page.get("items") or [])
+        if not batch:
+            break
+        items.extend(batch)
+        offset += len(batch)
+    first["items"] = items
+    return first
+
+
 def _rs_json(subpath: str) -> dict:
     """服务端直连 RS-Service 取 JSON（供 bootstrap 合并首屏请求）。"""
     url = f"{RS_SERVICE_BASE}/{subpath}"
@@ -385,7 +403,7 @@ def balance() -> Response:
 def bootstrap() -> Response:
     """首屏一次拿齐目录、星历与余额，少 3 个往返；星历是秒级数据，不缓存。"""
     try:
-        satellites = _rs_json("satellites?limit=500")
+        satellites = _rs_catalog()
         positions = _rs_json("positions")
     except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, ValueError) as exc:
         return jsonify({"ok": False, "error": f"RS-Service 不可达：{exc}"}), 502
