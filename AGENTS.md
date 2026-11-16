@@ -72,7 +72,7 @@ git log --oneline -10
 
 ### 成图规划口径
 
-- v2.0.0 只有一个场景 `revisit`：给定区域 + 重访时间 T（24/48/72h），求最少卫星；面积目标固定 100%。旧 task1~task5 的 API/UI 入口已移除，旧报告目录保留可读。
+- v2.0.0 只有一个场景 `revisit`：给定区域 + 重访时间 T（48/72h，默认 48），求最少卫星；面积目标固定 100%。旧 task1~task5 的 API/UI 入口已移除，旧报告目录保留可读。
 - 评估窗口 `W = min(3T, 168h)`，不由用户输入；T=72h 时封顶 168h（2.33T），结果必须标 `window.capped_by_tle=true` 并写“受 TLE 上限限制”。禁止自动扩窗（72h→168h 多轮求解）。
 - 达标 = 每个 5km 网格代表点的最长重访间隔（**含夜间与窗口首尾空档**）≤ T；100% 指全部网格代表点，不四舍五入。`targets.temporal_coverage_pct` 必须为 `null`，`targets.area_pct` 固定 100，`targets.revisit_hours` 是 T。
 - 不可行时禁止返回“0 颗星、0%”：必须再跑限时贪心，返回最佳努力 + `summary_cards.ceiling_area_pct`（全目录上限），并给 `suggestion`（放宽到 ≤1km 的实测建议，不自动切换）。`optimality` 只能是 `proven_optimal|time_limited|infeasible_heuristic`。
@@ -81,7 +81,7 @@ git log --oneline -10
 - 选星限时：贪心 ≤60s（`greedy_time_limit_s`）+ ILP ≤30s；超时返回最佳努力并标 `time_limited`。机会计算按卫星并行，结果按 `sat_index` 确定性归并，golden 测试不得漂移。
 - 进度：`GET /plans/{id}` 必须带 `progress={stage,label,current,total,pct,elapsed_s}`；前端显示阶段、逐星 `N/总数`、已用时间，**不做 ETA**；job_id 存 localStorage，重开抽屉恢复，404 提示任务失效。
 - 报告：首屏 KPI = 最少卫星数 / 达标面积（最长重访 ≤ T · 目标 100%）/ 全目录上限 / 评估窗口；不再出现时间覆盖率、面积加权 MRT 作为主 KPI。不可行时标题写“未达标，全目录上限 X%”。地图与回放轴铺满主区，正文 15px、辅助 ≥13px。
-- 数据闸门：≤10m 国产光学补到 150–180 颗后，**杭州 72h / 24h / 100% 必须实测可行**（`scripts/revisit_gate.py`），才允许在 UI 承诺 100%。不过闸门就停止扩容，按 `suggestion` 发布并需产品负责人签字；不许为了凑 100% 塞近似参数或无限补星。
+- 数据闸门：≤10m 光学补到 215 颗 / 203 可规划后，**杭州 144h / 48h / 100% 必须实测可行**（`scripts/revisit_gate.py`），才允许在 UI 承诺 100%。不过闸门就停止扩容，按 `suggestion` 发布并需产品负责人签字；不许为了凑 100% 塞近似参数或无限补星。
 - 每次改 revisit 口径或报告，必须用修改后的代码实际跑一份杭州报告并核对：达标面积与 `targets.revisit_hours` 一致、未达标时不出现“0 颗星”、报告无旧 task KPI；只跑单测不算验收。
 
 ### 交互与安全
