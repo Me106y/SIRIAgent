@@ -204,6 +204,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
   const [districtCode, setDistrictCode] = useState("");
   const [aoiWkt, setAoiWkt] = useState("");
   const [drawOpen, setDrawOpen] = useState(false);
+  const [aoiMode, setAoiMode] = useState<"admin" | "draw">("admin");
   const [startLocal, setStartLocal] = useState(nowLocal);
   const [revisitHours, setRevisitHours] = useState(48);
   const [evalHours, setEvalHours] = useState(144);
@@ -412,7 +413,9 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
   if (!open) return null;
 
   const stepValid = (index: number): boolean => {
-    if (index === 0) return Boolean(effectiveCode || aoiWkt);
+    if (index === 0) {
+      return aoiMode === "admin" ? Boolean(effectiveCode) : Boolean(aoiWkt);
+    }
     if (index === 1) {
       return (
         Boolean(startLocal) &&
@@ -506,67 +509,93 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
         <h2>框定目标范围</h2>
         <p>只支持浙江省内的市、区县，或在地图上画一个多边形（面积上限 2 万 km²）。</p>
       </header>
-      <div className="plan-grid-2">
-        <label className="plan-field">
-          <span>市</span>
-          <select
-            value={cityCode}
-            onChange={(event) => {
-              setCityCode(event.target.value);
-              setDistrictCode("");
-              setAoiWkt("");
-            }}
-            disabled={Boolean(aoiWkt)}
-          >
-            {cities.map((item) => (
-              <option key={item.code} value={item.code}>
-                {item.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="plan-field">
-          <span>区县</span>
-          <select
-            value={districtCode}
-            onChange={(event) => {
-              setDistrictCode(event.target.value);
-              setAoiWkt("");
-            }}
-            disabled={Boolean(aoiWkt) || districts.length === 0}
-          >
-            <option value="">全市（不选区县）</option>
-            {districts.map((item) => (
-              <option key={item.code} value={item.code}>
-                {item.name}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-      <div className="plan-or">
-        <span>或</span>
-      </div>
-      <div className="plan-draw-row">
-        <button type="button" className="plan-ghost" onClick={() => setDrawOpen(true)}>
-          {aoiWkt ? "重新绘制范围" : "在地图上画范围"}
+      <div className="plan-segment" role="tablist" aria-label="范围方式">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={aoiMode === "admin"}
+          className={aoiMode === "admin" ? "active" : ""}
+          onClick={() => {
+            setAoiMode("admin");
+            setAoiWkt("");
+            setDrawOpen(false);
+          }}
+        >
+          按行政区
         </button>
-        {aoiWkt ? (
-          <button
-            type="button"
-            className="plan-link"
-            onClick={() => {
-              setAoiWkt("");
-              setDrawOpen(false);
-            }}
-          >
-            清除自定义范围
-          </button>
-        ) : null}
+        <button
+          type="button"
+          role="tab"
+          aria-selected={aoiMode === "draw"}
+          className={aoiMode === "draw" ? "active" : ""}
+          onClick={() => setAoiMode("draw")}
+        >
+          在地图上画范围
+        </button>
       </div>
-      {aoiWkt ? (
+      {aoiMode === "admin" ? (
+        <div className="plan-grid-2">
+          <label className="plan-field">
+            <span>市</span>
+            <select
+              value={cityCode}
+              onChange={(event) => {
+                setCityCode(event.target.value);
+                setDistrictCode("");
+                setAoiWkt("");
+              }}
+            >
+              {cities.map((item) => (
+                <option key={item.code} value={item.code}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="plan-field">
+            <span>区县</span>
+            <select
+              value={districtCode}
+              onChange={(event) => setDistrictCode(event.target.value)}
+              disabled={districts.length === 0}
+            >
+              <option value="">全市（不选区县）</option>
+              {districts.map((item) => (
+                <option key={item.code} value={item.code}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      ) : (
+        <div className="plan-draw-card">
+          <div>
+            <strong>{aoiWkt ? "已绘制自定义范围" : "在地图上圈出目标区域"}</strong>
+            <p>画完后按多边形裁剪 5km 网格；面积上限 2 万 km²。</p>
+          </div>
+          <div className="plan-draw-actions">
+            <button type="button" className="plan-primary" onClick={() => setDrawOpen(true)}>
+              {aoiWkt ? "重新绘制" : "开始绘制"}
+            </button>
+            {aoiWkt ? (
+              <button
+                type="button"
+                className="plan-link"
+                onClick={() => {
+                  setAoiWkt("");
+                  setDrawOpen(false);
+                }}
+              >
+                清除
+              </button>
+            ) : null}
+          </div>
+        </div>
+      )}
+      {aoiMode === "draw" && aoiWkt ? (
         <p className="plan-note">已使用自定义多边形；求解时按 WKT 裁剪网格。</p>
-      ) : aoi ? (
+      ) : aoiMode === "admin" && aoi ? (
         <p className="plan-note">
           将分析 {aoi.name}
           {aoi.level ? `（${LEVEL_LABELS[aoi.level] ?? aoi.level}）` : ""}；省级范围本版不开放。
@@ -982,15 +1011,15 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
       }}
     >
       <div className="plan-shell">
+        <button type="button" className="plan-close plan-close-fixed" onClick={onClose} aria-label="关闭">
+          <CloseIcon />
+        </button>
         <aside className="plan-rail">
           <div className="plan-rail-head">
             <div>
               <span className="plan-mark">成图</span>
               <h2>区域重访</h2>
             </div>
-            <button type="button" className="plan-close" onClick={onClose} aria-label="关闭">
-              <CloseIcon />
-            </button>
           </div>
           <ol className="plan-steps">
             {STEPS.map((label, index) => {
