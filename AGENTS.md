@@ -67,13 +67,13 @@ git log --oneline -10
 
 - 所有对外结果带 `accuracy_note`；SGP4 在 LEO 约 1 km/天，过境时间只到 ±1 分钟。
 - 门限：可视化 5°、成像 10°、光学另加太阳高度 >10°；足迹边缘 ±2–5 km；覆盖率与重访标 `estimate`。
-- TLE >72h 标 `degraded`，>7d 拒绝过境计算。
+- TLE 年龄只作信息展示；不再做 >72h 降级或 >7d 拒绝，过期数据由同步任务更新。
 - `payload_public=false` 的卫星只给轨道与可见性，不给分辨率、幅宽，不参与成像推荐。
 
 ### 成图规划口径
 
-- v2.0.0 只有一个场景 `revisit`：给定区域 + 重访时间 T（48/72h，默认 48），求最少卫星；面积目标固定 100%。旧 task1~task5 的 API/UI 入口已移除，旧报告目录保留可读。
-- 评估窗口 `W = min(3T, 168h)`，不由用户输入；T=72h 时封顶 168h（2.33T），结果必须标 `window.capped_by_tle=true` 并写“受 TLE 上限限制”。禁止自动扩窗（72h→168h 多轮求解）。
+- v2.0.0 只有一个场景 `revisit`：给定区域 + 重访时间 T（整数 48–168h，默认 48），求最少卫星；面积目标固定 100%。旧 task1~task5 的 API/UI 入口已移除，旧报告目录保留可读。
+- 评估窗口 `W = min(3T, 336h)`，不由用户输入；T>112h 时达到 336h 上限（14 天），结果必须标 `window.capped_by_horizon=true` 并写“受 336h 上限限制”。禁止自动扩窗。
 - 达标 = 每个 5km 网格代表点的最长重访间隔（**含夜间与窗口首尾空档**）≤ T；100% 指全部网格代表点，不四舍五入。`targets.temporal_coverage_pct` 必须为 `null`，`targets.area_pct` 固定 100，`targets.revisit_hours` 是 T。
 - 不可行时禁止返回“0 颗星、0%”：必须再跑限时贪心，返回最佳努力 + `summary_cards.ceiling_area_pct`（全目录上限），并给 `suggestion`（放宽到 ≤1km 的实测建议，不自动切换）。`optimality` 只能是 `proven_optimal|time_limited|infeasible_heuristic`。
 - AOI 只允许市/区县/自定义 ≤20,000 km²；省级 AOI 返回 `aoi_too_large`。载荷只开光学，`max_resolution_m` 只接受 1/2/5/10；高光谱留在星历，不参与 revisit。

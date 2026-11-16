@@ -133,7 +133,7 @@ function parentCityCode(item: PlanAoi): string {
 }
 
 function windowHours(hours: number): number {
-  return Math.min(3 * hours, 168);
+  return Math.min(3 * hours, 336);
 }
 
 export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
@@ -349,7 +349,9 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
 
   const stepValid = (index: number): boolean => {
     if (index === 0) return Boolean(effectiveCode || aoiWkt);
-    if (index === 1) return Boolean(startLocal) && (revisitHours === 48 || revisitHours === 72);
+    if (index === 1) {
+      return Boolean(startLocal) && Number.isFinite(revisitHours) && revisitHours >= 48 && revisitHours <= 168;
+    }
     return true;
   };
 
@@ -507,23 +509,24 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
     <div className="plan-step" key="revisit">
       <header className="plan-step-head">
         <h2>给定重访时间</h2>
-        <p>窗口由系统派生：W = min(3T, 168h)。窗口不能太短，否则“覆盖一次”也会被误判成重访达标。</p>
+        <p>重访时间可自行设定，最小 48h；评估窗口由系统派生 W = min(3T, 336h)，最长 14 天。</p>
       </header>
-      <div className="plan-chips" role="group" aria-label="重访时间">
-        {[48, 72].map((hours) => (
-          <button
-            key={hours}
-            type="button"
-            className={`plan-chip ${revisitHours === hours ? "active" : ""}`}
-            onClick={() => setRevisitHours(hours)}
-          >
-            {hours} 小时
-          </button>
-        ))}
-      </div>
+      <label className="plan-field">
+        <span>重访时间 T <small>小时</small></span>
+        <input
+          type="number"
+          min={48}
+          max={168}
+          step={1}
+          inputMode="numeric"
+          value={revisitHours}
+          onChange={(event) => setRevisitHours(Math.round(Number(event.target.value) || 0))}
+        />
+        <small className="plan-help">至少 48h；窗口取 3T，最长 336h（14 天）。</small>
+      </label>
       <div className="plan-grid-2">
         <label className="plan-field">
-          <span>开始时间</span>
+          <span>开始时间 <small>北京时间</small></span>
           <input
             type="datetime-local"
             value={startLocal}
@@ -535,8 +538,8 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
           <div className="plan-readout">
             <strong>{windowHours(revisitHours)} h</strong>
             <small>
-              {3 * revisitHours > 168
-                ? `3T = ${3 * revisitHours} h，受 TLE 7 天上限截断（2.33T）`
+              {3 * revisitHours > 336
+                ? `3T = ${3 * revisitHours} h，按 336h 上限`
                 : `3T = ${3 * revisitHours} h`}
             </small>
           </div>
@@ -587,7 +590,6 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
   );
 
   const tle = options?.tle;
-  const tleStale = Boolean(tle?.stale);
   const result = job?.result ?? null;
 
   const renderProgress = () => {
@@ -650,7 +652,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
           <strong>{feasible ? "目标可行" : "未达标"}</strong>
           <span>
             {value.optimality ?? "—"} · 窗口 {value.window?.used_horizon_h ?? "—"}h
-            {value.window?.capped_by_tle ? "（受 TLE 上限限制）" : ""} · 候选{" "}
+            {value.window?.capped_by_horizon ? "（受 336h 上限限制）" : ""} · 候选{" "}
             {value.candidate_count ?? "—"} 颗
           </span>
         </div>
@@ -688,9 +690,9 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
             {suggestion.source} 可在同窗口做到 100%（{suggestion.basis}）。这只是建议，不会自动切换。
           </p>
         ) : null}
-        {value.window?.capped_by_tle ? (
+        {value.window?.capped_by_horizon ? (
           <p className="plan-note">
-            请求窗口 {3 * revisitHours}h，实际按 {value.window.used_horizon_h}h 计算（TLE 7 天上限）。
+            请求窗口 {3 * revisitHours}h，实际按 {value.window.used_horizon_h}h 计算（336h 上限）。
           </p>
         ) : null}
 
@@ -793,7 +795,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
       {pollError && !error ? <p className="plan-note">状态查询暂时失败，正在重试：{pollError}</p> : null}
 
       {!jobId ? (
-        <button type="button" className="plan-solve" onClick={() => void solve()} disabled={tleStale}>
+        <button type="button" className="plan-solve" onClick={() => void solve()}>
           开始求解
           <ArrowIcon />
         </button>
@@ -977,15 +979,6 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
           ) : null}
           {view === "wizard" && !options && !optionsError ? (
             <div className="plan-loading">正在读取任务与范围…</div>
-          ) : null}
-          {view === "wizard" && options && tleStale ? (
-            <div className="plan-error" role="alert">
-              <strong>TLE 已过期</strong>
-              <p>
-                最新 TLE 年龄 {tle?.max_age_hours ?? "—"} 小时（超过 7 天）；先运行
-                <code> rs-service sync</code> 再规划。
-              </p>
-            </div>
           ) : null}
           {view === "wizard" && options ? stepContent() : null}
           {view === "history" ? renderHistoryView() : null}

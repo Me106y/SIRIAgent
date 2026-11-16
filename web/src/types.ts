@@ -236,8 +236,10 @@ export interface PlanOptions {
   sensor_types: Array<{ value: string; label: string }>;
   defaults: Record<string, unknown>;
   revisit?: {
-    hours: number[];
+    min_hours: number;
+    max_hours: number;
     default_hours: number;
+    window_cap_hours: number;
     window_rule: string;
     area_target_pct: number;
     cloud_filter_default: boolean;
@@ -311,6 +313,8 @@ export interface PlanResult {
     attempts?: number;
     window_rule?: string | null;
     revisit_hours?: number | null;
+    cap_hours?: number | null;
+    capped_by_horizon?: boolean;
     capped_by_tle?: boolean;
   };
   catalog?: {

@@ -2067,14 +2067,14 @@ button {
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 9px 10px;
+  gap: 11px;
+  padding: 10px 12px;
   border-radius: 10px;
   border: 1px solid transparent;
   background: transparent;
   color: var(--muted);
   text-align: left;
-  font-size: 13px;
+  font-size: 14px;
   transition: color 140ms ease, background 140ms ease;
 }
 
@@ -2094,8 +2094,8 @@ button {
 }
 
 .plan-step-dot {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   flex: none;
   display: grid;
   place-items: center;
@@ -2148,28 +2148,28 @@ button {
   display: flex;
   flex-direction: column;
   overflow: auto;
-  padding: 24px 30px 0;
+  padding: 28px 34px 0;
 }
 
 .plan-step {
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  padding-bottom: 24px;
+  gap: 22px;
+  padding-bottom: 28px;
   animation: plan-step-in 180ms ease-out;
 }
 
 .plan-step-head {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  max-width: 64ch;
+  gap: 8px;
+  max-width: 62ch;
 }
 
 .plan-step-head h2 {
   margin: 0;
-  font-size: 24px;
-  line-height: 1.25;
+  font-size: 26px;
+  line-height: 1.22;
   letter-spacing: -0.02em;
   text-wrap: balance;
 }
@@ -2177,7 +2177,8 @@ button {
 .plan-step-head p {
   margin: 0;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 .plan-task-list {
@@ -2265,19 +2266,19 @@ button {
 .plan-grid-2 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  gap: 16px;
 }
 
 .plan-grid-3 {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  gap: 16px;
 }
 
 .plan-field {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 8px;
   min-width: 0;
 }
 
@@ -2286,7 +2287,7 @@ button {
   align-items: baseline;
   gap: 6px;
   color: #a9c2d8;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
 }
 
@@ -2296,16 +2297,22 @@ button {
   font-weight: 400;
 }
 
+.plan-help {
+  color: #8ba3ba;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .plan-field input,
 .plan-field select {
   width: 100%;
-  height: 38px;
-  padding: 0 11px;
-  border-radius: 9px;
+  height: 44px;
+  padding: 0 12px;
+  border-radius: 10px;
   border: 1px solid var(--line);
   background: #071221;
   color: var(--ink);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .plan-field input::placeholder {
@@ -4001,8 +4008,10 @@ button {
 .plan-readout {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 10px 12px;
+  justify-content: center;
+  gap: 1px;
+  height: 44px;
+  padding: 0 12px;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: #071322;
@@ -4010,11 +4019,13 @@ button {
 
 .plan-readout strong {
   font-size: 16px;
+  line-height: 1.2;
   color: var(--ink);
 }
 
 .plan-readout small {
-  font-size: 12px;
+  font-size: 11.5px;
+  line-height: 1.3;
   color: var(--muted);
 }
 
