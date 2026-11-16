@@ -2,6 +2,12 @@
 
 SIRIAgent 的用户可见变化。版本规则见 [docs/VERSIONING.md](docs/VERSIONING.md)。
 
+## [2.1.1] - 2026-11-16
+
+### Fixed
+
+- bootstrap 按 offset 分页取完整卫星目录（RS 单页上限 200）：目录 203 颗时左侧显示 203，不再被截断成 200。
+
 ## [2.1.0] - 2026-11-16
 
 ### Changed
