@@ -73,7 +73,7 @@ git log --oneline -10
 ### 成图规划口径
 
 - v2.0.0 只有一个场景 `revisit`：给定区域 + 重访时间 T（整数 48–168h，默认 48），求最少卫星；面积目标固定 100%。旧 task1~task5 的 API/UI 入口已移除，旧报告目录保留可读。
-- 评估窗口 `W = min(3T, 336h)`，不由用户输入；T>112h 时达到 336h 上限（14 天），结果必须标 `window.capped_by_horizon=true` 并写“受 336h 上限限制”。禁止自动扩窗。
+- 评估窗口默认 `W = min(3T, 336h)`；用户可用 `window_hours`（48–336）覆盖，此时 `window.window_rule="user"`。未覆盖且 T>112h 时达到 336h 上限（14 天），结果标 `window.capped_by_horizon=true`。禁止自动扩窗。
 - 达标 = 每个 5km 网格代表点的最长重访间隔（**含夜间与窗口首尾空档**）≤ T；100% 指全部网格代表点，不四舍五入。`targets.temporal_coverage_pct` 必须为 `null`，`targets.area_pct` 固定 100，`targets.revisit_hours` 是 T。
 - 不可行时禁止返回“0 颗星、0%”：必须再跑限时贪心，返回最佳努力 + `summary_cards.ceiling_area_pct`（全目录上限），并给 `suggestion`（放宽到 ≤1km 的实测建议，不自动切换）。`optimality` 只能是 `proven_optimal|time_limited|infeasible_heuristic`。
 - AOI 只允许市/区县/自定义 ≤20,000 km²；省级 AOI 返回 `aoi_too_large`。载荷只开光学，`max_resolution_m` 只接受 1/2/5/10；高光谱留在星历，不参与 revisit。

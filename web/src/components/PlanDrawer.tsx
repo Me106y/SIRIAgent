@@ -132,8 +132,67 @@ function parentCityCode(item: PlanAoi): string {
   return digits.length >= 4 ? `${digits.slice(0, 4)}00` : "";
 }
 
-function windowHours(hours: number): number {
-  return Math.min(3 * hours, 336);
+function MinusIcon() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M3.5 8h9" />
+    </svg>
+  );
+}
+
+function PlusIcon() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M3.5 8h9M8 3.5v9" />
+    </svg>
+  );
+}
+
+interface NumberStepperProps {
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+  min: number;
+  max: number;
+  step?: number;
+}
+
+function NumberStepper({ label, value, onChange, min, max, step = 1 }: NumberStepperProps) {
+  const clamp = (next: number) => Math.min(max, Math.max(min, next));
+  const bump = (direction: 1 | -1) => onChange(clamp((Number.isFinite(value) ? value : min) + direction * step));
+  return (
+    <div className="plan-number">
+      <button
+        type="button"
+        className="plan-number-btn"
+        onClick={() => bump(-1)}
+        disabled={Number.isFinite(value) && value <= min}
+        aria-label={`减少${label}`}
+      >
+        <MinusIcon />
+      </button>
+      <input
+        type="number"
+        inputMode="numeric"
+        aria-label={label}
+        value={Number.isFinite(value) ? value : ""}
+        min={min}
+        max={max}
+        step={step}
+        onChange={(event) => onChange(Number(event.target.value) || 0)}
+        onBlur={() => onChange(clamp(Number.isFinite(value) ? value : min))}
+      />
+      <button
+        type="button"
+        className="plan-number-btn"
+        onClick={() => bump(1)}
+        disabled={Number.isFinite(value) && value >= max}
+        aria-label={`增加${label}`}
+      >
+        <PlusIcon />
+      </button>
+    </div>
+  );
 }
 
 export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
@@ -147,6 +206,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
   const [drawOpen, setDrawOpen] = useState(false);
   const [startLocal, setStartLocal] = useState(nowLocal);
   const [revisitHours, setRevisitHours] = useState(48);
+  const [evalHours, setEvalHours] = useState(144);
   const [maxResolution, setMaxResolution] = useState(10);
   const [cloud, setCloud] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);
@@ -154,6 +214,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
   const [jobSummary, setJobSummary] = useState<{
     aoi_label: string;
     revisit_hours: number;
+    window_hours: number;
     max_resolution_m: number;
     cloud_filter: boolean;
   } | null>(null);
@@ -235,6 +296,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
         job_id?: string;
         aoi_label?: string;
         revisit_hours?: number;
+        window_hours?: number;
         max_resolution_m?: number;
         cloud_filter?: boolean;
       };
@@ -244,10 +306,12 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
         setJobSummary({
           aoi_label: parsed.aoi_label ?? "—",
           revisit_hours: parsed.revisit_hours ?? 48,
+          window_hours: parsed.window_hours ?? Math.min(3 * (parsed.revisit_hours ?? 48), 336),
           max_resolution_m: parsed.max_resolution_m ?? 10,
           cloud_filter: Boolean(parsed.cloud_filter),
         });
         setRevisitHours(parsed.revisit_hours ?? 48);
+        setEvalHours(parsed.window_hours ?? Math.min(3 * (parsed.revisit_hours ?? 48), 336));
         setMaxResolution(parsed.max_resolution_m ?? 10);
         setCloud(Boolean(parsed.cloud_filter));
       }
@@ -350,7 +414,11 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
   const stepValid = (index: number): boolean => {
     if (index === 0) return Boolean(effectiveCode || aoiWkt);
     if (index === 1) {
-      return Boolean(startLocal) && Number.isFinite(revisitHours) && revisitHours >= 48 && revisitHours <= 168;
+      return (
+        Boolean(startLocal) &&
+        Number.isFinite(revisitHours) && revisitHours >= 48 && revisitHours <= 168 &&
+        Number.isFinite(evalHours) && evalHours >= 48 && evalHours <= 336
+      );
     }
     return true;
   };
@@ -368,6 +436,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
     aoi_wkt: aoiWkt || null,
     start_utc: new Date(startLocal).toISOString(),
     revisit_hours: revisitHours,
+    window_hours: evalHours,
     sensor_types: ["optical"],
     max_resolution_m: maxResolution,
     cloud_filter: cloud,
@@ -388,6 +457,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
         job_id: created.job_id,
         aoi_label: aoiWkt ? "自定义多边形" : aoi?.name ?? effectiveCode,
         revisit_hours: revisitHours,
+        window_hours: evalHours,
         max_resolution_m: maxResolution,
         cloud_filter: cloud,
       };
@@ -512,17 +582,18 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
         <p>重访时间可自行设定，最小 48h；评估窗口由系统派生 W = min(3T, 336h)，最长 14 天。</p>
       </header>
       <label className="plan-field">
-        <span>重访时间 T <small>小时</small></span>
-        <input
-          type="number"
+        <span>重访时间</span>
+        <NumberStepper
+          label="重访时间"
+          value={revisitHours}
           min={48}
           max={168}
-          step={1}
-          inputMode="numeric"
-          value={revisitHours}
-          onChange={(event) => setRevisitHours(Math.round(Number(event.target.value) || 0))}
+          onChange={(next) => {
+            setRevisitHours(next);
+            setEvalHours(Math.min(3 * next, 336));
+          }}
         />
-        <small className="plan-help">至少 48h；窗口取 3T，最长 336h（14 天）。</small>
+        <small className="plan-help">至少 48h；修改后评估窗口默认取 3T，可再单独调整。</small>
       </label>
       <div className="plan-grid-2">
         <label className="plan-field">
@@ -535,14 +606,14 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
         </label>
         <div className="plan-field">
           <span>评估窗口</span>
-          <div className="plan-readout">
-            <strong>{windowHours(revisitHours)} h</strong>
-            <small>
-              {3 * revisitHours > 336
-                ? `3T = ${3 * revisitHours} h，按 336h 上限`
-                : `3T = ${3 * revisitHours} h`}
-            </small>
-          </div>
+          <NumberStepper
+            label="评估窗口"
+            value={evalHours}
+            min={48}
+            max={336}
+            onChange={setEvalHours}
+          />
+          <small className="plan-help">默认 3T = {3 * revisitHours} h；最长 336h（14 天）。</small>
         </div>
       </div>
       <p className="plan-note">开始时间按本机时区填写，提交时转成 UTC；面积目标固定 100%。</p>
@@ -692,7 +763,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
         ) : null}
         {value.window?.capped_by_horizon ? (
           <p className="plan-note">
-            请求窗口 {3 * revisitHours}h，实际按 {value.window.used_horizon_h}h 计算（336h 上限）。
+            请求窗口 {evalHours}h，实际按 {value.window.used_horizon_h}h 计算。
           </p>
         ) : null}
 
@@ -772,9 +843,7 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
         <div>
           <dt>重访</dt>
           <dd>
-            ≤ {jobSummary?.revisit_hours ?? revisitHours} h · 窗口 {windowHours(
-              jobSummary?.revisit_hours ?? revisitHours,
-            )} h
+            ≤ {jobSummary?.revisit_hours ?? revisitHours} h · 窗口 {jobSummary?.window_hours ?? evalHours} h
           </dd>
         </div>
         <div>
