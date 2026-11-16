@@ -2,6 +2,12 @@
 
 SIRIAgent 的用户可见变化。版本规则见 [docs/VERSIONING.md](docs/VERSIONING.md)。
 
+## [2.2.1] - 2026-11-16
+
+### Docs
+
+- PRD/AGENTS 同步 336h 窗口、T 48–168、TLE 不降级、报告 2 格 KPI。
+
 ## [2.2.0] - 2026-11-16
 
 ### Changed
