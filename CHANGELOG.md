@@ -2,6 +2,12 @@
 
 SIRIAgent 的用户可见变化。版本规则见 [docs/VERSIONING.md](docs/VERSIONING.md)。
 
+## [2.1.2] - 2026-11-16
+
+### Docs
+
+- 目录口径统一为 **203 颗 / 203 可规划**，修正 PRD/AGENTS 中残留的 215/203。
+
 ## [2.1.1] - 2026-11-16
 
 ### Fixed
