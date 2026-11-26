@@ -294,6 +294,28 @@ export interface PlanPass {
   maximum_covered_area_pct: number;
 }
 
+export interface PlanCandidateReview {
+  generated_by?: string;
+  degraded?: boolean;
+  catalog_total?: number;
+  summary?: {
+    selected?: number;
+    candidate?: number;
+    excluded?: number;
+    groups?: Array<{ code: string; label: string; count: number }>;
+  };
+  targets?: { area_pct?: number; qualified_area_pct?: number; total_cells?: number; target_cells?: number };
+  ties?: { greedy_only?: string[]; ilp_only?: string[]; shared_count?: number };
+  cloud?: {
+    filtered?: boolean;
+    dropped_windows?: number;
+    no_data_accesses?: number;
+    no_data_pct?: number;
+    per_sat_available?: boolean;
+  };
+  method_notes?: string[];
+}
+
 export interface PlanResult {
   status: string;
   operation: string;
@@ -355,6 +377,7 @@ export interface PlanResult {
   warnings?: string[];
   cloud?: { filtered?: boolean; threshold_pct?: number; dropped_windows?: number; reason?: string };
   blocked_satellites?: Array<{ norad_id: number; name: string; reason: string }>;
+  candidate_review?: PlanCandidateReview;
   candidate_count?: number;
   blocked_count?: number;
   [key: string]: unknown;

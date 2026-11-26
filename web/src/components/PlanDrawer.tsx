@@ -822,10 +822,19 @@ export function PlanDrawer({ open, onClose, onAnalyze }: Props) {
           </table>
         ) : null}
 
+        {value.candidate_review?.summary ? (
+          <p className="plan-note">
+            候选与排除：目录 {value.candidate_review.catalog_total ?? "—"} 颗，入选{" "}
+            {value.candidate_review.summary.selected ?? 0}、备选{" "}
+            {value.candidate_review.summary.candidate ?? 0}、未采用{" "}
+            {value.candidate_review.summary.excluded ?? 0}；逐颗原因见报告第 05 节。
+          </p>
+        ) : null}
+
         <div className="plan-report">
           <div>
             <strong>报告</strong>
-            <p>四节：卫星构成 / 覆盖与回放 / 推荐计划 / 口径与精度。</p>
+            <p>五节：卫星构成 / 访问覆盖 / 推荐计划 / 候选与排除 / 口径与精度。</p>
           </div>
           <div className="plan-report-actions">
             {report ? (
